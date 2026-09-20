@@ -38,6 +38,8 @@ export function SettingsPanel() {
   const [micWorks, setMicWorks] = useState(false);
   const [screenshotText, setScreenshotTextState] = useState(false);
   const [ocrAvailable, setOcrAvailable] = useState(false);
+  const [speechLanguage, setSpeechLanguageState] = useState<"ru" | "en" | "auto">("ru");
+  const [speechModel, setSpeechModelState] = useState<"small" | "medium" | "turbo">("small");
 
   const strings = UI_STRINGS[uiLanguage];
   const t = strings.settings;
@@ -90,7 +92,19 @@ export function SettingsPanel() {
     setMeetingModeState(all.meetingMode);
     setScreenshotTextState(all.screenshotText);
     setOcrAvailable(all.ocrAvailable);
+    setSpeechLanguageState(all.speechLanguage);
+    setSpeechModelState(all.speechModel);
     document.documentElement.dataset.theme = all.theme;
+  }
+
+  async function handleSpeechLanguage(language: "ru" | "en" | "auto") {
+    setSpeechLanguageState(language);
+    await bridge.settings.setSpeech({ language });
+  }
+
+  async function handleSpeechModel(model: "small" | "medium" | "turbo") {
+    setSpeechModelState(model);
+    await bridge.settings.setSpeech({ model });
   }
 
   async function handleToggleScreenshotText() {
@@ -398,6 +412,31 @@ export function SettingsPanel() {
             </span>
           </div>
         ) : null}
+      </section>
+
+      <section className="context speech-settings">
+        <h3 className="section-title">{t.speechTitle}</h3>
+        <label className="mode-select">
+          {t.speechLanguage}
+          <select value={speechLanguage} onChange={(e) => void handleSpeechLanguage(e.target.value as "ru" | "en" | "auto")}>
+            {(["ru", "en", "auto"] as const).map((code) => (
+              <option key={code} value={code}>
+                {t.speechLanguages[code]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="mode-select">
+          {t.speechModel}
+          <select value={speechModel} onChange={(e) => void handleSpeechModel(e.target.value as "small" | "medium" | "turbo")}>
+            {(["small", "medium", "turbo"] as const).map((name) => (
+              <option key={name} value={name}>
+                {t.speechModels[name]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="hint">{t.speechHint}</p>
       </section>
 
       <section className="context">

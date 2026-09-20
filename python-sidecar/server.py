@@ -25,7 +25,9 @@ import traceback
 import wave
 from typing import Any
 
-MODEL_SIZE = os.environ.get("AVALET_WHISPER_MODEL", "small")
+DEFAULT_MODEL = os.environ.get("AVALET_WHISPER_MODEL", "small")
+# Names the app offers; "turbo" is faster-whisper's alias for large-v3-turbo.
+ALLOWED_MODELS = {"small", "medium", "turbo"}
 COMPUTE_TYPE = os.environ.get("AVALET_WHISPER_COMPUTE", "int8")
 # How much silence has to follow the last detected speech segment, relative
 # to the end of the chunk, to count as "they stopped talking" — reuses
@@ -46,16 +48,21 @@ def _log(message: str) -> None:
 
 
 _model = None
+_model_name = None
 
 
-def _get_model():
-    global _model
-    if _model is None:
+def _get_model(name: str | None = None):
+    """Loads the requested model once and keeps it; switching drops the old one."""
+    global _model, _model_name
+    wanted = name if name in ALLOWED_MODELS else DEFAULT_MODEL
+    if _model is None or _model_name != wanted:
         from faster_whisper import WhisperModel  # type: ignore
 
-        _log(f"loading whisper model={MODEL_SIZE!r} compute={COMPUTE_TYPE!r}")
+        _model = None
+        _log(f"loading whisper model={wanted!r} compute={COMPUTE_TYPE!r}")
         started = time.time()
-        _model = WhisperModel(MODEL_SIZE, device="auto", compute_type=COMPUTE_TYPE)
+        _model = WhisperModel(wanted, device="auto", compute_type=COMPUTE_TYPE)
+        _model_name = wanted
         _log(f"model loaded in {time.time() - started:.2f}s")
     return _model
 
@@ -90,6 +97,9 @@ def _wav_base64_to_float_pcm(audio_base64: str) -> tuple[list[float], int]:
 def _transcribe_chunk(payload: dict) -> dict:
     audio_base64 = payload.get("audio_base64")
     language = payload.get("language")
+    model_name = payload.get("model")
+    initial_prompt = payload.get("initial_prompt")
+    hotwords = payload.get("hotwords")
     if not isinstance(audio_base64, str) or not audio_base64:
         raise ValueError("audio_base64 is required")
 
@@ -99,7 +109,7 @@ def _transcribe_chunk(payload: dict) -> dict:
     audio = np.array(floats, dtype=np.float32)
     chunk_duration = len(floats) / sample_rate if sample_rate else 0.0
 
-    model = _get_model()
+    model = _get_model(model_name if isinstance(model_name, str) else None)
     ends_with_pause = False
     try:
         segments, info = model.transcribe(
@@ -107,6 +117,8 @@ def _transcribe_chunk(payload: dict) -> dict:
             language=language if isinstance(language, str) and language else None,
             vad_filter=True,
             condition_on_previous_text=False,
+            initial_prompt=initial_prompt if isinstance(initial_prompt, str) and initial_prompt else None,
+            hotwords=hotwords if isinstance(hotwords, str) and hotwords else None,
         )
         segments = list(segments)
         text = "".join(segment.text for segment in segments).strip()
@@ -154,7 +166,7 @@ def main() -> int:
     _log("sidecar starting")
     if os.environ.get("AVALET_PRELOAD_MODEL") == "1":
         try:
-            _get_model()
+            _get_model(None)
         except Exception as error:  # noqa: BLE001
             _log(f"failed to preload model: {error}")
     _emit({"event": "ready"})

@@ -40,6 +40,8 @@ import {
   getMainPinned,
   getMeetingMode,
   getScreenshotTextEnabled,
+  getSpeechLanguage,
+  getSpeechModel,
   getOverlayOpacity,
   getPreferredMicDeviceId,
   getPreferredScreenSourceId,
@@ -53,6 +55,10 @@ import {
   setMainPinned,
   setMeetingMode,
   setScreenshotTextEnabled,
+  setSpeechLanguage,
+  setSpeechModel,
+  SPEECH_LANGUAGES,
+  SPEECH_MODELS,
   setOverlayOpacity,
   setPreferredMicDeviceId,
   setPreferredScreenSourceId,
@@ -264,7 +270,21 @@ function registerIpc(): void {
     mainPinned: getMainPinned(),
     screenshotText: getScreenshotTextEnabled(),
     ocrAvailable: await isOcrAvailable(),
+    speechLanguage: getSpeechLanguage(),
+    speechModel: getSpeechModel(),
   }));
+
+  ipcMain.handle("avalet:speech-set", (_event, patch: unknown) => {
+    const p = (patch ?? {}) as { language?: unknown; model?: unknown };
+    if (p.language !== undefined) {
+      if (!SPEECH_LANGUAGES.includes(p.language as never)) throw new Error("unknown speech language");
+      setSpeechLanguage(p.language as never);
+    }
+    if (p.model !== undefined) {
+      if (!SPEECH_MODELS.includes(p.model as never)) throw new Error("unknown speech model");
+      setSpeechModel(p.model as never);
+    }
+  });
 
   ipcMain.handle("avalet:screenshot-text-set", (_event, enabled: unknown) => {
     setScreenshotTextEnabled(Boolean(enabled));
@@ -492,9 +512,15 @@ function registerIpc(): void {
     setPreferredScreenSourceId(sourceId);
   });
 
-  ipcMain.handle("avalet:capture-audio-chunk", async (_event, audioBase64: unknown, channel: unknown) => {
+  ipcMain.handle("avalet:capture-audio-chunk", async (_event, audioBase64: unknown, channel: unknown, meta: unknown) => {
     if (typeof audioBase64 !== "string") throw new Error("audioBase64 must be a string");
-    await liveSession.ingestAudioChunk(audioBase64, channel === "other" ? "other" : "me");
+    const m = (meta ?? {}) as { startedAt?: unknown; endedAt?: unknown; endedBySilence?: unknown };
+    const endedAt = typeof m.endedAt === "number" ? m.endedAt : Date.now();
+    await liveSession.ingestAudioChunk(audioBase64, channel === "other" ? "other" : "me", {
+      startedAt: typeof m.startedAt === "number" ? m.startedAt : endedAt,
+      endedAt,
+      endedBySilence: Boolean(m.endedBySilence),
+    });
   });
 
   // Settings window owns the actual MediaStreams (see audio-capture.ts) — it

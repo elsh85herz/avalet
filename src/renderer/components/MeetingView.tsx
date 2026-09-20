@@ -44,7 +44,13 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     if (!live) return;
     const unsubscribers = [
       bridge.events.onTranscriptSegment((segment: TranscriptSegment) => {
-        setMeeting((prev) => ({ ...prev, transcript: [...prev.transcript, segment] }));
+        setMeeting((prev) => {
+          const transcript = [...prev.transcript];
+          let index = transcript.length;
+          while (index > 0 && transcript[index - 1].at > segment.at) index--;
+          transcript.splice(index, 0, segment);
+          return { ...prev, transcript };
+        });
       }),
       bridge.events.onMeetingModeChanged((mode) => setMeeting((prev) => ({ ...prev, mode }))),
     ];

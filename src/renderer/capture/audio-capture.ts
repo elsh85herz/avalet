@@ -1,7 +1,8 @@
 import { getBridge } from "../lib/bridge.js";
-import { encodeWavBase64, resampleLinear } from "./wav-encode.js";
+import { resample } from "./resample.js";
+import { Segmenter, type Utterance } from "./segmenter.js";
+import { encodeWavBase64 } from "./wav-encode.js";
 
-const CHUNK_SECONDS = 5;
 const TARGET_SAMPLE_RATE = 16_000;
 const PROCESSOR_BUFFER_SIZE = 4096;
 // Auto-reconnect backoff after a track dies mid-session (permission revoked,
@@ -38,43 +39,45 @@ type ChannelPipeline = {
 };
 
 /**
- * Chunks one MediaStream's audio into ~5s 16kHz mono WAVs and ships each to
- * the main process tagged with `channel` — this is what gives the transcript
- * "Я:" / "Собеседник:" diarization-lite instead of one blended stream (see
- * live-session.ts). Each channel gets its own AudioContext/processor so a
- * failure or reconnect on one side never touches the other.
+ * Cuts one MediaStream's audio into whole utterances at the speaker's pauses,
+ * converts each to 16 kHz mono WAV and ships it to the main process tagged
+ * with `channel` — this is what gives the transcript "Я:" / "Собеседник:"
+ * labels instead of one blended stream (see live-session.ts). Each channel
+ * gets its own AudioContext/processor so a failure or reconnect on one side
+ * never touches the other.
  */
 function startChunkPipeline(stream: MediaStream, channel: AudioChannel): ChannelPipeline {
   const bridge = getBridge();
   const audioContext = new AudioContext();
   const source = audioContext.createMediaStreamSource(stream);
   const processor = audioContext.createScriptProcessor(PROCESSOR_BUFFER_SIZE, 1, 1);
-  const chunkTargetSamples = audioContext.sampleRate * CHUNK_SECONDS;
-  let buffer: Float32Array[] = [];
-  let bufferedSamples = 0;
   let stopped = false;
+
+  const submit = (utterance: Utterance) => {
+    const resampled = resample(utterance.samples, audioContext.sampleRate, TARGET_SAMPLE_RATE);
+    const base64 = encodeWavBase64(resampled, TARGET_SAMPLE_RATE);
+    void bridge.capture
+      .submitAudioChunk(base64, channel, {
+        startedAt: utterance.startedAt,
+        endedAt: utterance.endedAt,
+        endedBySilence: utterance.endedBySilence,
+      })
+      .catch((error) => {
+        console.error(`[audio-capture:${channel}] failed to submit utterance:`, error);
+      });
+  };
+  // The other side gets a slightly shorter pause threshold than the mic:
+  // remote speech is clean and steady, while the user's own mic picks up
+  // breaths and room noise.
+  const segmenter = new Segmenter(
+    { sampleRate: audioContext.sampleRate, silenceMs: channel === "other" ? 600 : 700 },
+    submit,
+  );
 
   processor.onaudioprocess = (event) => {
     if (stopped) return;
-    const input = event.inputBuffer.getChannelData(0);
-    buffer.push(new Float32Array(input));
-    bufferedSamples += input.length;
-    if (bufferedSamples < chunkTargetSamples) return;
-
-    const merged = new Float32Array(bufferedSamples);
-    let offset = 0;
-    for (const part of buffer) {
-      merged.set(part, offset);
-      offset += part.length;
-    }
-    buffer = [];
-    bufferedSamples = 0;
-
-    const resampled = resampleLinear(merged, audioContext.sampleRate, TARGET_SAMPLE_RATE);
-    const base64 = encodeWavBase64(resampled, TARGET_SAMPLE_RATE);
-    void bridge.capture.submitAudioChunk(base64, channel).catch((error) => {
-      console.error(`[audio-capture:${channel}] failed to submit chunk:`, error);
-    });
+    // getChannelData returns a view the engine reuses, so it is copied.
+    segmenter.push(new Float32Array(event.inputBuffer.getChannelData(0)), Date.now());
   };
 
   // ScriptProcessorNode requires a destination connection to fire in some
@@ -89,6 +92,8 @@ function startChunkPipeline(stream: MediaStream, channel: AudioChannel): Channel
     stream,
     audioContext,
     stop: () => {
+      // Send what was being said rather than losing the last sentence.
+      segmenter.flush(Date.now());
       stopped = true;
       processor.disconnect();
       source.disconnect();

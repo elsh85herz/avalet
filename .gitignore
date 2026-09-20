@@ -9,3 +9,4 @@ python-sidecar/__pycache__/
 *.pyc
 .env
 native/bin/
+dist-test/

@@ -3,11 +3,14 @@ import { generate } from "./providers/index.js";
 import { PROVIDER_PRESETS } from "./providers/types.js";
 import { isImageRejection } from "./providers/errors.js";
 import { logLine } from "./log.js";
+import { EchoFilter } from "./echo-filter.js";
 import {
   getApiKey,
   getAutoDetectEnabled,
   getMeetingMode,
   getScreenshotTextEnabled,
+  getSpeechLanguage,
+  getSpeechModel,
   getProviderSettings,
   getSelectedProviderId,
   getSessionContext,
@@ -79,6 +82,14 @@ const LAST_ANSWER_CHAR_BUDGET = 3_000;
 const OCR_WAIT_BUDGET_MS = 1_200;
 // Transcribing a 5s chunk slower than this is worth a line in the log.
 const SLOW_TRANSCRIBE_MS = 2_000;
+// The end of the previous chunk of the same channel is fed to whisper as a
+// prompt: chunks are cut mid-sentence, and the context keeps the boundary
+// words and the spelling of names consistent.
+const PROMPT_TAIL_CHARS = 200;
+// Domain words the analyst's calls are full of; nudges whisper toward the
+// right spelling instead of a phonetic guess.
+const SPEECH_HOTWORDS =
+  "API, REST, SOAP, Jira, Confluence, BRD, FRD, user story, SLA, ER-диаграмма, Kafka, PostgreSQL, микросервис, авторизация, интеграция, требования";
 
 function withBudget<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
@@ -150,6 +161,10 @@ export class LiveSession {
   // raw audio transcript, never its own prior output.
   private lastAnswer = "";
   private consecutiveTranscriptionFailures = 0;
+  private readonly echo = new EchoFilter(Date.now, (text) =>
+    logLine(`[echo] dropped a mic segment that repeats the other side (${text.length} chars)`),
+  );
+  private readonly promptTail: Record<AudioChannel, string> = { me: "", other: "" };
 
   constructor(
     private readonly pythonRuntime: PythonRuntime,
@@ -172,31 +187,50 @@ export class LiveSession {
 
   stop(): void {
     this.paused = true;
+    this.echo.flush();
     this.abortController?.abort();
     this.events.onStateChange(this.getState());
   }
 
   reset(): void {
+    this.echo.reset();
+    this.promptTail.me = "";
+    this.promptTail.other = "";
     this.transcript = "";
     this.segmentSinceTrigger = "";
     this.lastAnswer = "";
   }
 
   /** Called with a base64 16-bit PCM mono WAV chunk (~5s) from the renderer's capture pipeline. */
-  async ingestAudioChunk(audioBase64: string, channel: AudioChannel = "me"): Promise<void> {
+  async ingestAudioChunk(
+    audioBase64: string,
+    channel: AudioChannel,
+    meta: { startedAt: number; endedAt: number; endedBySilence: boolean },
+  ): Promise<void> {
     if (this.paused) return;
+    // When the words were spoken, from the capture side, so the two channels
+    // line up in time regardless of how long each took to transcribe.
+    const spoken = { start: meta.startedAt, end: meta.endedAt };
+    const transcribeStartedAt = Date.now();
     let text: string;
-    let endsWithPause = false;
     try {
-      const startedAt = Date.now();
-      const result = await this.pythonRuntime.call<{ text: string; ends_with_pause?: boolean }>(
+      const language = getSpeechLanguage();
+      const result = await this.pythonRuntime.call<{ text: string }>(
         "transcribe_chunk",
-        { audio_base64: audioBase64 },
+        {
+          audio_base64: audioBase64,
+          model: getSpeechModel(),
+          language: language === "auto" ? undefined : language,
+          initial_prompt: this.promptTail[channel] || undefined,
+          hotwords: SPEECH_HOTWORDS,
+        },
       );
-      const took = Date.now() - startedAt;
-      if (took > SLOW_TRANSCRIBE_MS) logLine(`[timing] slow transcription: ${took}ms for a 5s chunk (${channel})`);
+      const took = Date.now() - transcribeStartedAt;
+      const spokenSeconds = (spoken.end - spoken.start) / 1000;
+      if (took > Math.max(SLOW_TRANSCRIBE_MS, spokenSeconds * 500)) {
+        logLine(`[timing] slow transcription: ${took}ms for ${spokenSeconds.toFixed(1)}s of speech (${channel})`);
+      }
       text = result.text.trim();
-      endsWithPause = Boolean(result.ends_with_pause);
       if (this.consecutiveTranscriptionFailures > 0) {
         this.consecutiveTranscriptionFailures = 0;
         this.events.onTranscriptionRecovered();
@@ -211,14 +245,24 @@ export class LiveSession {
       return;
     }
     if (!text) return;
+    this.promptTail[channel] = `${this.promptTail[channel]} ${text}`.trim().slice(-PROMPT_TAIL_CHARS);
 
-    this.events.onTranscriptSegment({ at: Date.now(), speaker: channel, text });
+    if (channel === "other") {
+      this.echo.pushOther({ ...spoken, text });
+      // The cut happened because the other side paused, which is the moment
+      // to respond (unless it was cut only for length).
+      this.commitSegment("other", spoken.start, text, meta.endedBySilence);
+    } else {
+      // The mic may only be hearing the other side through the speakers.
+      this.echo.pushMe({ ...spoken, text }, () => this.commitSegment("me", spoken.start, text, false));
+    }
+  }
+
+  private commitSegment(channel: AudioChannel, at: number, text: string, endsWithPause: boolean): void {
+    this.events.onTranscriptSegment({ at, speaker: channel, text });
     const label = channel === "other" ? "Собеседник" : "Я";
     this.transcript = `${this.transcript}\n[${label}]: ${text}`.trim().slice(-TRANSCRIPT_CHAR_BUDGET);
     this.segmentSinceTrigger = `${this.segmentSinceTrigger} ${text}`.trim();
-    // The other side pausing right after speaking is a stronger "they're
-    // done, respond now" signal than any keyword regex — reuses whisper's
-    // own VAD timing (see python-sidecar/server.py), no extra model call.
     this.maybeTrigger(channel === "other" && endsWithPause);
   }
 

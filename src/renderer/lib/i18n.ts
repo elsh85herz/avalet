@@ -78,6 +78,12 @@ export type UiStrings = {
     screenshotTextOn: string;
     screenshotTextOff: string;
     screenshotTextUnavailable: string;
+    speechTitle: string;
+    speechLanguage: string;
+    speechLanguages: Record<"ru" | "en" | "auto", string>;
+    speechModel: string;
+    speechModels: Record<"small" | "medium" | "turbo", string>;
+    speechHint: string;
     perm: Record<PermState, string>;
     sessionStates: Record<SessionKey, string>;
   };
@@ -193,6 +199,17 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       screenshotTextOn: "Screenshots also carry the text recognized on your Mac, for exact names, numbers and code. Adds up to about a second to each answer.",
       screenshotTextOff: "Fastest: screenshots go to models that see images as a picture only. Models that cannot see images always get the recognized text.",
       screenshotTextUnavailable: "Text recognition is not available in this build (it needs the Xcode Command Line Tools when building from source). Models that see images still work.",
+      speechTitle: "Speech recognition",
+      speechLanguage: "Spoken language",
+      speechLanguages: { ru: "Russian", en: "English", auto: "Detect automatically" },
+      speechModel: "Accuracy",
+      speechModels: {
+        small: "Fast (small, 0.5 GB)",
+        medium: "More accurate (medium, 1.5 GB)",
+        turbo: "Most accurate (turbo, 1.6 GB)",
+      },
+      speechHint:
+        "Runs on your Mac. A larger model understands speech better but is slower, and is downloaded the first time it is used (a few minutes; a VPN may be needed). Nothing is transcribed until the download finishes. A fixed language is more reliable than detecting it on every phrase.",
       perm: {
         granted: "Granted",
         denied: "Denied",
@@ -320,6 +337,17 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       screenshotTextOn: "К скриншоту добавляется текст, распознанный на вашем Mac, для точных имён, чисел и кода. Добавляет до секунды к каждому ответу.",
       screenshotTextOff: "Быстрее всего: моделям с картинками скриншот уходит только изображением. Моделям без картинок распознанный текст отправляется всегда.",
       screenshotTextUnavailable: "Распознавание текста в этой сборке недоступно (при сборке из исходников нужны Xcode Command Line Tools). Модели с картинками работают как раньше.",
+      speechTitle: "Распознавание речи",
+      speechLanguage: "Язык речи",
+      speechLanguages: { ru: "Русский", en: "English", auto: "Определять автоматически" },
+      speechModel: "Точность",
+      speechModels: {
+        small: "Быстро (small, 0,5 ГБ)",
+        medium: "Точнее (medium, 1,5 ГБ)",
+        turbo: "Максимум (turbo, 1,6 ГБ)",
+      },
+      speechHint:
+        "Работает на вашем Mac. Большая модель лучше понимает речь, но медленнее, и скачивается при первом использовании (несколько минут, может понадобиться VPN). Пока загрузка не закончится, расшифровки не будет. Фиксированный язык надёжнее, чем угадывание на каждой фразе.",
       perm: {
         granted: "Разрешено",
         denied: "Запрещено",

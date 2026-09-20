@@ -56,7 +56,11 @@ const api = {
       mainPinned: boolean;
       screenshotText: boolean;
       ocrAvailable: boolean;
+      speechLanguage: "ru" | "en" | "auto";
+      speechModel: "small" | "medium" | "turbo";
     }> => ipcRenderer.invoke("avalet:settings-get-all"),
+    setSpeech: (patch: { language?: "ru" | "en" | "auto"; model?: "small" | "medium" | "turbo" }): Promise<void> =>
+      ipcRenderer.invoke("avalet:speech-set", patch),
     setScreenshotText: (enabled: boolean): Promise<void> => ipcRenderer.invoke("avalet:screenshot-text-set", enabled),
     setMainPinned: (pinned: boolean): Promise<void> => ipcRenderer.invoke("avalet:main-set-pinned", pinned),
     setMeetingMode: (mode: MeetingMode): Promise<void> => ipcRenderer.invoke("avalet:meeting-mode-set", mode),
@@ -87,8 +91,11 @@ const api = {
       ipcRenderer.invoke("avalet:capture-screenshot"),
     enableLoopbackAudio: (): Promise<void> => ipcRenderer.invoke("enable-loopback-audio"),
     disableLoopbackAudio: (): Promise<void> => ipcRenderer.invoke("disable-loopback-audio"),
-    submitAudioChunk: (audioBase64: string, channel: "me" | "other"): Promise<void> =>
-      ipcRenderer.invoke("avalet:capture-audio-chunk", audioBase64, channel),
+    submitAudioChunk: (
+      audioBase64: string,
+      channel: "me" | "other",
+      meta: { startedAt: number; endedAt: number; endedBySilence: boolean },
+    ): Promise<void> => ipcRenderer.invoke("avalet:capture-audio-chunk", audioBase64, channel, meta),
     reportAudioDegraded: (state: { me: boolean; other: boolean }): Promise<void> =>
       ipcRenderer.invoke("avalet:audio-degraded-set", state),
     requestReconnect: (channel: "me" | "other" | "both"): Promise<void> =>

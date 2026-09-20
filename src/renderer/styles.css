@@ -1047,3 +1047,12 @@ select {
   padding-top: 4px;
   border-top: 1px solid var(--card-border);
 }
+
+.section-title {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

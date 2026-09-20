@@ -26,7 +26,10 @@ type AvaletBridge = {
       mainPinned: boolean;
       screenshotText: boolean;
       ocrAvailable: boolean;
+      speechLanguage: "ru" | "en" | "auto";
+      speechModel: "small" | "medium" | "turbo";
     }>;
+    setSpeech: (patch: { language?: "ru" | "en" | "auto"; model?: "small" | "medium" | "turbo" }) => Promise<void>;
     setScreenshotText: (enabled: boolean) => Promise<void>;
     setMainPinned: (pinned: boolean) => Promise<void>;
     setMeetingMode: (mode: MeetingMode) => Promise<void>;
@@ -54,7 +57,11 @@ type AvaletBridge = {
     screenshot: () => Promise<{ base64: string; width: number; height: number }>;
     enableLoopbackAudio: () => Promise<void>;
     disableLoopbackAudio: () => Promise<void>;
-    submitAudioChunk: (audioBase64: string, channel: "me" | "other") => Promise<void>;
+    submitAudioChunk: (
+      audioBase64: string,
+      channel: "me" | "other",
+      meta: { startedAt: number; endedAt: number; endedBySilence: boolean },
+    ) => Promise<void>;
     reportAudioDegraded: (state: { me: boolean; other: boolean }) => Promise<void>;
     requestReconnect: (channel: "me" | "other" | "both") => Promise<void>;
   };

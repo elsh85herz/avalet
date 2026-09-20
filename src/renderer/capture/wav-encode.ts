@@ -1,19 +1,4 @@
-/** Minimal, dependency-free 16-bit PCM WAV encoding + naive linear resampling — good enough for feeding whisper, not for hi-fi audio. */
-
-export function resampleLinear(input: Float32Array, fromRate: number, toRate: number): Float32Array {
-  if (fromRate === toRate) return input;
-  const ratio = fromRate / toRate;
-  const outputLength = Math.floor(input.length / ratio);
-  const output = new Float32Array(outputLength);
-  for (let i = 0; i < outputLength; i += 1) {
-    const srcIndex = i * ratio;
-    const lower = Math.floor(srcIndex);
-    const upper = Math.min(lower + 1, input.length - 1);
-    const weight = srcIndex - lower;
-    output[i] = input[lower] * (1 - weight) + input[upper] * weight;
-  }
-  return output;
-}
+/** Minimal, dependency-free 16-bit PCM mono WAV encoding for feeding the recognizer. */
 
 function floatTo16BitPCM(samples: Float32Array): Int16Array {
   const out = new Int16Array(samples.length);

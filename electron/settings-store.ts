@@ -4,6 +4,11 @@ import { PROVIDER_PRESETS } from "./providers/index.js";
 import { RETIRED_MODELS } from "./providers/types.js";
 import type { MeetingMode } from "./modes.js";
 
+export type SpeechLanguage = "ru" | "en" | "auto";
+export type SpeechModel = "small" | "medium" | "turbo";
+export const SPEECH_LANGUAGES: SpeechLanguage[] = ["ru", "en", "auto"];
+export const SPEECH_MODELS: SpeechModel[] = ["small", "medium", "turbo"];
+
 export type ProviderSettings = {
   providerId: string;
   model: string;
@@ -39,6 +44,10 @@ type StoreShape = {
   mainPinned: boolean;
   /** Also send locally recognized text with screenshots to models that see images (slower, off by default). */
   screenshotText: boolean;
+  /** Spoken language for transcription; "auto" lets whisper guess on every chunk. */
+  speechLanguage: SpeechLanguage;
+  /** Whisper model size: bigger is more accurate and slower. */
+  speechModel: SpeechModel;
 };
 
 const defaults: StoreShape = {
@@ -59,6 +68,8 @@ const defaults: StoreShape = {
   meetingMode: "free",
   mainPinned: true,
   screenshotText: false,
+  speechLanguage: "ru",
+  speechModel: "small",
 };
 
 const store = new Store<StoreShape>({ name: "avalet-settings", defaults });
@@ -208,4 +219,22 @@ export function getScreenshotTextEnabled(): boolean {
 
 export function setScreenshotTextEnabled(enabled: boolean): void {
   store.set("screenshotText", enabled);
+}
+
+export function getSpeechLanguage(): SpeechLanguage {
+  const value = store.get("speechLanguage");
+  return SPEECH_LANGUAGES.includes(value) ? value : "ru";
+}
+
+export function setSpeechLanguage(language: SpeechLanguage): void {
+  store.set("speechLanguage", language);
+}
+
+export function getSpeechModel(): SpeechModel {
+  const value = store.get("speechModel");
+  return SPEECH_MODELS.includes(value) ? value : "small";
+}
+
+export function setSpeechModel(model: SpeechModel): void {
+  store.set("speechModel", model);
 }

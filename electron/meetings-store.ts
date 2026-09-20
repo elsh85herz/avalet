@@ -102,7 +102,10 @@ export function endCurrentMeeting(): Meeting | null {
 
 export function appendSegment(segment: TranscriptSegment): void {
   if (!current || current.endedAt) return;
-  current.transcript.push(segment);
+  // A held mic segment can be committed a few seconds after later ones.
+  let index = current.transcript.length;
+  while (index > 0 && current.transcript[index - 1].at > segment.at) index--;
+  current.transcript.splice(index, 0, segment);
   scheduleFlush();
 }
 

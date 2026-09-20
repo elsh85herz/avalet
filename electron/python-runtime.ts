@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { app } from "electron";
+import { logLine } from "./log.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,7 +52,7 @@ export class PythonRuntime {
     proc.stdout.on("data", (chunk: string) => this.onStdout(chunk));
     proc.stderr.setEncoding("utf8");
     proc.stderr.on("data", (chunk: string) => {
-      console.log(`[python-sidecar] ${chunk.trim()}`);
+      logLine(`[python-sidecar] ${chunk.trim()}`);
     });
     proc.on("exit", (code) => {
       console.error(`[python-sidecar] exited with code ${code}`);

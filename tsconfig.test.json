@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "outDir": "dist-test",
+    "rootDir": ".",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["test", "src/renderer/capture/segmenter.ts", "src/renderer/capture/resample.ts"]
+}
