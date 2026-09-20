@@ -14,7 +14,7 @@ Local-first and bring-your-own-LLM: audio never leaves your Mac, transcription r
 - **Drafts on demand.** Ask for a database schema, an ER diagram, an API contract, a process flow, and you get a concrete draft with stated assumptions, then it gets revised as new details arrive.
 - **Who said what.** Your mic and the system audio are captured as two channels, so the transcript is tagged "me" / "other" and the model doesn't mistake your own words for a question addressed to you.
 - **Meeting context.** Paste the ticket, spec, or agenda before the call; every suggestion is grounded in it.
-- **Manual ask, quick actions, screenshot.** Type a question any time, tap "Summarize" / "Risks?" / "Ask a question" / "Explain this", or send a screenshot of your screen for a priority read (Claude and OpenAI only).
+- **Manual ask, quick actions, screenshot.** Type a question any time, tap "Summarize" / "Risks?" / "Ask a question" / "Explain this", or send a screenshot of your screen for a priority read (Claude, OpenAI, DeepSeek).
 - **Meeting modes.** Requirements gathering, grooming and estimation, demo and acceptance, interview, or free: each shifts what the assistant pays attention to.
 - **Transcript and meeting summary.** Every call is saved as a meeting with a timestamped, speaker-tagged transcript. One button writes the summary in an analyst's format: decisions, open questions, requirements, risks, tasks. Export to Markdown or copy as plain text.
 - **Stop / Resume / history.** Stop freezes live output without losing anything, page through earlier blocks, resume instantly. History is kept on disk.
@@ -82,7 +82,7 @@ system audio (loopback)               5s WAV chunks, tagged "other"
 - **System audio capture can be fragile.** Uses [`electron-audio-loopback`](https://github.com/alectrocute/electron-audio-loopback) (MIT); needs macOS 13.2+. If the other side's audio doesn't come through, a banner shows up with a **Reconnect** button. Mic-only always works as a fallback.
 - **Unsigned build.** See the install steps above. Code signing and auto-update are planned.
 - **Speech model is downloaded from Hugging Face** on first run. If that's slow or blocked on your network, use a VPN for the first download (ours: [ast-net.ru](https://ast-net.ru)); the model is cached afterwards. Bundling the model with the app is on the roadmap.
-- **DeepSeek and local models have no vision support** in this build; screenshots are only sent to Claude and OpenAI.
+- **Screenshots** are sent to Claude, OpenAI, and DeepSeek (`deepseek-flash`). Local models are text-only in this build.
 - **Consent.** Recording a call may require the other participants' consent depending on your jurisdiction. Avalet shows a visible listening indicator, but consent is on whoever runs it.
 
 ## Roadmap

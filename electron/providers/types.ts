@@ -43,8 +43,11 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     kind: "openai-compatible",
     defaultBaseUrl: "https://api.deepseek.com",
     // "deepseek-chat" was retired by DeepSeek on 2026-07-24; "deepseek-flash" is the current default.
+    // Per DeepSeek's vision guide (checked 2026-09-20) deepseek-flash accepts
+    // images through the OpenAI-style image_url content block, up to 1024
+    // tokens per image, resized to about 1300x1300.
     defaultModel: "deepseek-flash",
-    supportsVision: false,
+    supportsVision: true,
   },
   {
     id: "custom",
@@ -55,6 +58,12 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     supportsVision: false,
   },
 ];
+
+// Model ids that providers have retired, mapped to their replacements, so a
+// value saved in settings by an older build keeps working.
+export const RETIRED_MODELS: Record<string, string> = {
+  "deepseek-chat": "deepseek-flash",
+};
 
 export type GenerateRequest = {
   providerId: string;

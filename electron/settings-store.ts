@@ -1,6 +1,7 @@
 import { safeStorage } from "electron";
 import Store from "electron-store";
 import { PROVIDER_PRESETS } from "./providers/index.js";
+import { RETIRED_MODELS } from "./providers/types.js";
 import type { MeetingMode } from "./modes.js";
 
 export type ProviderSettings = {
@@ -144,13 +145,10 @@ export function setSelectedProviderId(providerId: string): void {
 export function getProviderSettings(providerId: string): ProviderSettings {
   const existing = readProviders()[providerId];
   const preset = PROVIDER_PRESETS.find((p) => p.id === providerId);
-  return (
-    existing ?? {
-      providerId,
-      model: preset?.defaultModel ?? "",
-      baseUrl: preset?.defaultBaseUrl,
-    }
-  );
+  if (!existing) {
+    return { providerId, model: preset?.defaultModel ?? "", baseUrl: preset?.defaultBaseUrl };
+  }
+  return { ...existing, model: RETIRED_MODELS[existing.model] ?? existing.model };
 }
 
 export function getAllProviderSettings(): ProviderSettings[] {
