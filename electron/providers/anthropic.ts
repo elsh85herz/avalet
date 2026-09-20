@@ -2,7 +2,7 @@ import type { GenerateRequest } from "./types.js";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
-const MAX_TOKENS = 1024;
+const DEFAULT_MAX_TOKENS = 1024;
 
 /**
  * Streams a completion from the Anthropic Messages API. Runs in the Electron
@@ -27,7 +27,7 @@ export async function streamAnthropic(request: GenerateRequest): Promise<string>
     },
     body: JSON.stringify({
       model: request.model,
-      max_tokens: MAX_TOKENS,
+      max_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
       system: request.systemPrompt,
       stream: true,
       messages: [{ role: "user", content }],

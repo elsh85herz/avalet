@@ -1,6 +1,6 @@
 import type { GenerateRequest } from "./types.js";
 
-const MAX_TOKENS = 1024;
+const DEFAULT_MAX_TOKENS = 1024;
 
 /**
  * Streams a completion from any OpenAI Chat Completions-compatible endpoint
@@ -26,7 +26,7 @@ export async function streamOpenAICompatible(request: GenerateRequest): Promise<
     headers,
     body: JSON.stringify({
       model: request.model,
-      max_tokens: MAX_TOKENS,
+      max_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
       stream: true,
       messages: [
         { role: "system", content: request.systemPrompt },

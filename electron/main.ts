@@ -106,6 +106,9 @@ function createMainWindow(): void {
       preload: preloadPath,
     },
   });
+  // Same as the overlay: the transcript and summary stay out of the user's
+  // own screen share and recordings (macOS, Windows 10 2004+).
+  win.setContentProtection(true);
   void win.loadURL(entryUrl("main"));
   if (devServerUrl) win.webContents.openDevTools({ mode: "detach" });
   mainWindow = win;
