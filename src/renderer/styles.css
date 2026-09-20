@@ -941,3 +941,20 @@ button.danger {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* Native-looking form controls: system accent on radios/checkboxes/selects
+   instead of the default web look. */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+select {
+  accent-color: var(--accent);
+}
+
+/* Quick-action chips are panel-colored, so they need the text color, not
+   the white of filled accent buttons. */
+.quick-actions button {
+  color: var(--text);
+}

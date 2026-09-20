@@ -1,4 +1,4 @@
-// Overlay UI copy (button labels, tooltips, placeholders) — independent of
+// Overlay UI copy (button labels, tooltips, placeholders): independent of
 // the model's own answer language, which is fixed to Russian in the system
 // prompt (see live-session.ts) and isn't user-configurable. Keys are used
 // verbatim by OverlayApp; add a new key here + in both language blocks
@@ -102,23 +102,23 @@ export type MeetingModeKey = "free" | "requirements" | "grooming" | "demo" | "in
 
 export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
   en: {
-    autoOnTitle: "Auto-suggest is on — click to only respond to typed/quick-action questions",
-    autoOffTitle: "Auto-suggest is off — click to resume automatic suggestions",
-    uiLangTitle: "Interface language (this overlay's own labels/tooltips, not the AI's answers) — click to switch",
+    autoOnTitle: "Auto-suggest is on: click to only respond to typed/quick-action questions",
+    autoOffTitle: "Auto-suggest is off: click to resume automatic suggestions",
+    uiLangTitle: "Interface language (this overlay's own labels/tooltips, not the AI's answers): click to switch",
     screenshotTitle:
       "Take a fresh screenshot right now and prioritize it in the next answer, alongside the audio transcript",
     sessionStopTitle: "Stop",
     sessionResumeTitle: "Resume",
     opacityLabel: "Opacity",
     opacityTitle: "Overlay window opacity",
-    listeningEmpty: "Listening — the first suggestion will appear here.",
+    listeningEmpty: "Listening: the first suggestion will appear here.",
     processNowLabel: "Process now",
     processNowTitle:
-      "Generate a suggestion from what's been transcribed so far (voice only, no screenshot) — auto-suggest is off, so nothing does this on its own",
+      "Generate a suggestion from what's been transcribed so far (voice only, no screenshot): auto-suggest is off, so nothing does this on its own",
     askPlaceholder: "Ask anything…",
     askButton: "Ask",
     audioDegradedBoth: "Audio lost entirely",
-    audioDegradedOther: "Only hearing you — the other side's audio dropped",
+    audioDegradedOther: "Only hearing you: the other side's audio dropped",
     audioDegradedMe: "Your mic dropped",
     reconnectButton: "Reconnect",
     reconnectTitle: "Try to re-acquire audio capture right now",
@@ -193,7 +193,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       exported: "Saved",
       delete: "Delete",
       back: "Back to list",
-      listEmpty: "No meetings yet. Every Start creates one; Reset history closes it.",
+      listEmpty: "No meetings yet. Every Start creates one; End meeting closes it.",
       segments: "phrases",
       hasSummary: "summary",
       date: "Date",
@@ -202,23 +202,23 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
     },
   },
   ru: {
-    autoOnTitle: "Авто-подсказки включены — клик, чтобы реагировать только на вопросы и быстрые кнопки",
-    autoOffTitle: "Авто-подсказки выключены — клик, чтобы снова включить",
-    uiLangTitle: "Язык интерфейса (подписи и подсказки самого оверлея, не ответов ИИ) — клик переключает",
+    autoOnTitle: "Авто-подсказки включены: клик, чтобы реагировать только на вопросы и быстрые кнопки",
+    autoOffTitle: "Авто-подсказки выключены: клик, чтобы снова включить",
+    uiLangTitle: "Язык интерфейса (подписи и подсказки самого оверлея, не ответов ИИ): клик переключает",
     screenshotTitle:
       "Сделать свежий скриншот прямо сейчас и учесть его в следующем ответе вместе с аудио-транскриптом",
     sessionStopTitle: "Стоп",
     sessionResumeTitle: "Продолжить",
     opacityLabel: "Прозрачность",
     opacityTitle: "Прозрачность окна оверлея",
-    listeningEmpty: "Слушаю — первая подсказка появится здесь.",
+    listeningEmpty: "Слушаю: первая подсказка появится здесь.",
     processNowLabel: "Обработать сейчас",
     processNowTitle:
-      "Сгенерировать подсказку из того, что уже расшифровано (только голос, без скриншота) — авто-режим выключен, само это не сделает",
+      "Сгенерировать подсказку из того, что уже расшифровано (только голос, без скриншота): авто-режим выключен, само это не сделает",
     askPlaceholder: "Спросите что угодно…",
     askButton: "Спросить",
     audioDegradedBoth: "Звук пропал полностью",
-    audioDegradedOther: "Слышу только себя — звук собеседника пропал",
+    audioDegradedOther: "Слышу только себя: звук собеседника пропал",
     audioDegradedMe: "Свой микрофон пропал",
     reconnectButton: "Переподключить",
     reconnectTitle: "Попробовать восстановить захват звука прямо сейчас",

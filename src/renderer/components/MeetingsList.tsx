@@ -54,7 +54,7 @@ export function MeetingsList({ uiLanguage }: { uiLanguage: UiLanguage }) {
         <button key={m.id} type="button" className="meeting-row" onClick={() => void openMeeting(m.id)}>
           <span className="meeting-row-title">{m.title}</span>
           <span className="meeting-row-meta">
-            {new Date(m.startedAt).toLocaleString()} · {t.modes[m.mode]} · {m.segmentCount} {t.meeting.segments}
+            {new Date(m.startedAt).toLocaleString(uiLanguage === "ru" ? "ru-RU" : "en-US")} · {t.modes[m.mode]} · {m.segmentCount} {t.meeting.segments}
             {m.hasSummary ? ` · ${t.meeting.hasSummary}` : ""}
             {!m.endedAt ? ` · ${t.meeting.live}` : ""}
           </span>

@@ -160,7 +160,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
           }}
         />
         <div className="meeting-meta">
-          <span>{new Date(meeting.startedAt).toLocaleString()}</span>
+          <span>{new Date(meeting.startedAt).toLocaleString(uiLanguage === "ru" ? "ru-RU" : "en-US")}</span>
           <span className="badge">{t.modes[meeting.mode]}</span>
           <span className={`badge ${meeting.endedAt ? "" : "live"}`}>{meeting.endedAt ? t.meeting.ended : t.meeting.live}</span>
         </div>

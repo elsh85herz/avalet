@@ -76,12 +76,12 @@ export function getCurrentMeeting(): Meeting | null {
   return current;
 }
 
-export function startMeeting(input: { title?: string; mode: MeetingMode; context: string }): Meeting {
+export function startMeeting(input: { title?: string; titlePrefix?: string; mode: MeetingMode; context: string }): Meeting {
   if (current && !current.endedAt) return current;
   const startedAt = Date.now();
   current = {
     id: randomUUID(),
-    title: input.title?.trim() || defaultTitle(startedAt),
+    title: input.title?.trim() || defaultTitle(startedAt, input.titlePrefix ?? "Meeting"),
     startedAt,
     mode: input.mode,
     context: input.context,
@@ -181,9 +181,9 @@ function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-function defaultTitle(at: number): string {
+function defaultTitle(at: number, prefix: string): string {
   const d = new Date(at);
-  return `Meeting ${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${prefix} ${pad(d.getDate())}.${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export function formatClock(at: number, startedAt: number): string {

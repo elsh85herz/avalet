@@ -34,7 +34,7 @@ Avalet is currently distributed as an unsigned build (no Apple Developer certifi
 5. If the "damaged" message persists, run once in Terminal: `xattr -cr /Applications/Avalet.app`
 6. Launch Avalet, pick a provider, paste its API key, click **Save**. That's the whole setup.
 7. Click **Start** and allow **Microphone** and **Screen Recording** when macOS asks. The screen-share picker is how the other side's audio gets captured: pick "Entire screen", keep "Share audio" on.
-8. First transcription downloads the speech model (a few hundred MB, one time).
+8. First transcription downloads the speech model (a few hundred MB, one time) from Hugging Face. If your network blocks or throttles it, turn on a VPN for that first download only; we use our own, [ast-net.ru](https://ast-net.ru). The model is cached afterwards and the app never needs it again.
 
 Updates: the app doesn't auto-update yet. Check [Releases](https://github.com/elsh85herz/a-valet/releases) for new versions; install over the old one the same way.
 
@@ -81,7 +81,7 @@ system audio (loopback)               5s WAV chunks, tagged "other"
 
 - **System audio capture can be fragile.** Uses [`electron-audio-loopback`](https://github.com/alectrocute/electron-audio-loopback) (MIT); needs macOS 13.2+. If the other side's audio doesn't come through, a banner shows up with a **Reconnect** button. Mic-only always works as a fallback.
 - **Unsigned build.** See the install steps above. Code signing and auto-update are planned.
-- **Speech model is downloaded from Hugging Face** on first run. If that's slow or blocked on your network, use a VPN for the first download; the model is cached afterwards.
+- **Speech model is downloaded from Hugging Face** on first run. If that's slow or blocked on your network, use a VPN for the first download (ours: [ast-net.ru](https://ast-net.ru)); the model is cached afterwards. Bundling the model with the app is on the roadmap.
 - **DeepSeek and local models have no vision support** in this build; screenshots are only sent to Claude and OpenAI.
 - **Consent.** Recording a call may require the other participants' consent depending on your jurisdiction. Avalet shows a visible listening indicator, but consent is on whoever runs it.
 

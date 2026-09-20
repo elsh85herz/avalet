@@ -155,6 +155,15 @@ const liveSession = new LiveSession(
   },
 );
 
+// Real native switch, not just CSS: window vibrancy on macOS follows
+// nativeTheme; elsewhere there is no vibrancy, so the window's own
+// background has to change with the theme or light mode ends up dark-on-dark.
+function applyTheme(theme: "dark" | "light"): void {
+  setTheme(theme);
+  nativeTheme.themeSource = theme;
+  if (!isMac) mainWindow?.setBackgroundColor(theme === "light" ? "#f5f5f7" : "#0b0d10");
+}
+
 function renderMeeting(id: string, labels: unknown, modeLabel: unknown): string {
   const meeting = readMeeting(id);
   if (!meeting) throw new Error("meeting not found");
@@ -270,6 +279,43 @@ function registerIpc(): void {
     return renderMeeting(id, labels, modeLabel).replace(/^#+ /gm, "");
   });
 
+  ipcMain.handle("avalet:context-set", (_event, text: unknown) => {
+    if (typeof text !== "string") throw new Error("text must be a string");
+    setSessionContext(text);
+  });
+
+  ipcMain.handle("avalet:auto-detect-set", (_event, enabled: unknown) => {
+    const next = Boolean(enabled);
+    setAutoDetectEnabled(next);
+    // Toggleable from both windows; broadcast so the other one stays in sync.
+    broadcastToOverlay("avalet:event:auto-detect-changed", next);
+    mainWindow?.webContents.send("avalet:event:auto-detect-changed", next);
+  });
+
+  ipcMain.handle("avalet:overlay-set-opacity", (_event, opacity: unknown) => {
+    if (typeof opacity !== "number" || Number.isNaN(opacity)) throw new Error("opacity must be a number");
+    setOverlayOpacity(opacity);
+    setOverlayWindowOpacity(getOverlayOpacity());
+  });
+
+  ipcMain.handle("avalet:overlay-set-collapsed", (_event, collapsed: unknown) => {
+    setOverlayCollapsed(Boolean(collapsed));
+  });
+
+  ipcMain.handle("avalet:theme-set", (_event, theme: unknown) => {
+    if (theme !== "dark" && theme !== "light") throw new Error("theme must be 'dark' or 'light'");
+    applyTheme(theme);
+    broadcastToOverlay("avalet:event:theme-changed", theme);
+    mainWindow?.webContents.send("avalet:event:theme-changed", theme);
+  });
+
+  ipcMain.handle("avalet:ui-language-set", (_event, language: unknown) => {
+    if (language !== "ru" && language !== "en") throw new Error("language must be 'ru' or 'en'");
+    setUiLanguage(language);
+    broadcastToOverlay("avalet:event:ui-language-changed", language);
+    mainWindow?.webContents.send("avalet:event:ui-language-changed", language);
+  });
+
   ipcMain.handle("avalet:session-ask", async (_event, question: unknown) => {
     if (typeof question !== "string") throw new Error("question must be a string");
     await liveSession.askManual(question);
@@ -312,7 +358,11 @@ function registerIpc(): void {
         console.error("[main] python-sidecar failed to start:", error);
       });
     }
-    const meeting = startMeeting({ mode: getMeetingMode(), context: getSessionContext() });
+    const meeting = startMeeting({
+      titlePrefix: getUiLanguage() === "ru" ? "Встреча" : "Meeting",
+      mode: getMeetingMode(),
+      context: getSessionContext(),
+    });
     mainWindow?.webContents.send("avalet:event:meeting-started", meeting);
     createOverlayWindow(preloadPath, entryUrl("overlay"));
     showOverlayWindow();
@@ -398,6 +448,50 @@ function registerIpc(): void {
   );
 }
 
+// Design check without a Mac: AVALET_SCREENSHOT_DIR=<dir> electron . renders
+// both windows in both themes to PNGs and quits. Used under Xvfb on CI/servers.
+async function runScreenshotMode(dir: string): Promise<void> {
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const shoot = async (win: BrowserWindow, name: string) => {
+    const image = await win.webContents.capturePage();
+    fs.writeFileSync(path.join(dir, `${name}.png`), image.toPNG());
+  };
+  fs.mkdirSync(dir, { recursive: true });
+  const main = mainWindow;
+  if (!main) return;
+  await wait(1500);
+  const overlay = createOverlayWindow(preloadPath, entryUrl("overlay"));
+  showOverlayWindow();
+  await wait(1200);
+  const fake = startMeeting({ mode: "requirements", context: "" });
+  const base = Date.now() - 90_000;
+  appendSegment({ at: base, speaker: "other", text: "Нам нужно, чтобы клиент мог менять лимит по карте прямо в приложении." });
+  appendSegment({ at: base + 12_000, speaker: "me", text: "Лимит дневной или разовый? И кто подтверждает изменение выше порога?" });
+  appendSegment({ at: base + 30_000, speaker: "other", text: "Дневной. Выше 300 тысяч нужен звонок из колл-центра, это уже есть в другом процессе." });
+  main.webContents.send("avalet:event:meeting-started", fake);
+  for (const theme of ["dark", "light"] as const) {
+    applyTheme(theme);
+    main.webContents.send("avalet:event:theme-changed", theme);
+    overlay.webContents.send("avalet:event:theme-changed", theme);
+    await wait(400);
+    await shoot(main, `main-meeting-${theme}`);
+    overlay.webContents.send("avalet:event:session-state", "listening");
+    await wait(400);
+    await shoot(overlay, `overlay-${theme}-expanded`);
+    overlay.webContents.send("avalet:event:session-state", "paused");
+    await wait(400);
+    await shoot(overlay, `overlay-${theme}-collapsed`);
+  }
+  main.webContents.send("avalet:event:meeting-ended", endCurrentMeeting());
+  await wait(400);
+  await shoot(main, "main-settings-light");
+  applyTheme("dark");
+  main.webContents.send("avalet:event:theme-changed", "dark");
+  await wait(400);
+  await shoot(main, "main-settings-dark");
+  app.quit();
+}
+
 app.whenReady().then(() => {
   nativeTheme.themeSource = getTheme();
   registerIpc();
@@ -406,6 +500,10 @@ app.whenReady().then(() => {
     if (!dockIcon.isEmpty()) app.dock.setIcon(dockIcon);
   }
   createMainWindow();
+  const screenshotDir = process.env.AVALET_SCREENSHOT_DIR;
+  if (screenshotDir) {
+    mainWindow?.webContents.once("did-finish-load", () => void runScreenshotMode(screenshotDir));
+  }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
