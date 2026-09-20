@@ -41,7 +41,7 @@ Avalet пока распространяется как неподписанна
 ## Запуск из исходников
 
 ```bash
-brew install node python git      # Node 20+, Python 3.9+
+brew install node python git      # Node 20+, Python 3.11+
 git clone https://github.com/elsh85herz/a-valet.git
 cd a-valet
 npm install
