@@ -7,10 +7,10 @@
   "main": "dist-electron/main.js",
   "author": "Elshad Astanov",
   "license": "AGPL-3.0-only",
-  "homepage": "https://github.com/elsh85herz/a-valet",
+  "homepage": "https://github.com/elsh85herz/avalet",
   "repository": {
     "type": "git",
-    "url": "https://github.com/elsh85herz/a-valet.git"
+    "url": "https://github.com/elsh85herz/avalet.git"
   },
   "scripts": {
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:main\" \"npm:dev:electron\"",

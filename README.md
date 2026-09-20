@@ -27,7 +27,7 @@ Avalet is currently distributed as an unsigned build (no Apple Developer certifi
 
 **Requirements:** macOS 13.2 or newer, Apple Silicon or Intel, about 1 GB free (the speech model is downloaded on first run).
 
-1. Download the latest `Avalet-x.y.z.dmg` from [Releases](https://github.com/elsh85herz/a-valet/releases).
+1. Download the latest `Avalet-x.y.z.dmg` from [Releases](https://github.com/elsh85herz/avalet/releases).
 2. Open the `.dmg` and drag **Avalet** into **Applications**.
 3. Open Avalet. macOS says it "cannot be opened" or is "damaged". Close that dialog.
 4. Go to **System Settings, Privacy & Security**, scroll to the bottom, click **Open Anyway** next to Avalet, confirm. (On macOS 14 and older you can instead right-click the app and choose Open.)
@@ -36,14 +36,14 @@ Avalet is currently distributed as an unsigned build (no Apple Developer certifi
 7. Click **Start** and allow **Microphone** and **Screen Recording** when macOS asks. The screen-share picker is how the other side's audio gets captured: pick "Entire screen", keep "Share audio" on.
 8. First transcription downloads the speech model (a few hundred MB, one time) from Hugging Face. If your network blocks or throttles it, turn on a VPN for that first download only; we use our own, [ast-net.ru](https://ast-net.ru). The model is cached afterwards and the app never needs it again.
 
-Updates: the app doesn't auto-update yet. Check [Releases](https://github.com/elsh85herz/a-valet/releases) for new versions; install over the old one the same way.
+Updates: the app doesn't auto-update yet. Check [Releases](https://github.com/elsh85herz/avalet/releases) for new versions; install over the old one the same way.
 
 ## Run from source
 
 ```bash
 brew install node python git      # Node 20+, Python 3.11+
-git clone https://github.com/elsh85herz/a-valet.git
-cd a-valet
+git clone https://github.com/elsh85herz/avalet.git
+cd avalet
 npm install
 ./scripts/setup-python.sh         # creates python-sidecar/.venv with faster-whisper
 npm run dev
