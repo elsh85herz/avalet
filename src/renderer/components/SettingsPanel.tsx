@@ -4,7 +4,7 @@ import { MEETING_MODES, type MeetingMode, type ProviderSettingsPublic, type Sess
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { PROVIDER_PRESETS_UI } from "../providers/presets.js";
 import { startAudioCapture, type AudioCaptureHandle } from "../capture/audio-capture.js";
-import { IconMoon, IconSun } from "../icons.js";
+import { IconHelp, IconMoon, IconSun } from "../icons.js";
 
 export function SettingsPanel() {
   const bridge = getBridge();
@@ -30,6 +30,7 @@ export function SettingsPanel() {
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
   const [meetingMode, setMeetingModeState] = useState<MeetingMode>("free");
+  const [modeHelpOpen, setModeHelpOpen] = useState(false);
 
   const strings = UI_STRINGS[uiLanguage];
   const t = strings.settings;
@@ -377,16 +378,37 @@ export function SettingsPanel() {
       </section>
 
       <section className="context">
-        <label className="mode-select">
-          {strings.modeLabel}
+        <div className="mode-select">
+          <div className="mode-label-row">
+            <span>{strings.modeLabel}</span>
+            <button
+              type="button"
+              className={`help-btn ${modeHelpOpen ? "on" : ""}`}
+              onClick={() => setModeHelpOpen((v) => !v)}
+              title={t.modeHelpTitle}
+            >
+              <IconHelp />
+            </button>
+          </div>
           <select value={meetingMode} onChange={(e) => void handleModeChange(e.target.value as MeetingMode)}>
             {MEETING_MODES.map((mode) => (
-              <option key={mode} value={mode}>
+              <option key={mode} value={mode} title={strings.modeHelp[mode]}>
                 {strings.modes[mode]}
               </option>
             ))}
           </select>
-        </label>
+          <p className="hint">{strings.modeHelp[meetingMode]}</p>
+          {modeHelpOpen ? (
+            <dl className="mode-help">
+              {MEETING_MODES.map((mode) => (
+                <div key={mode} className={mode === meetingMode ? "active" : ""}>
+                  <dt>{strings.modes[mode]}</dt>
+                  <dd>{strings.modeHelp[mode]}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+        </div>
         <label>
           {t.contextLabel} <span className="optional">{t.contextOptional}</span>
           <textarea
@@ -423,11 +445,21 @@ export function SettingsPanel() {
           <button type="button" onClick={() => void handleStop()} disabled={sessionState !== "listening"}>
             {t.stop}
           </button>
+          <button type="button" onClick={() => void bridge.history.clear()} title={t.clearBlocksTitle}>
+            {t.clearBlocks}
+          </button>
           <button type="button" onClick={() => void handleReset()}>
             {t.resetHistory}
           </button>
         </div>
         <p className="hint">{t.startHint}</p>
+      </section>
+
+      <section className="quit-row">
+        <button type="button" className="danger" onClick={() => void bridge.app.quit()}>
+          {t.quit}
+        </button>
+        <p className="hint">{t.quitHint}</p>
       </section>
     </main>
   );

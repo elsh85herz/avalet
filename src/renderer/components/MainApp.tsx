@@ -5,6 +5,7 @@ import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { SettingsPanel } from "./SettingsPanel.js";
 import { MeetingView } from "./MeetingView.js";
 import { MeetingsList } from "./MeetingsList.js";
+import { IconPin } from "../icons.js";
 
 type Tab = "settings" | "meeting" | "meetings";
 
@@ -13,9 +14,19 @@ export function MainApp() {
   const [tab, setTab] = useState<Tab>("settings");
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
   const [current, setCurrent] = useState<Meeting | null>(null);
+  const [pinned, setPinned] = useState(true);
+
+  async function togglePinned() {
+    const next = !pinned;
+    setPinned(next);
+    await bridge.settings.setMainPinned(next);
+  }
 
   useEffect(() => {
-    void bridge.settings.getAll().then((all) => setUiLanguage(all.uiLanguage));
+    void bridge.settings.getAll().then((all) => {
+      setUiLanguage(all.uiLanguage);
+      setPinned(all.mainPinned);
+    });
     void bridge.meetings.current().then(setCurrent);
     const unsubscribers = [
       bridge.events.onUiLanguageChanged(setUiLanguage),
@@ -38,6 +49,14 @@ export function MainApp() {
             {t.tabs[id]}
           </button>
         ))}
+        <button
+          type="button"
+          className={`pin-btn ${pinned ? "on" : ""}`}
+          onClick={() => void togglePinned()}
+          title={pinned ? t.settings.pinTitle : t.settings.unpinTitle}
+        >
+          <IconPin />
+        </button>
       </nav>
       <div className={tab === "settings" ? "" : "tab-hidden"}>
         <SettingsPanel />

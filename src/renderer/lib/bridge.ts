@@ -23,7 +23,9 @@ type AvaletBridge = {
       theme: "dark" | "light";
       uiLanguage: "ru" | "en";
       meetingMode: MeetingMode;
+      mainPinned: boolean;
     }>;
+    setMainPinned: (pinned: boolean) => Promise<void>;
     setMeetingMode: (mode: MeetingMode) => Promise<void>;
     selectProvider: (providerId: string) => Promise<void>;
     updateProvider: (providerId: string, patch: { model?: string; baseUrl?: string }) => Promise<void>;
@@ -72,7 +74,12 @@ type AvaletBridge = {
     setOpacity: (opacity: number) => Promise<void>;
     setCollapsed: (collapsed: boolean) => Promise<void>;
   };
+  app: {
+    toggleMainWindow: () => Promise<void>;
+    quit: () => Promise<void>;
+  };
   history: {
+    clear: () => Promise<void>;
     get: () => Promise<HistoryBlock[]>;
     append: (block: { id: string; text: string; status: "done" | "error" }) => Promise<void>;
   };

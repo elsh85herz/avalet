@@ -67,8 +67,17 @@ export type UiStrings = {
     stop: string;
     resetHistory: string;
     startHint: string;
+    clearBlocks: string;
+    clearBlocksTitle: string;
+    quit: string;
+    quitHint: string;
+    pinTitle: string;
+    unpinTitle: string;
+    modeHelpTitle: string;
   };
   modes: Record<MeetingModeKey, string>;
+  modeHelp: Record<MeetingModeKey, string>;
+  notesTitle: string;
   modeLabel: string;
   tabs: { settings: string; meeting: string; meetings: string };
   meeting: {
@@ -165,6 +174,13 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       stop: "Stop",
       resetHistory: "End meeting",
       startHint: "Start asks for mic and screen-share (system audio) permissions and opens the overlay. Stop freezes live output but keeps blocks in the overlay for paging. End meeting closes the record; the next Start opens a new one.",
+      clearBlocks: "Clear suggestions",
+      clearBlocksTitle: "Remove the suggestion blocks from the overlay. The meeting and its transcript are kept.",
+      quit: "Quit Avalet",
+      quitHint: "Stops listening, saves the current meeting, and closes the app.",
+      pinTitle: "This window floats above others. Click to make it an ordinary window.",
+      unpinTitle: "Keep this window above other windows during the call.",
+      modeHelpTitle: "What each mode does",
     },
     modes: {
       free: "Free",
@@ -173,6 +189,14 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       demo: "Demo / acceptance",
       interview: "Interview",
     },
+    modeHelp: {
+      free: "No specialization: short suggestions for any conversation.",
+      requirements: "A session with a stakeholder: turns wishes into testable requirements, catches contradictions, suggests what to clarify.",
+      grooming: "Estimating and splitting a task: scope, dependencies, hidden work, a split into slices with acceptance criteria.",
+      demo: "Accepting what is shown: compares it with the requirements, finds unverified states, prepares the sign-off conditions.",
+      interview: "You are the one answering: a complete, structured answer with an example and the likely follow-up question.",
+    },
+    notesTitle: "Show or hide the notes window (transcript, summary, settings)",
     modeLabel: "Meeting mode",
     tabs: { settings: "Settings", meeting: "Meeting", meetings: "History" },
     meeting: {
@@ -265,6 +289,13 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       stop: "Стоп",
       resetHistory: "Завершить встречу",
       startHint: "Старт запросит доступ к микрофону и к экрану (для звука собеседника) и откроет оверлей. Стоп замораживает подсказки, но оставляет их в оверлее для пролистывания. Завершить встречу закрывает запись, следующий Старт откроет новую.",
+      clearBlocks: "Очистить подсказки",
+      clearBlocksTitle: "Убрать накопленные блоки подсказок из оверлея. Встреча и транскрипт остаются.",
+      quit: "Выйти из Avalet",
+      quitHint: "Останавливает прослушивание, сохраняет текущую встречу и закрывает приложение.",
+      pinTitle: "Окно закреплено поверх других. Нажмите, чтобы сделать его обычным.",
+      unpinTitle: "Держать окно поверх других во время звонка.",
+      modeHelpTitle: "Что делает каждый режим",
     },
     modes: {
       free: "Свободный",
@@ -273,6 +304,14 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       demo: "Демо и приёмка",
       interview: "Интервью",
     },
+    modeHelp: {
+      free: "Без специализации: короткие подсказки по ходу любого разговора.",
+      requirements: "Встреча с заказчиком: превращает пожелания в проверяемые требования, ловит противоречия, подсказывает, что уточнить.",
+      grooming: "Оценка и разбиение задачи: границы, зависимости, скрытая работа, декомпозиция на куски с критериями приёмки.",
+      demo: "Приёмка показанного: сверяет с требованиями, ищет непроверенные состояния, готовит условия для подписи.",
+      interview: "Отвечаете вы: развёрнутый структурный ответ с примером и вероятным следующим вопросом.",
+    },
+    notesTitle: "Показать или скрыть окно конспекта (транскрипт, итог, настройки)",
     modeLabel: "Режим встречи",
     tabs: { settings: "Настройки", meeting: "Встреча", meetings: "История" },
     meeting: {

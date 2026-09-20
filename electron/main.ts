@@ -35,6 +35,7 @@ import { summarizeMeeting } from "./meeting-summary.js";
 import {
   getAllProviderSettings,
   getAutoDetectEnabled,
+  getMainPinned,
   getMeetingMode,
   getOverlayOpacity,
   getPreferredMicDeviceId,
@@ -46,6 +47,7 @@ import {
   hasApiKey,
   setApiKey,
   setAutoDetectEnabled,
+  setMainPinned,
   setMeetingMode,
   setOverlayOpacity,
   setPreferredMicDeviceId,
@@ -109,12 +111,33 @@ function createMainWindow(): void {
   // Same as the overlay: the transcript and summary stay out of the user's
   // own screen share and recordings (macOS, Windows 10 2004+).
   win.setContentProtection(true);
+  applyMainPinned(win, getMainPinned());
   void win.loadURL(entryUrl("main"));
   if (devServerUrl) win.webContents.openDevTools({ mode: "detach" });
   mainWindow = win;
   win.on("closed", () => {
     mainWindow = null;
   });
+}
+
+// "Pinned" = floats above other windows like the overlay, so the notes stay
+// reachable during a call; unpinned = an ordinary window.
+function applyMainPinned(win: BrowserWindow, pinned: boolean): void {
+  win.setAlwaysOnTop(pinned, "floating");
+  win.setVisibleOnAllWorkspaces(pinned, { visibleOnFullScreen: true });
+}
+
+function toggleMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createMainWindow();
+    return;
+  }
+  if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
+    mainWindow.hide();
+  } else {
+    mainWindow.show();
+    mainWindow.focus();
+  }
 }
 
 function broadcastToOverlay(channel: string, payload?: unknown): void {
@@ -213,7 +236,23 @@ function registerIpc(): void {
     theme: getTheme(),
     uiLanguage: getUiLanguage(),
     meetingMode: getMeetingMode(),
+    mainPinned: getMainPinned(),
   }));
+
+  ipcMain.handle("avalet:main-set-pinned", (_event, pinned: unknown) => {
+    const next = Boolean(pinned);
+    setMainPinned(next);
+    if (mainWindow) applyMainPinned(mainWindow, next);
+  });
+  ipcMain.handle("avalet:main-toggle", () => toggleMainWindow());
+  ipcMain.handle("avalet:app-quit", () => app.quit());
+
+  // Clears only the suggestion blocks in the overlay; the meeting record and
+  // its transcript are untouched.
+  ipcMain.handle("avalet:history-clear", () => {
+    clearHistory();
+    broadcastToOverlay("avalet:event:history-cleared");
+  });
 
   ipcMain.handle("avalet:meeting-mode-set", (_event, mode: unknown) => {
     if (!isMeetingMode(mode)) throw new Error("unknown meeting mode");
@@ -463,6 +502,7 @@ async function runScreenshotMode(dir: string): Promise<void> {
   const main = mainWindow;
   if (!main) return;
   await wait(1500);
+  await shoot(main, "main-settings-dark");
   const overlay = createOverlayWindow(preloadPath, entryUrl("overlay"));
   showOverlayWindow();
   await wait(1200);
@@ -486,12 +526,9 @@ async function runScreenshotMode(dir: string): Promise<void> {
     await shoot(overlay, `overlay-${theme}-collapsed`);
   }
   main.webContents.send("avalet:event:meeting-ended", endCurrentMeeting());
-  await wait(400);
-  await shoot(main, "main-settings-light");
   applyTheme("dark");
   main.webContents.send("avalet:event:theme-changed", "dark");
   await wait(400);
-  await shoot(main, "main-settings-dark");
   app.quit();
 }
 

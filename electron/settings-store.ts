@@ -34,6 +34,8 @@ type StoreShape = {
   uiLanguage: "ru" | "en";
   /** Prompt preset for the kind of meeting; see electron/modes.ts. */
   meetingMode: MeetingMode;
+  /** Keep the main (notes) window above other windows. */
+  mainPinned: boolean;
 };
 
 const defaults: StoreShape = {
@@ -52,6 +54,7 @@ const defaults: StoreShape = {
   theme: "dark",
   uiLanguage: "ru",
   meetingMode: "free",
+  mainPinned: true,
 };
 
 const store = new Store<StoreShape>({ name: "avalet-settings", defaults });
@@ -188,4 +191,12 @@ export function setApiKey(providerId: string, apiKey: string): void {
 /** Whether a key has been saved, without decrypting/returning it. */
 export function hasApiKey(providerId: string): boolean {
   return Boolean(getProviderSettings(providerId).apiKeyEncrypted);
+}
+
+export function getMainPinned(): boolean {
+  return store.get("mainPinned") ?? true;
+}
+
+export function setMainPinned(pinned: boolean): void {
+  store.set("mainPinned", pinned);
 }

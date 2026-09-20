@@ -53,7 +53,9 @@ const api = {
       theme: "dark" | "light";
       uiLanguage: "ru" | "en";
       meetingMode: MeetingMode;
+      mainPinned: boolean;
     }> => ipcRenderer.invoke("avalet:settings-get-all"),
+    setMainPinned: (pinned: boolean): Promise<void> => ipcRenderer.invoke("avalet:main-set-pinned", pinned),
     setMeetingMode: (mode: MeetingMode): Promise<void> => ipcRenderer.invoke("avalet:meeting-mode-set", mode),
     selectProvider: (providerId: string): Promise<void> =>
       ipcRenderer.invoke("avalet:settings-select-provider", providerId),
@@ -114,7 +116,12 @@ const api = {
     setCollapsed: (collapsed: boolean): Promise<void> =>
       ipcRenderer.invoke("avalet:overlay-set-collapsed", collapsed),
   },
+  app: {
+    toggleMainWindow: (): Promise<void> => ipcRenderer.invoke("avalet:main-toggle"),
+    quit: (): Promise<void> => ipcRenderer.invoke("avalet:app-quit"),
+  },
   history: {
+    clear: (): Promise<void> => ipcRenderer.invoke("avalet:history-clear"),
     get: (): Promise<HistoryBlock[]> => ipcRenderer.invoke("avalet:history-get"),
     append: (block: { id: string; text: string; status: "done" | "error" }): Promise<void> =>
       ipcRenderer.invoke("avalet:history-append", block),

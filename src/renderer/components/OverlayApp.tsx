@@ -3,7 +3,7 @@ import { getBridge } from "../lib/bridge.js";
 import type { MeetingMode, SessionState } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { QUICK_ACTIONS } from "../live/quick-actions.js";
-import { IconCamera, IconPause, IconPlay } from "../icons.js";
+import { IconCamera, IconNotes, IconPause, IconPlay } from "../icons.js";
 
 type Block = {
   id: string;
@@ -61,7 +61,6 @@ export function OverlayApp() {
       bridge.events.onBlockStart(({ id }) => {
         textById.current[id] = "";
         setBlocks((prev) => [...prev, { id, text: "", status: "streaming" }]);
-        if (followLive.current) setPageIndex((prev) => prev + 1);
       }),
       bridge.events.onBlockDelta(({ id, delta }) => {
         textById.current[id] = (textById.current[id] ?? "") + delta;
@@ -95,6 +94,16 @@ export function OverlayApp() {
     ];
     return () => unsubscribers.forEach((unsub) => unsub());
   }, []);
+
+  // Auto mode always shows the newest block; with auto off, paging back
+  // sticks until the user pages forward to the end again.
+  useEffect(() => {
+    if (blocks.length === 0) return;
+    if (autoDetectEnabled || followLive.current) {
+      followLive.current = true;
+      setPageIndex(blocks.length - 1);
+    }
+  }, [blocks.length, autoDetectEnabled]);
 
   const current = blocks[pageIndex];
   // Stopped and not peeking at history = collapsed to a thin strip (see
@@ -228,6 +237,17 @@ export function OverlayApp() {
     </button>
   );
 
+  const notesButton = (
+    <button
+      type="button"
+      className="notes-btn"
+      onClick={() => void bridge.app.toggleMainWindow()}
+      title={t.notesTitle}
+    >
+      <IconNotes />
+    </button>
+  );
+
   const sessionButton = (
     <button
       type="button"
@@ -267,6 +287,7 @@ export function OverlayApp() {
           {autoButton}
           {uiLangButton}
           {screenshotButton}
+          {notesButton}
           {sessionButton}
         </div>
         {navRow}
@@ -283,6 +304,7 @@ export function OverlayApp() {
         {autoButton}
         {uiLangButton}
         {screenshotButton}
+        {notesButton}
         {sessionButton}
       </div>
 

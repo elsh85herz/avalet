@@ -55,3 +55,30 @@ export function IconMoon({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+export function IconNotes({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <rect x="3" y="2" width="10" height="12" rx="1.5" />
+      <path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" />
+    </svg>
+  );
+}
+
+export function IconPin({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <path d="M9.5 2.2 13.8 6.5l-2.1.6-2.4 2.4.3 3-1.4 1.4L5 10.7l-3 3 .6-4.2 3.2-3.2-.2-2.6 1.4-1.4 2.5 0Z" />
+    </svg>
+  );
+}
+
+export function IconHelp({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <circle cx="8" cy="8" r="6.2" />
+      <path d="M6.2 6.3a1.9 1.9 0 0 1 3.7.5c0 1.2-1.9 1.4-1.9 2.6" />
+      <circle cx="8" cy="11.6" r="0.5" fill="currentColor" />
+    </svg>
+  );
+}

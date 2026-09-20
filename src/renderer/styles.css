@@ -958,3 +958,85 @@ select {
 .quick-actions button {
   color: var(--text);
 }
+
+/* --- Mode help, pin, notes, quit --- */
+
+.mode-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.help-btn,
+.pin-btn,
+.notes-btn {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--muted);
+  padding: 4px 6px;
+  border-radius: 999px;
+}
+
+.help-btn.on,
+.pin-btn.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.pin-btn {
+  margin-left: auto;
+  padding: 6px 8px;
+}
+
+.notes-btn {
+  font-size: 12px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+}
+
+.mode-help {
+  margin: 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.mode-help div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mode-help dt {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.mode-help div.active dt {
+  color: var(--accent);
+}
+
+.mode-help dd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.quit-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--card-border);
+}
