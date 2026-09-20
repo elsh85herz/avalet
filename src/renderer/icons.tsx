@@ -1,0 +1,57 @@
+// Minimal single-color line icons (SF Symbols-ish: thin stroke, rounded
+// caps, currentColor) — used instead of emoji across the overlay/settings
+// for a native-feeling, monochrome icon language rather than colorful glyphs.
+
+type IconProps = { size?: number };
+
+const base = {
+  viewBox: "0 0 16 16",
+  fill: "none" as const,
+  stroke: "currentColor",
+  strokeWidth: 1.4,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+export function IconCamera({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <path d="M5.5 4 6.3 2.6h3.4L10.5 4H13a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h2.5Z" />
+      <circle cx="8" cy="8.2" r="2.3" />
+    </svg>
+  );
+}
+
+export function IconPlay({ size = 12 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor">
+      <path d="M4.5 2.8a.8.8 0 0 1 1.22-.68l7.3 4.7a1.4 1.4 0 0 1 0 2.36l-7.3 4.7A.8.8 0 0 1 4.5 13.2z" />
+    </svg>
+  );
+}
+
+export function IconPause({ size = 12 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor">
+      <rect x="4" y="2.5" width="2.6" height="11" rx="1" />
+      <rect x="9.4" y="2.5" width="2.6" height="11" rx="1" />
+    </svg>
+  );
+}
+
+export function IconSun({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...base}>
+      <circle cx="8" cy="8" r="3" />
+      <path d="M8 1.3v1.6M8 13.1v1.6M14.7 8h-1.6M2.9 8H1.3M12.7 3.3l-1.1 1.1M4.4 11.6l-1.1 1.1M12.7 12.7l-1.1-1.1M4.4 4.4 3.3 3.3" />
+    </svg>
+  );
+}
+
+export function IconMoon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor">
+      <path d="M13.8 9.7A6 6 0 0 1 6.3 2.2a6 6 0 1 0 7.5 7.5Z" />
+    </svg>
+  );
+}

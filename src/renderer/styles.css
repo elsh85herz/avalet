@@ -1,0 +1,697 @@
+:root {
+  color-scheme: dark;
+  /* macOS dark-mode system colors (System Blue/Green/Red/Yellow) — matches
+     what native panels like System Settings use, not arbitrary web hues. */
+  --bg: #0b0d10;
+  --panel: #14171c;
+  --border: #262b33;
+  --text: #e6e8eb;
+  --muted: #8b94a3;
+  --accent: #0a84ff;
+  --danger: #ff453a;
+  --ok: #32d74b;
+  --warn: #ffd60a;
+  /* Translucent "card" fill for content sitting over the vibrancy blur
+     (electron/main.ts `vibrancy: "sidebar"`) — same idea as the frosted
+     grouped-list rows in System Settings. */
+  --card-bg: rgba(255, 255, 255, 0.055);
+  --card-border: rgba(255, 255, 255, 0.09);
+  --overlay-tint: rgba(20, 22, 26, 0.45);
+  --overlay-border: rgba(255, 255, 255, 0.12);
+}
+
+/* Light appearance — toggled via the theme switch in Settings, which also
+   flips Electron's `nativeTheme.themeSource` (main.ts) so vibrancy itself
+   renders light, not just these tokens. macOS light-mode system colors,
+   not the dark-mode ones scaled down. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f5f7;
+  --panel: #ffffff;
+  --border: #d8d8dc;
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --accent: #007aff;
+  --danger: #ff3b30;
+  --ok: #34c759;
+  --warn: #ff9f0a;
+  --card-bg: rgba(0, 0, 0, 0.035);
+  --card-border: rgba(0, 0, 0, 0.08);
+  --overlay-tint: rgba(255, 255, 255, 0.55);
+  --overlay-border: rgba(0, 0, 0, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  /* Left transparent on purpose: the main window's vibrancy blur and the
+     overlay's "hud" material (electron/main.ts, overlay-window.ts) need to
+     show through. Non-macOS windows still get a solid background from
+     BrowserWindow's own `backgroundColor` underneath. */
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+/* --- Settings window --- */
+
+.settings {
+  /* Extra top clearance for the inset traffic lights (titleBarStyle:
+     hiddenInset + trafficLightPosition in electron/main.ts). */
+  padding: 40px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings header {
+  -webkit-app-region: drag;
+}
+
+.settings h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-btn {
+  -webkit-app-region: no-drag;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text);
+  padding: 6px;
+  display: inline-flex;
+  border-radius: 999px;
+}
+
+.lang-btn {
+  -webkit-app-region: no-drag;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text);
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.providers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.provider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.provider-row.active {
+  border-color: var(--accent);
+  background: rgba(10, 132, 255, 0.16);
+}
+
+.badge {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ok);
+  border: 1px solid var(--ok);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.provider-config {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+}
+
+.provider-config label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.provider-config input {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.key-row {
+  display: flex;
+  gap: 8px;
+}
+
+.key-row input {
+  flex: 1;
+}
+
+button {
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: filter 0.12s ease, transform 0.08s ease;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* The tactile "press" every native macOS button gives on click. */
+button:active:not(:disabled) {
+  transform: scale(0.96);
+  filter: brightness(0.94);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.permissions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+}
+
+.perm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.perm-pill {
+  font-size: 11px;
+  text-transform: capitalize;
+  border-radius: 999px;
+  padding: 2px 10px;
+  border: 1px solid var(--muted);
+  color: var(--muted);
+}
+
+.perm-pill.granted {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.perm-pill.denied,
+.perm-pill.restricted {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.mic-picker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mic-picker select {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.degraded-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 159, 10, 0.14);
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.degraded-banner button {
+  flex-shrink: 0;
+  background: var(--warn);
+  color: #1d1d1f;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.onboarding-banner {
+  background: rgba(10, 132, 255, 0.14);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.context {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+}
+
+.context label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.context .optional {
+  font-weight: normal;
+  opacity: 0.8;
+}
+
+.context textarea {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.context button {
+  align-self: flex-start;
+}
+
+.auto-detect-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Native-style iOS/macOS toggle switch, built from a plain checkbox —
+   real native apps use this shape everywhere (System Settings, Control
+   Center), never a web-y square checkbox. */
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.switch input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.32);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.switch input::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.switch input:checked {
+  background: var(--ok);
+}
+
+.switch input:checked::before {
+  transform: translateX(16px);
+}
+
+.session-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.state {
+  margin: 0;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.error {
+  color: var(--danger);
+  margin: 0;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+/* --- Overlay window --- */
+
+.overlay {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  /* Light tint over the window's own "hud" vibrancy blur (see
+     overlay-window.ts) — on macOS the frosting comes from the native
+     material, this is just enough tint to keep text legible over it.
+     Non-macOS windows (no vibrancy) fall back to this alone. */
+  background: var(--overlay-tint);
+  border: 1px solid var(--overlay-border);
+  border-radius: 14px;
+  overflow: hidden;
+  -webkit-app-region: drag;
+}
+
+.overlay-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.dot.listening {
+  background: var(--ok);
+}
+
+.dot.paused {
+  background: var(--warn);
+}
+
+/* Pulses over whatever session color is already set (listening/paused) —
+   audio health is orthogonal to session state, both can be true at once. */
+.dot.warn {
+  background: var(--danger);
+  animation: dot-warn-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes dot-warn-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.audio-warning {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 0 10px 8px;
+  padding: 6px 10px;
+  background: rgba(255, 159, 10, 0.16);
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  font-size: 11px;
+  -webkit-app-region: no-drag;
+}
+
+.audio-warning button {
+  flex-shrink: 0;
+  background: var(--warn);
+  color: #1d1d1f;
+  border: none;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.overlay-title {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Filled/tinted chip, like a native segmented-control selection state —
+   not just an outline, so "on" reads as pressed/active at a glance. */
+.auto-btn {
+  margin-left: auto;
+  -webkit-app-region: no-drag;
+  font-size: 11px;
+  padding: 4px 9px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--muted);
+}
+
+.auto-btn.on {
+  background: var(--ok);
+  color: #062;
+  font-weight: 600;
+}
+
+.auto-btn.off {
+  background: var(--danger);
+  color: #400;
+  font-weight: 600;
+}
+
+.session-btn {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  padding: 4px 9px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--muted);
+}
+
+.session-btn.on {
+  background: var(--ok);
+  color: #062;
+}
+
+.session-btn.off {
+  background: var(--danger);
+  color: #400;
+}
+
+/* The collapsed strip and the nav row use the same subtle, borderless
+   arrow buttons — not the heavy filled accent button used everywhere else,
+   which would be too loud for a tiny ◀/▶. */
+.nav-btn {
+  -webkit-app-region: no-drag;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+.nav-btn:hover:not(:disabled) {
+  color: var(--text);
+}
+
+/* --- Collapsed overlay: a thin control strip (see overlay-window.ts
+   setOverlayCollapsed) — same controls as the full header/footer, just
+   squeezed into one row, no block text/quick-actions/ask row. --- */
+.overlay-collapsed {
+  height: auto;
+}
+
+.overlay-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  height: 100%;
+  -webkit-app-region: drag;
+}
+
+.overlay-controls {
+  display: flex;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: no-drag;
+}
+
+.opacity-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  width: 100%;
+}
+
+.opacity-control input[type="range"] {
+  flex: 1;
+}
+
+/* Icon-only chip in the header, next to Auto/Stop — same slot, same size. */
+.screenshot-btn {
+  -webkit-app-region: no-drag;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 8px;
+  background: rgba(10, 132, 255, 0.16);
+  border: 1px solid var(--accent);
+}
+
+.overlay-body-content {
+  flex: 1;
+  padding: 14px;
+  overflow-y: auto;
+  -webkit-app-region: no-drag;
+}
+
+.block-text {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.block-text.error {
+  color: var(--danger);
+}
+
+.block-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 8px;
+  -webkit-app-region: no-drag;
+}
+
+.quick-actions button {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.quick-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+/* Only shown when auto-suggest is off — visually flagged as the one
+   action that actually produces a new block while nothing does it on
+   its own. */
+.process-btn {
+  border-color: var(--accent) !important;
+  color: var(--accent);
+}
+
+.ask-row {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 10px;
+  -webkit-app-region: no-drag;
+}
+
+.ask-row input {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+/* Its own fixed row directly under the header/strip — same DOM position in
+   both the collapsed and expanded views (see OverlayApp.tsx navRow), so
+   paging never jumps between top-right (old collapsed strip) and
+   bottom-center (old expanded footer) when the overlay expands/collapses. */
+.overlay-navrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: no-drag;
+}
+
+.page-counter {
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-electron/
+release/
+*.tsbuildinfo
+.DS_Store
+python-sidecar/.venv/
+python-sidecar/__pycache__/
+*.pyc
+.env
