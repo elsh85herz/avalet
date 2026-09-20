@@ -12,6 +12,29 @@ type LiveBlockDeltaEvent = { id: string; delta: string };
 type LiveBlockErrorEvent = { id: string; message: string };
 type SessionState = "idle" | "listening" | "paused";
 type HistoryBlock = { id: string; text: string; status: "done" | "error"; createdAt: number };
+type MeetingMode = "free" | "requirements" | "grooming" | "demo" | "interview";
+type TranscriptSegment = { at: number; speaker: "me" | "other"; text: string };
+type Meeting = {
+  id: string;
+  title: string;
+  startedAt: number;
+  endedAt?: number;
+  mode: MeetingMode;
+  context: string;
+  transcript: TranscriptSegment[];
+  summary?: string;
+  summaryAt?: number;
+};
+type MeetingListItem = {
+  id: string;
+  title: string;
+  startedAt: number;
+  endedAt?: number;
+  mode: MeetingMode;
+  segmentCount: number;
+  hasSummary: boolean;
+};
+type ExportLabels = { me: string; other: string; summary: string; transcript: string; date: string; mode: string };
 
 function on<T>(channel: string, callback: (payload: T) => void): () => void {
   const listener = (_event: unknown, payload: T) => callback(payload);
@@ -29,7 +52,9 @@ const api = {
       overlayOpacity: number;
       theme: "dark" | "light";
       uiLanguage: "ru" | "en";
+      meetingMode: MeetingMode;
     }> => ipcRenderer.invoke("avalet:settings-get-all"),
+    setMeetingMode: (mode: MeetingMode): Promise<void> => ipcRenderer.invoke("avalet:meeting-mode-set", mode),
     selectProvider: (providerId: string): Promise<void> =>
       ipcRenderer.invoke("avalet:settings-select-provider", providerId),
     updateProvider: (providerId: string, patch: { model?: string; baseUrl?: string }): Promise<void> =>
@@ -94,6 +119,18 @@ const api = {
     append: (block: { id: string; text: string; status: "done" | "error" }): Promise<void> =>
       ipcRenderer.invoke("avalet:history-append", block),
   },
+  meetings: {
+    list: (): Promise<MeetingListItem[]> => ipcRenderer.invoke("avalet:meetings-list"),
+    current: (): Promise<Meeting | null> => ipcRenderer.invoke("avalet:meetings-current"),
+    get: (id: string): Promise<Meeting | null> => ipcRenderer.invoke("avalet:meetings-get", id),
+    rename: (id: string, title: string): Promise<void> => ipcRenderer.invoke("avalet:meetings-rename", id, title),
+    delete: (id: string): Promise<void> => ipcRenderer.invoke("avalet:meetings-delete", id),
+    summarize: (id: string): Promise<string> => ipcRenderer.invoke("avalet:meetings-summarize", id),
+    export: (id: string, labels: ExportLabels, modeLabel: string): Promise<string | null> =>
+      ipcRenderer.invoke("avalet:meetings-export", id, labels, modeLabel),
+    toText: (id: string, labels: ExportLabels, modeLabel: string): Promise<string> =>
+      ipcRenderer.invoke("avalet:meetings-to-text", id, labels, modeLabel),
+  },
   events: {
     onBlockStart: (cb: (e: LiveBlockEvent) => void) => on("avalet:event:block-start", cb),
     onBlockDelta: (cb: (e: LiveBlockDeltaEvent) => void) => on("avalet:event:block-delta", cb),
@@ -111,6 +148,13 @@ const api = {
       on("avalet:event:reconnect-audio-requested", cb),
     onTranscriptionError: (cb: (message: string) => void) => on("avalet:event:transcription-error", cb),
     onTranscriptionRecovered: (cb: () => void) => on("avalet:event:transcription-recovered", cb),
+    onMeetingModeChanged: (cb: (mode: MeetingMode) => void) => on("avalet:event:meeting-mode-changed", cb),
+    onTranscriptSegment: (cb: (segment: TranscriptSegment) => void) => on("avalet:event:transcript-segment", cb),
+    onMeetingStarted: (cb: (meeting: Meeting) => void) => on("avalet:event:meeting-started", cb),
+    onMeetingEnded: (cb: (meeting: Meeting | null) => void) => on("avalet:event:meeting-ended", cb),
+    onSummaryDelta: (cb: (e: { id: string; delta: string }) => void) => on("avalet:event:summary-delta", cb),
+    onSummaryDone: (cb: (e: { id: string; text: string }) => void) => on("avalet:event:summary-done", cb),
+    onSummaryError: (cb: (e: { id: string; message: string }) => void) => on("avalet:event:summary-error", cb),
   },
 };
 

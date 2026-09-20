@@ -68,7 +68,37 @@ export type UiStrings = {
     resetHistory: string;
     startHint: string;
   };
+  modes: Record<MeetingModeKey, string>;
+  modeLabel: string;
+  tabs: { settings: string; meeting: string; meetings: string };
+  meeting: {
+    noCurrent: string;
+    titlePlaceholder: string;
+    live: string;
+    ended: string;
+    transcriptEmpty: string;
+    me: string;
+    other: string;
+    summarize: string;
+    summarizing: string;
+    summaryTitle: string;
+    summaryEmpty: string;
+    exportMd: string;
+    copyText: string;
+    copied: string;
+    exported: string;
+    delete: string;
+    back: string;
+    listEmpty: string;
+    segments: string;
+    hasSummary: string;
+    date: string;
+    transcriptTitle: string;
+    error: string;
+  };
 };
+
+export type MeetingModeKey = "free" | "requirements" | "grooming" | "demo" | "interview";
 
 export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
   en: {
@@ -133,8 +163,42 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       start: "Start",
       resume: "Resume",
       stop: "Stop",
-      resetHistory: "Reset history",
-      startHint: "Start asks for mic and screen-share (system audio) permissions and opens the overlay. Stop freezes live output but keeps blocks in the overlay for paging.",
+      resetHistory: "End meeting",
+      startHint: "Start asks for mic and screen-share (system audio) permissions and opens the overlay. Stop freezes live output but keeps blocks in the overlay for paging. End meeting closes the record; the next Start opens a new one.",
+    },
+    modes: {
+      free: "Free",
+      requirements: "Requirements",
+      grooming: "Grooming",
+      demo: "Demo / acceptance",
+      interview: "Interview",
+    },
+    modeLabel: "Meeting mode",
+    tabs: { settings: "Settings", meeting: "Meeting", meetings: "History" },
+    meeting: {
+      noCurrent: "No meeting in progress. Press Start in Settings: the transcript will appear here.",
+      titlePlaceholder: "Meeting title",
+      live: "live",
+      ended: "ended",
+      transcriptEmpty: "Listening. The first phrases will appear here in a few seconds.",
+      me: "Me",
+      other: "Other",
+      summarize: "Meeting summary",
+      summarizing: "Writing the summary…",
+      summaryTitle: "Summary",
+      summaryEmpty: "No summary yet. Press \"Meeting summary\" when the call is over (or any time during it).",
+      exportMd: "Export .md",
+      copyText: "Copy as text",
+      copied: "Copied",
+      exported: "Saved",
+      delete: "Delete",
+      back: "Back to list",
+      listEmpty: "No meetings yet. Every Start creates one; Reset history closes it.",
+      segments: "phrases",
+      hasSummary: "summary",
+      date: "Date",
+      transcriptTitle: "Transcript",
+      error: "Error",
     },
   },
   ru: {
@@ -199,8 +263,42 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       start: "Старт",
       resume: "Продолжить",
       stop: "Стоп",
-      resetHistory: "Очистить историю",
-      startHint: "Старт запросит доступ к микрофону и к экрану (для звука собеседника) и откроет оверлей. Стоп замораживает подсказки, но оставляет их в оверлее для пролистывания.",
+      resetHistory: "Завершить встречу",
+      startHint: "Старт запросит доступ к микрофону и к экрану (для звука собеседника) и откроет оверлей. Стоп замораживает подсказки, но оставляет их в оверлее для пролистывания. Завершить встречу закрывает запись, следующий Старт откроет новую.",
+    },
+    modes: {
+      free: "Свободный",
+      requirements: "Сбор требований",
+      grooming: "Груминг и оценка",
+      demo: "Демо и приёмка",
+      interview: "Интервью",
+    },
+    modeLabel: "Режим встречи",
+    tabs: { settings: "Настройки", meeting: "Встреча", meetings: "История" },
+    meeting: {
+      noCurrent: "Встреча не идёт. Нажмите Старт в настройках: транскрипт появится здесь.",
+      titlePlaceholder: "Название встречи",
+      live: "идёт",
+      ended: "завершена",
+      transcriptEmpty: "Слушаю. Первые фразы появятся здесь через несколько секунд.",
+      me: "Я",
+      other: "Собеседник",
+      summarize: "Итог встречи",
+      summarizing: "Пишу итог…",
+      summaryTitle: "Итог",
+      summaryEmpty: "Итога пока нет. Нажмите \"Итог встречи\" после звонка (или в любой момент во время него).",
+      exportMd: "Экспорт .md",
+      copyText: "Скопировать текстом",
+      copied: "Скопировано",
+      exported: "Сохранено",
+      delete: "Удалить",
+      back: "К списку",
+      listEmpty: "Встреч пока нет. Каждый Старт создаёт встречу, кнопка Завершить встречу закрывает её.",
+      segments: "реплик",
+      hasSummary: "итог",
+      date: "Дата",
+      transcriptTitle: "Транскрипт",
+      error: "Ошибка",
     },
   },
 };

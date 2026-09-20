@@ -1,6 +1,7 @@
 import { safeStorage } from "electron";
 import Store from "electron-store";
 import { PROVIDER_PRESETS } from "./providers/index.js";
+import type { MeetingMode } from "./modes.js";
 
 export type ProviderSettings = {
   providerId: string;
@@ -31,6 +32,8 @@ type StoreShape = {
    * The model's own answer language is fixed to Russian in the system
    * prompt (see live-session.ts) — not user-configurable. */
   uiLanguage: "ru" | "en";
+  /** Prompt preset for the kind of meeting; see electron/modes.ts. */
+  meetingMode: MeetingMode;
 };
 
 const defaults: StoreShape = {
@@ -48,6 +51,7 @@ const defaults: StoreShape = {
   overlayOpacity: 1,
   theme: "dark",
   uiLanguage: "ru",
+  meetingMode: "free",
 };
 
 const store = new Store<StoreShape>({ name: "avalet-settings", defaults });
@@ -106,6 +110,14 @@ export function getUiLanguage(): "ru" | "en" {
 
 export function setUiLanguage(language: "ru" | "en"): void {
   store.set("uiLanguage", language);
+}
+
+export function getMeetingMode(): MeetingMode {
+  return store.get("meetingMode") ?? "free";
+}
+
+export function setMeetingMode(mode: MeetingMode): void {
+  store.set("meetingMode", mode);
 }
 
 function readProviders(): Record<string, ProviderSettings> {

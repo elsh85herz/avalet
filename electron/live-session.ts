@@ -4,10 +4,12 @@ import { PROVIDER_PRESETS } from "./providers/types.js";
 import {
   getApiKey,
   getAutoDetectEnabled,
+  getMeetingMode,
   getProviderSettings,
   getSelectedProviderId,
   getSessionContext,
 } from "./settings-store.js";
+import { MODE_INSTRUCTIONS } from "./modes.js";
 import type { PythonRuntime } from "./python-runtime.js";
 
 const BASE_SYSTEM_PROMPT = [
@@ -79,6 +81,8 @@ export type LiveSessionEvents = {
   onTranscriptionError: (message: string) => void;
   /** Fires once transcription succeeds again after having been in error. */
   onTranscriptionRecovered: () => void;
+  /** Every non-empty transcribed chunk, in order, for the meeting record. */
+  onTranscriptSegment: (segment: { at: number; speaker: AudioChannel; text: string }) => void;
 };
 
 // Skip the first blip — a single dropped chunk is normal noise (a hiccup in
@@ -88,6 +92,8 @@ const TRANSCRIPTION_ERROR_THRESHOLD = 2;
 
 function buildSystemPrompt(options: { includeScreenshot?: boolean } = {}): string {
   let prompt = BASE_SYSTEM_PROMPT;
+  const modeInstruction = MODE_INSTRUCTIONS[getMeetingMode()];
+  if (modeInstruction) prompt = `${prompt} ${modeInstruction}`;
   if (options.includeScreenshot) prompt = `${prompt} ${SCREENSHOT_INSTRUCTION}`;
   const context = getSessionContext().trim();
   if (!context) return prompt;
@@ -173,6 +179,7 @@ export class LiveSession {
     }
     if (!text) return;
 
+    this.events.onTranscriptSegment({ at: Date.now(), speaker: channel, text });
     const label = channel === "other" ? "Собеседник" : "Я";
     this.transcript = `${this.transcript}\n[${label}]: ${text}`.trim().slice(-TRANSCRIPT_CHAR_BUDGET);
     this.segmentSinceTrigger = `${this.segmentSinceTrigger} ${text}`.trim();

@@ -1,10 +1,15 @@
 import type {
+  ExportLabels,
   HistoryBlock,
   LiveBlockDeltaEvent,
   LiveBlockErrorEvent,
   LiveBlockEvent,
+  Meeting,
+  MeetingListItem,
+  MeetingMode,
   ProviderSettingsPublic,
   SessionState,
+  TranscriptSegment,
 } from "./types.js";
 
 type AvaletBridge = {
@@ -17,7 +22,9 @@ type AvaletBridge = {
       overlayOpacity: number;
       theme: "dark" | "light";
       uiLanguage: "ru" | "en";
+      meetingMode: MeetingMode;
     }>;
+    setMeetingMode: (mode: MeetingMode) => Promise<void>;
     selectProvider: (providerId: string) => Promise<void>;
     updateProvider: (providerId: string, patch: { model?: string; baseUrl?: string }) => Promise<void>;
     setApiKey: (providerId: string, apiKey: string) => Promise<void>;
@@ -69,6 +76,16 @@ type AvaletBridge = {
     get: () => Promise<HistoryBlock[]>;
     append: (block: { id: string; text: string; status: "done" | "error" }) => Promise<void>;
   };
+  meetings: {
+    list: () => Promise<MeetingListItem[]>;
+    current: () => Promise<Meeting | null>;
+    get: (id: string) => Promise<Meeting | null>;
+    rename: (id: string, title: string) => Promise<void>;
+    delete: (id: string) => Promise<void>;
+    summarize: (id: string) => Promise<string>;
+    export: (id: string, labels: ExportLabels, modeLabel: string) => Promise<string | null>;
+    toText: (id: string, labels: ExportLabels, modeLabel: string) => Promise<string>;
+  };
   events: {
     onBlockStart: (cb: (e: LiveBlockEvent) => void) => () => void;
     onBlockDelta: (cb: (e: LiveBlockDeltaEvent) => void) => () => void;
@@ -83,6 +100,13 @@ type AvaletBridge = {
     onReconnectAudioRequested: (cb: (channel: "me" | "other" | "both") => void) => () => void;
     onTranscriptionError: (cb: (message: string) => void) => () => void;
     onTranscriptionRecovered: (cb: () => void) => () => void;
+    onMeetingModeChanged: (cb: (mode: MeetingMode) => void) => () => void;
+    onTranscriptSegment: (cb: (segment: TranscriptSegment) => void) => () => void;
+    onMeetingStarted: (cb: (meeting: Meeting) => void) => () => void;
+    onMeetingEnded: (cb: (meeting: Meeting | null) => void) => () => void;
+    onSummaryDelta: (cb: (e: { id: string; delta: string }) => void) => () => void;
+    onSummaryDone: (cb: (e: { id: string; text: string }) => void) => () => void;
+    onSummaryError: (cb: (e: { id: string; message: string }) => void) => () => void;
   };
 };
 

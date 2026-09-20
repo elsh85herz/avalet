@@ -15,6 +15,8 @@ Local-first and bring-your-own-LLM: audio never leaves your Mac, transcription r
 - **Who said what.** Your mic and the system audio are captured as two channels, so the transcript is tagged "me" / "other" and the model doesn't mistake your own words for a question addressed to you.
 - **Meeting context.** Paste the ticket, spec, or agenda before the call; every suggestion is grounded in it.
 - **Manual ask, quick actions, screenshot.** Type a question any time, tap "Summarize" / "Risks?" / "Ask a question" / "Explain this", or send a screenshot of your screen for a priority read (Claude and OpenAI only).
+- **Meeting modes.** Requirements gathering, grooming and estimation, demo and acceptance, interview, or free: each shifts what the assistant pays attention to.
+- **Transcript and meeting summary.** Every call is saved as a meeting with a timestamped, speaker-tagged transcript. One button writes the summary in an analyst's format: decisions, open questions, requirements, risks, tasks. Export to Markdown or copy as plain text.
 - **Stop / Resume / history.** Stop freezes live output without losing anything, page through earlier blocks, resume instantly. History is kept on disk.
 - **Overlay stays out of your screen share** (macOS content protection), the way presenter notes do.
 - **Works for any meeting where you have to answer fast and to the point:** requirements sessions, grooming, demos, architecture reviews, technical interviews.
@@ -85,10 +87,10 @@ system audio (loopback)               5s WAV chunks, tagged "other"
 
 ## Roadmap
 
-- Transcript view and per-meeting saving with export
-- "Meeting summary" in an analyst's format: decisions, open questions, requirements, risks, tasks
-- Meeting modes (requirements gathering, grooming, demo, interview practice)
 - Signed builds and auto-update
+- Speech model bundled with the app (no first-run download)
+- Interview practice mode (the assistant asks, you answer)
+- Meeting facilitation: agenda progress, "back on topic", open items before wrap-up
 - Windows
 
 ## License

@@ -1,4 +1,13 @@
-import { app, BrowserWindow, ipcMain, nativeImage, nativeTheme, type DesktopCapturerSource } from "electron";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  nativeImage,
+  nativeTheme,
+  type DesktopCapturerSource,
+} from "electron";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { initMain as initAudioLoopbackMain } from "electron-audio-loopback";
@@ -8,9 +17,25 @@ import { checkMicAccess, checkScreenAccess } from "./ipc/permissions.js";
 import { listScreenSources } from "./ipc/screen-sources.js";
 import { appendHistoryBlock, clearHistory, getHistory, type HistoryBlock } from "./history-store.js";
 import { LiveSession, type LiveBlock } from "./live-session.js";
+import { isMeetingMode } from "./modes.js";
+import {
+  appendSegment,
+  deleteMeeting,
+  endCurrentMeeting,
+  flushCurrentMeeting,
+  getCurrentMeeting,
+  listMeetings,
+  meetingToMarkdown,
+  readMeeting,
+  renameMeeting,
+  setCurrentMode,
+  startMeeting,
+} from "./meetings-store.js";
+import { summarizeMeeting } from "./meeting-summary.js";
 import {
   getAllProviderSettings,
   getAutoDetectEnabled,
+  getMeetingMode,
   getOverlayOpacity,
   getPreferredMicDeviceId,
   getPreferredScreenSourceId,
@@ -21,6 +46,7 @@ import {
   hasApiKey,
   setApiKey,
   setAutoDetectEnabled,
+  setMeetingMode,
   setOverlayOpacity,
   setPreferredMicDeviceId,
   setPreferredScreenSourceId,
@@ -113,6 +139,10 @@ const liveSession = new LiveSession(
       broadcastToOverlay("avalet:event:transcription-recovered");
       mainWindow?.webContents.send("avalet:event:transcription-recovered");
     },
+    onTranscriptSegment: (segment) => {
+      appendSegment(segment);
+      mainWindow?.webContents.send("avalet:event:transcript-segment", segment);
+    },
   },
   async () => {
     try {
@@ -124,6 +154,25 @@ const liveSession = new LiveSession(
     }
   },
 );
+
+function renderMeeting(id: string, labels: unknown, modeLabel: unknown): string {
+  const meeting = readMeeting(id);
+  if (!meeting) throw new Error("meeting not found");
+  const l = (labels ?? {}) as Record<string, unknown>;
+  const pick = (key: string, fallback: string) => (typeof l[key] === "string" ? (l[key] as string) : fallback);
+  return meetingToMarkdown(
+    meeting,
+    {
+      me: pick("me", "Me"),
+      other: pick("other", "Other"),
+      summary: pick("summary", "Summary"),
+      transcript: pick("transcript", "Transcript"),
+      date: pick("date", "Date"),
+      mode: pick("mode", "Mode"),
+    },
+    typeof modeLabel === "string" ? modeLabel : meeting.mode,
+  );
+}
 
 function registerIpc(): void {
   // Loopback capture picks a screen source itself (no native share picker) —
@@ -151,49 +200,74 @@ function registerIpc(): void {
     overlayOpacity: getOverlayOpacity(),
     theme: getTheme(),
     uiLanguage: getUiLanguage(),
+    meetingMode: getMeetingMode(),
   }));
 
-  ipcMain.handle("avalet:context-set", (_event, text: unknown) => {
-    if (typeof text !== "string") throw new Error("text must be a string");
-    setSessionContext(text);
+  ipcMain.handle("avalet:meeting-mode-set", (_event, mode: unknown) => {
+    if (!isMeetingMode(mode)) throw new Error("unknown meeting mode");
+    setMeetingMode(mode);
+    setCurrentMode(mode);
+    broadcastToOverlay("avalet:event:meeting-mode-changed", mode);
+    mainWindow?.webContents.send("avalet:event:meeting-mode-changed", mode);
   });
 
-  ipcMain.handle("avalet:auto-detect-set", (_event, enabled: unknown) => {
-    const next = Boolean(enabled);
-    setAutoDetectEnabled(next);
-    // Toggleable both from the settings window and from the overlay itself
-    // (mid-session) — broadcast so whichever window didn't originate the
-    // change stays in sync.
-    broadcastToOverlay("avalet:event:auto-detect-changed", next);
-    mainWindow?.webContents.send("avalet:event:auto-detect-changed", next);
+  ipcMain.handle("avalet:meetings-list", () => listMeetings());
+  ipcMain.handle("avalet:meetings-current", () => getCurrentMeeting());
+  ipcMain.handle("avalet:meetings-get", (_event, id: unknown) => {
+    if (typeof id !== "string") throw new Error("id must be a string");
+    return readMeeting(id);
+  });
+  ipcMain.handle("avalet:meetings-rename", (_event, id: unknown, title: unknown) => {
+    if (typeof id !== "string" || typeof title !== "string") throw new Error("invalid arguments");
+    renameMeeting(id, title);
+  });
+  ipcMain.handle("avalet:meetings-delete", (_event, id: unknown) => {
+    if (typeof id !== "string") throw new Error("id must be a string");
+    deleteMeeting(id);
   });
 
-  ipcMain.handle("avalet:overlay-set-opacity", (_event, opacity: unknown) => {
-    if (typeof opacity !== "number" || Number.isNaN(opacity)) throw new Error("opacity must be a number");
-    setOverlayOpacity(opacity);
-    setOverlayWindowOpacity(getOverlayOpacity());
+  let summaryAbort: AbortController | null = null;
+  ipcMain.handle("avalet:meetings-summarize", async (_event, id: unknown) => {
+    if (typeof id !== "string") throw new Error("id must be a string");
+    summaryAbort?.abort();
+    const controller = new AbortController();
+    summaryAbort = controller;
+    flushCurrentMeeting();
+    try {
+      const text = await summarizeMeeting(id, controller.signal, {
+        onDelta: (delta) => mainWindow?.webContents.send("avalet:event:summary-delta", { id, delta }),
+      });
+      mainWindow?.webContents.send("avalet:event:summary-done", { id, text });
+      return text;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      mainWindow?.webContents.send("avalet:event:summary-error", { id, message });
+      throw error;
+    } finally {
+      if (summaryAbort === controller) summaryAbort = null;
+    }
   });
 
-  ipcMain.handle("avalet:overlay-set-collapsed", (_event, collapsed: unknown) => {
-    setOverlayCollapsed(Boolean(collapsed));
+  ipcMain.handle("avalet:meetings-export", async (_event, id: unknown, labels: unknown, modeLabel: unknown) => {
+    if (typeof id !== "string") throw new Error("id must be a string");
+    const meeting = readMeeting(id);
+    if (!meeting) throw new Error("meeting not found");
+    const markdown = renderMeeting(id, labels, modeLabel);
+    const safeTitle = meeting.title.replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80);
+    const options = {
+      defaultPath: path.join(app.getPath("documents"), `${safeTitle}.md`),
+      filters: [{ name: "Markdown", extensions: ["md"] }],
+    };
+    const result = mainWindow ? await dialog.showSaveDialog(mainWindow, options) : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) return null;
+    fs.writeFileSync(result.filePath, markdown, "utf8");
+    return result.filePath;
   });
 
-  ipcMain.handle("avalet:theme-set", (_event, theme: unknown) => {
-    if (theme !== "dark" && theme !== "light") throw new Error("theme must be 'dark' or 'light'");
-    setTheme(theme);
-    // Real native switch, not just CSS: makes window vibrancy (and any
-    // other OS chrome) actually render in the matching shade, independent
-    // of the system's own appearance setting.
-    nativeTheme.themeSource = theme;
-    broadcastToOverlay("avalet:event:theme-changed", theme);
-    mainWindow?.webContents.send("avalet:event:theme-changed", theme);
-  });
-
-  ipcMain.handle("avalet:ui-language-set", (_event, language: unknown) => {
-    if (language !== "ru" && language !== "en") throw new Error("language must be 'ru' or 'en'");
-    setUiLanguage(language);
-    broadcastToOverlay("avalet:event:ui-language-changed", language);
-    mainWindow?.webContents.send("avalet:event:ui-language-changed", language);
+  // Plain-text variant for the clipboard: same content, markdown headings stripped.
+  ipcMain.handle("avalet:meetings-to-text", (_event, id: unknown, labels: unknown, modeLabel: unknown) => {
+    if (typeof id !== "string") throw new Error("id must be a string");
+    return renderMeeting(id, labels, modeLabel).replace(/^#+ /gm, "");
   });
 
   ipcMain.handle("avalet:session-ask", async (_event, question: unknown) => {
@@ -238,6 +312,8 @@ function registerIpc(): void {
         console.error("[main] python-sidecar failed to start:", error);
       });
     }
+    const meeting = startMeeting({ mode: getMeetingMode(), context: getSessionContext() });
+    mainWindow?.webContents.send("avalet:event:meeting-started", meeting);
     createOverlayWindow(preloadPath, entryUrl("overlay"));
     showOverlayWindow();
     liveSession.start();
@@ -245,6 +321,7 @@ function registerIpc(): void {
 
   ipcMain.handle("avalet:session-stop", () => {
     liveSession.stop();
+    flushCurrentMeeting();
   });
 
   // The overlay window's page can finish loading after `session-start`
@@ -254,10 +331,13 @@ function registerIpc(): void {
   // default instead of the real current state.
   ipcMain.handle("avalet:session-get-state", () => liveSession.getState());
 
+  // Ends the current meeting record as well: the next Start opens a new one.
   ipcMain.handle("avalet:session-reset", () => {
     liveSession.reset();
     clearHistory();
+    const ended = endCurrentMeeting();
     broadcastToOverlay("avalet:event:history-cleared");
+    mainWindow?.webContents.send("avalet:event:meeting-ended", ended);
   });
 
   ipcMain.handle("avalet:history-get", (): HistoryBlock[] => getHistory());
@@ -332,10 +412,12 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", async () => {
+  flushCurrentMeeting();
   await pythonRuntime.stop();
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("before-quit", async () => {
+  flushCurrentMeeting();
   await pythonRuntime.stop();
 });

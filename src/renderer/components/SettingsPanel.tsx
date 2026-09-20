@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
-import type { ProviderSettingsPublic, SessionState } from "../lib/types.js";
+import { MEETING_MODES, type MeetingMode, type ProviderSettingsPublic, type SessionState } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { PROVIDER_PRESETS_UI } from "../providers/presets.js";
 import { startAudioCapture, type AudioCaptureHandle } from "../capture/audio-capture.js";
@@ -29,8 +29,10 @@ export function SettingsPanel() {
   const [autoDetectEnabled, setAutoDetectEnabledState] = useState(true);
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
+  const [meetingMode, setMeetingModeState] = useState<MeetingMode>("free");
 
-  const t = UI_STRINGS[uiLanguage].settings;
+  const strings = UI_STRINGS[uiLanguage];
+  const t = strings.settings;
 
   useEffect(() => {
     void refresh();
@@ -46,6 +48,7 @@ export function SettingsPanel() {
       document.documentElement.dataset.theme = next;
     });
     const unsubscribeLanguage = bridge.events.onUiLanguageChanged(setUiLanguage);
+    const unsubscribeMode = bridge.events.onMeetingModeChanged(setMeetingModeState);
     // The overlay can't reach this window's MediaStreams directly — it asks
     // (via main) for whichever channel needs reconnecting, and we're the
     // ones actually holding the live AudioCaptureHandle.
@@ -61,6 +64,7 @@ export function SettingsPanel() {
       unsubscribeAutoDetect();
       unsubscribeTheme();
       unsubscribeLanguage();
+      unsubscribeMode();
       unsubscribeReconnect();
       unsubscribeTranscriptionError();
       unsubscribeTranscriptionRecovered();
@@ -75,7 +79,13 @@ export function SettingsPanel() {
     setAutoDetectEnabledState(all.autoDetectEnabled);
     setThemeState(all.theme);
     setUiLanguage(all.uiLanguage);
+    setMeetingModeState(all.meetingMode);
     document.documentElement.dataset.theme = all.theme;
+  }
+
+  async function handleModeChange(mode: MeetingMode) {
+    setMeetingModeState(mode);
+    await bridge.settings.setMeetingMode(mode);
   }
 
   async function toggleTheme() {
@@ -367,6 +377,16 @@ export function SettingsPanel() {
       </section>
 
       <section className="context">
+        <label className="mode-select">
+          {strings.modeLabel}
+          <select value={meetingMode} onChange={(e) => void handleModeChange(e.target.value as MeetingMode)}>
+            {MEETING_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {strings.modes[mode]}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           {t.contextLabel} <span className="optional">{t.contextOptional}</span>
           <textarea

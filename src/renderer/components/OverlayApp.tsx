@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
-import type { SessionState } from "../lib/types.js";
+import type { MeetingMode, SessionState } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { QUICK_ACTIONS } from "../live/quick-actions.js";
 import { IconCamera, IconPause, IconPlay } from "../icons.js";
@@ -21,6 +21,7 @@ export function OverlayApp() {
   const [autoDetectEnabled, setAutoDetectEnabled] = useState(true);
   const [opacity, setOpacity] = useState(1);
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
+  const [meetingMode, setMeetingMode] = useState<MeetingMode>("free");
   const [audioDegraded, setAudioDegraded] = useState({ me: false, other: false });
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
@@ -41,6 +42,7 @@ export function OverlayApp() {
       setOpacity(all.overlayOpacity);
       document.documentElement.dataset.theme = all.theme;
       setUiLanguage(all.uiLanguage);
+      setMeetingMode(all.meetingMode);
     });
     // The session may already be "listening" by the time this page finishes
     // loading (session-start's state broadcast can't reach a listener that
@@ -81,6 +83,7 @@ export function OverlayApp() {
         document.documentElement.dataset.theme = theme;
       }),
       bridge.events.onUiLanguageChanged(setUiLanguage),
+      bridge.events.onMeetingModeChanged(setMeetingMode),
       bridge.events.onAudioDegraded(setAudioDegraded),
       bridge.events.onTranscriptionError(setTranscriptionError),
       bridge.events.onTranscriptionRecovered(() => setTranscriptionError(null)),
@@ -276,6 +279,7 @@ export function OverlayApp() {
       <div className="overlay-header">
         <span className={`dot ${sessionState}${hasAudioIssue ? " warn" : ""}`} />
         <span className="overlay-title">Avalet</span>
+        {meetingMode !== "free" ? <span className="mode-chip">{t.modes[meetingMode]}</span> : null}
         {autoButton}
         {uiLangButton}
         {screenshotButton}
