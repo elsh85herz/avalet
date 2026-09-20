@@ -37,6 +37,8 @@ type StoreShape = {
   meetingMode: MeetingMode;
   /** Keep the main (notes) window above other windows. */
   mainPinned: boolean;
+  /** Also send locally recognized text with screenshots to models that see images. */
+  screenshotText: boolean;
 };
 
 const defaults: StoreShape = {
@@ -56,6 +58,7 @@ const defaults: StoreShape = {
   uiLanguage: "ru",
   meetingMode: "free",
   mainPinned: true,
+  screenshotText: true,
 };
 
 const store = new Store<StoreShape>({ name: "avalet-settings", defaults });
@@ -197,4 +200,12 @@ export function getMainPinned(): boolean {
 
 export function setMainPinned(pinned: boolean): void {
   store.set("mainPinned", pinned);
+}
+
+export function getScreenshotTextEnabled(): boolean {
+  return store.get("screenshotText") ?? true;
+}
+
+export function setScreenshotTextEnabled(enabled: boolean): void {
+  store.set("screenshotText", enabled);
 }

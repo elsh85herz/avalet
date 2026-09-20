@@ -31,6 +31,8 @@ export function SettingsPanel() {
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
   const [meetingMode, setMeetingModeState] = useState<MeetingMode>("free");
   const [modeHelpOpen, setModeHelpOpen] = useState(false);
+  const [screenshotText, setScreenshotTextState] = useState(true);
+  const [ocrAvailable, setOcrAvailable] = useState(false);
 
   const strings = UI_STRINGS[uiLanguage];
   const t = strings.settings;
@@ -81,7 +83,15 @@ export function SettingsPanel() {
     setThemeState(all.theme);
     setUiLanguage(all.uiLanguage);
     setMeetingModeState(all.meetingMode);
+    setScreenshotTextState(all.screenshotText);
+    setOcrAvailable(all.ocrAvailable);
     document.documentElement.dataset.theme = all.theme;
+  }
+
+  async function handleToggleScreenshotText() {
+    const next = !screenshotText;
+    setScreenshotTextState(next);
+    await bridge.settings.setScreenshotText(next);
   }
 
   async function handleModeChange(mode: MeetingMode) {
@@ -434,6 +444,20 @@ export function SettingsPanel() {
           {t.autoSuggest}
         </label>
         <p className="hint">{autoDetectEnabled ? t.autoSuggestOnHint : t.autoSuggestOffHint}</p>
+        <label className="auto-detect-toggle">
+          <span className="switch">
+            <input
+              type="checkbox"
+              checked={screenshotText && ocrAvailable}
+              disabled={!ocrAvailable}
+              onChange={() => void handleToggleScreenshotText()}
+            />
+          </span>
+          {t.screenshotText}
+        </label>
+        <p className="hint">
+          {!ocrAvailable ? t.screenshotTextUnavailable : screenshotText ? t.screenshotTextOn : t.screenshotTextOff}
+        </p>
         <p className="state">
           {t.sessionLabel}: {sessionState}
         </p>

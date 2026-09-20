@@ -21,9 +21,13 @@
     "typecheck": "npm run typecheck:renderer && npm run typecheck:main",
     "typecheck:renderer": "tsc --noEmit -p tsconfig.json",
     "typecheck:main": "tsc --noEmit -p tsconfig.node.json",
-    "dist:mac:unsigned": "npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.config.mjs -c.mac.identity=null --mac dmg zip --publish never",
-    "dist:mac:dir": "npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.config.mjs -c.mac.identity=null --mac dir --publish never",
-    "update:mac": "bash scripts/build-and-install.sh"
+    "dist:mac:unsigned": "npm run build:native && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.config.mjs -c.mac.identity=null --mac dmg zip --publish never",
+    "dist:mac:dir": "npm run build:native && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.config.mjs -c.mac.identity=null --mac dir --publish never",
+    "update:mac": "bash scripts/build-and-install.sh",
+    "test": "tsc -p tsconfig.node.json && node --test dist-electron/ocr/layout.test.js dist-electron/providers/errors.test.js",
+    "build:native": "bash scripts/build-native.sh",
+    "predev": "npm run build:native",
+    "ocr:selftest": "bash scripts/ocr-selftest.sh"
   },
   "dependencies": {
     "electron-audio-loopback": "^1.0.5",

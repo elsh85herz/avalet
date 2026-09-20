@@ -5,10 +5,14 @@ export default {
   directories: {
     output: "release",
   },
-  files: ["dist-electron/**/*", "dist/**/*", "package.json"],
+  files: ["dist-electron/**/*", "!dist-electron/**/*.test.js", "dist/**/*", "package.json"],
   // .venv is bundled (must be created with `python3 -m venv --copies .venv`
   // via scripts/setup-python.sh — a symlinked venv breaks once copied here).
-  extraResources: [{ from: "python-sidecar", to: "python-sidecar", filter: ["**/*", "!.venv/.gitignore"] }],
+  extraResources: [
+    { from: "python-sidecar", to: "python-sidecar", filter: ["**/*", "!.venv/.gitignore"] },
+    // Native helpers built by scripts/build-native.sh (screenshot text recognition).
+    { from: "native/bin", to: "native" },
+  ],
   // Single 1024x1024 PNG — electron-builder converts it to .icns/.ico itself,
   // no macOS-only tooling (iconutil etc.) required to build this.
   icon: "assets/icon.png",

@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { initMain as initAudioLoopbackMain } from "electron-audio-loopback";
 import { PythonRuntime } from "./python-runtime.js";
 import { captureScreenshot } from "./ipc/screenshot.js";
+import { isOcrAvailable, recognizeScreenText } from "./ocr/index.js";
 import { checkMicAccess, checkScreenAccess } from "./ipc/permissions.js";
 import { listScreenSources } from "./ipc/screen-sources.js";
 import { appendHistoryBlock, clearHistory, getHistory, type HistoryBlock } from "./history-store.js";
@@ -37,6 +38,7 @@ import {
   getAutoDetectEnabled,
   getMainPinned,
   getMeetingMode,
+  getScreenshotTextEnabled,
   getOverlayOpacity,
   getPreferredMicDeviceId,
   getPreferredScreenSourceId,
@@ -49,6 +51,7 @@ import {
   setAutoDetectEnabled,
   setMainPinned,
   setMeetingMode,
+  setScreenshotTextEnabled,
   setOverlayOpacity,
   setPreferredMicDeviceId,
   setPreferredScreenSourceId,
@@ -173,9 +176,17 @@ const liveSession = new LiveSession(
   async () => {
     try {
       const shot = await captureScreenshot();
-      return shot.base64;
+      return { image: shot.base64, ocrImage: shot.ocrBase64 };
     } catch (error) {
       console.error("[main] screenshot capture failed:", error);
+      return null;
+    }
+  },
+  async (pngBase64) => {
+    try {
+      return await recognizeScreenText(pngBase64);
+    } catch (error) {
+      console.error("[main] text recognition failed:", error);
       return null;
     }
   },
@@ -222,7 +233,7 @@ function registerIpc(): void {
     },
   });
 
-  ipcMain.handle("avalet:settings-get-all", () => ({
+  ipcMain.handle("avalet:settings-get-all", async () => ({
     selectedProviderId: getSelectedProviderId(),
     providers: getAllProviderSettings().map((s) => ({
       providerId: s.providerId,
@@ -237,7 +248,13 @@ function registerIpc(): void {
     uiLanguage: getUiLanguage(),
     meetingMode: getMeetingMode(),
     mainPinned: getMainPinned(),
+    screenshotText: getScreenshotTextEnabled(),
+    ocrAvailable: await isOcrAvailable(),
   }));
+
+  ipcMain.handle("avalet:screenshot-text-set", (_event, enabled: unknown) => {
+    setScreenshotTextEnabled(Boolean(enabled));
+  });
 
   ipcMain.handle("avalet:main-set-pinned", (_event, pinned: unknown) => {
     const next = Boolean(pinned);
@@ -501,8 +518,10 @@ async function runScreenshotMode(dir: string): Promise<void> {
   fs.mkdirSync(dir, { recursive: true });
   const main = mainWindow;
   if (!main) return;
+  main.setSize(480, 1700);
   await wait(1500);
   await shoot(main, "main-settings-dark");
+  main.setSize(480, 720);
   const overlay = createOverlayWindow(preloadPath, entryUrl("overlay"));
   showOverlayWindow();
   await wait(1200);

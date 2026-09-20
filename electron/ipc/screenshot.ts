@@ -1,32 +1,40 @@
 import { desktopCapturer, screen } from "electron";
 
-/**
- * Grabs a single downscaled screenshot of the primary display as a PNG,
- * base64-encoded (no data: prefix). Used as optional visual context for the
- * live-session's next generated block — not a continuous recording.
- */
-export async function captureScreenshot(): Promise<{ base64: string; width: number; height: number }> {
-  const display = screen.getPrimaryDisplay();
-  // Downscale before capture — screenshots only need to be legible to the
-  // model, not full resolution, and this keeps the request payload small.
-  const thumbnailWidth = 1280;
-  const scale = thumbnailWidth / display.size.width;
-  const thumbnailSize = {
-    width: thumbnailWidth,
-    height: Math.round(display.size.height * scale),
-  };
+// The image sent to a vision model is downscaled (models resize anyway and a
+// smaller payload is faster); the copy used for text recognition keeps more
+// pixels, because small UI text is the first thing lost when shrinking.
+const MODEL_WIDTH = 1280;
+const OCR_WIDTH = 2560;
 
+export type Screenshot = {
+  /** PNG, base64, no data: prefix, MODEL_WIDTH wide. */
+  base64: string;
+  /** PNG, base64, up to OCR_WIDTH wide, for text recognition. */
+  ocrBase64: string;
+  width: number;
+  height: number;
+};
+
+/** Grabs one screenshot of the primary display; not a continuous recording. */
+export async function captureScreenshot(): Promise<Screenshot> {
+  const display = screen.getPrimaryDisplay();
+  const capturedWidth = Math.min(OCR_WIDTH, Math.round(display.size.width * display.scaleFactor));
+  const scale = capturedWidth / display.size.width;
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
-    thumbnailSize,
+    thumbnailSize: { width: capturedWidth, height: Math.round(display.size.height * scale) },
   });
   const source = sources.find((s) => s.display_id === String(display.id)) ?? sources[0];
   if (!source) throw new Error("No screen source available for screenshot");
 
-  const png = source.thumbnail.toPNG();
+  const full = source.thumbnail;
+  const size = full.getSize();
+  const model = size.width > MODEL_WIDTH ? full.resize({ width: MODEL_WIDTH, quality: "best" }) : full;
+  const modelSize = model.getSize();
   return {
-    base64: png.toString("base64"),
-    width: thumbnailSize.width,
-    height: thumbnailSize.height,
+    base64: model.toPNG().toString("base64"),
+    ocrBase64: full.toPNG().toString("base64"),
+    width: modelSize.width,
+    height: modelSize.height,
   };
 }

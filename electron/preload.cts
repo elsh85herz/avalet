@@ -54,7 +54,10 @@ const api = {
       uiLanguage: "ru" | "en";
       meetingMode: MeetingMode;
       mainPinned: boolean;
+      screenshotText: boolean;
+      ocrAvailable: boolean;
     }> => ipcRenderer.invoke("avalet:settings-get-all"),
+    setScreenshotText: (enabled: boolean): Promise<void> => ipcRenderer.invoke("avalet:screenshot-text-set", enabled),
     setMainPinned: (pinned: boolean): Promise<void> => ipcRenderer.invoke("avalet:main-set-pinned", pinned),
     setMeetingMode: (mode: MeetingMode): Promise<void> => ipcRenderer.invoke("avalet:meeting-mode-set", mode),
     selectProvider: (providerId: string): Promise<void> =>

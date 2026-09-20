@@ -24,7 +24,10 @@ type AvaletBridge = {
       uiLanguage: "ru" | "en";
       meetingMode: MeetingMode;
       mainPinned: boolean;
+      screenshotText: boolean;
+      ocrAvailable: boolean;
     }>;
+    setScreenshotText: (enabled: boolean) => Promise<void>;
     setMainPinned: (pinned: boolean) => Promise<void>;
     setMeetingMode: (mode: MeetingMode) => Promise<void>;
     selectProvider: (providerId: string) => Promise<void>;

@@ -74,6 +74,10 @@ export type UiStrings = {
     pinTitle: string;
     unpinTitle: string;
     modeHelpTitle: string;
+    screenshotText: string;
+    screenshotTextOn: string;
+    screenshotTextOff: string;
+    screenshotTextUnavailable: string;
   };
   modes: Record<MeetingModeKey, string>;
   modeHelp: Record<MeetingModeKey, string>;
@@ -181,6 +185,10 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       pinTitle: "This window floats above others. Click to make it an ordinary window.",
       unpinTitle: "Keep this window above other windows during the call.",
       modeHelpTitle: "What each mode does",
+      screenshotText: "Read text on screenshots",
+      screenshotTextOn: "Screenshots also carry the text recognized on your Mac, so models that see images get exact wording, and models that do not still get the screen as text.",
+      screenshotTextOff: "Screenshots go to the model as an image only. Models that cannot see images still get the recognized text.",
+      screenshotTextUnavailable: "Text recognition is not available in this build (it needs the Xcode Command Line Tools when building from source). Models that see images still work.",
     },
     modes: {
       free: "Free",
@@ -296,6 +304,10 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       pinTitle: "Окно закреплено поверх других. Нажмите, чтобы сделать его обычным.",
       unpinTitle: "Держать окно поверх других во время звонка.",
       modeHelpTitle: "Что делает каждый режим",
+      screenshotText: "Читать текст на скриншотах",
+      screenshotTextOn: "К скриншоту добавляется текст, распознанный на вашем Mac: модели с картинками получают точные формулировки, а модели без картинок всё равно видят экран как текст.",
+      screenshotTextOff: "Скриншот уходит в модель только картинкой. Моделям без картинок распознанный текст всё равно отправляется.",
+      screenshotTextUnavailable: "Распознавание текста в этой сборке недоступно (при сборке из исходников нужны Xcode Command Line Tools). Модели с картинками работают как раньше.",
     },
     modes: {
       free: "Свободный",
