@@ -274,6 +274,46 @@ function registerIpc(): void {
     speechModel: getSpeechModel(),
   }));
 
+  // The recognizer process also runs while no session does, so models can be
+  // managed (and downloaded, with visible progress) from Settings.
+  const ensureSidecar = async () => {
+    if (pythonRuntime.getStatus().running) return;
+    await pythonRuntime.start();
+  };
+  pythonRuntime.setEventHandler((event) => {
+    const name = event.event;
+    if (name === "model-progress" || name === "model-done" || name === "model-error") {
+      mainWindow?.webContents.send(`avalet:event:${name}`, event);
+    }
+  });
+
+  ipcMain.handle("avalet:speech-models", async () => {
+    // Design check only (see runScreenshotMode): fixed example states.
+    if (process.env.AVALET_MOCK_MODELS) {
+      return {
+        available: true,
+        models: {
+          small: { downloaded: true, downloading: false, bytes: 0, sizeBytes: 484_000_000 },
+          medium: { downloaded: false, downloading: true, bytes: 610_000_000, sizeBytes: 1_528_000_000 },
+          turbo: { downloaded: false, downloading: false, bytes: 0, sizeBytes: 1_618_000_000 },
+        },
+      };
+    }
+    try {
+      await ensureSidecar();
+      return await pythonRuntime.call("model_status");
+    } catch (error) {
+      logLine(`[speech] model status unavailable: ${error instanceof Error ? error.message : String(error)}`);
+      return { available: false, models: {} };
+    }
+  });
+
+  ipcMain.handle("avalet:speech-model-download", async (_event, model: unknown) => {
+    if (!SPEECH_MODELS.includes(model as never)) throw new Error("unknown speech model");
+    await ensureSidecar();
+    await pythonRuntime.call("download_model", { model });
+  });
+
   ipcMain.handle("avalet:speech-set", (_event, patch: unknown) => {
     const p = (patch ?? {}) as { language?: unknown; model?: unknown };
     if (p.language !== undefined) {
@@ -599,6 +639,7 @@ async function runScreenshotMode(dir: string): Promise<void> {
 }
 
 app.whenReady().then(() => {
+  if (process.env.AVALET_SCREENSHOT_DIR) process.env.AVALET_MOCK_MODELS = "1";
   logLine(`[app] Avalet ${app.getVersion()} on ${process.platform}/${process.arch}, ${app.isPackaged ? "packaged" : "dev"}`);
   nativeTheme.themeSource = getTheme();
   registerIpc();
@@ -607,6 +648,8 @@ app.whenReady().then(() => {
     if (!dockIcon.isEmpty()) app.dock.setIcon(dockIcon);
   }
   createMainWindow();
+  // Start the recognizer in the background so Settings can show model state.
+  void pythonRuntime.start().catch((error) => logLine(`[speech] sidecar did not start: ${error instanceof Error ? error.message : String(error)}`));
   const screenshotDir = process.env.AVALET_SCREENSHOT_DIR;
   if (screenshotDir) {
     mainWindow?.webContents.once("did-finish-load", () => void runScreenshotMode(screenshotDir));

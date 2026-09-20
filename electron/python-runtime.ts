@@ -20,6 +20,12 @@ export class PythonRuntime {
   private nextId = 1;
   private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
   private buffer = "";
+  private eventHandler: ((event: Record<string, unknown>) => void) | null = null;
+
+  /** Receives events the sidecar pushes on its own (download progress). */
+  setEventHandler(handler: (event: Record<string, unknown>) => void): void {
+    this.eventHandler = handler;
+  }
 
   private resolveInterpreterPath(): string {
     const venvBin = process.platform === "win32" ? "Scripts/python.exe" : "bin/python3";
@@ -54,6 +60,13 @@ export class PythonRuntime {
     proc.stderr.on("data", (chunk: string) => {
       logLine(`[python-sidecar] ${chunk.trim()}`);
     });
+    // A missing or broken interpreter must not surface as an uncaught error
+    // dialog: it is reported to whoever asked to start it.
+    proc.on("error", (error) => {
+      logLine(`[python-sidecar] failed to start: ${error.message}`);
+      this.proc = null;
+      this.ready = false;
+    });
     proc.on("exit", (code) => {
       console.error(`[python-sidecar] exited with code ${code}`);
       this.proc = null;
@@ -64,19 +77,27 @@ export class PythonRuntime {
       this.pending.clear();
     });
 
-    await this.waitForReady();
+    await this.waitForReady(proc);
   }
 
-  private waitForReady(): Promise<void> {
+  private waitForReady(proc: ChildProcessWithoutNullStreams): Promise<void> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error("python-sidecar did not become ready in time")), 30_000);
+      const finish = (error?: Error) => {
+        clearTimeout(timeout);
+        clearInterval(check);
+        proc.off("error", onError);
+        proc.off("exit", onExit);
+        if (error) reject(error);
+        else resolve();
+      };
+      const onError = (error: Error) => finish(error);
+      const onExit = () => finish(new Error("python-sidecar exited before it was ready"));
+      const timeout = setTimeout(() => finish(new Error("python-sidecar did not become ready in time")), 30_000);
       const check = setInterval(() => {
-        if (this.ready) {
-          clearInterval(check);
-          clearTimeout(timeout);
-          resolve();
-        }
+        if (this.ready) finish();
       }, 100);
+      proc.once("error", onError);
+      proc.once("exit", onExit);
     });
   }
 
@@ -95,6 +116,10 @@ export class PythonRuntime {
       }
       if (message.event === "ready") {
         this.ready = true;
+        continue;
+      }
+      if (typeof message.event === "string") {
+        this.eventHandler?.(message);
         continue;
       }
       const id = message.id;

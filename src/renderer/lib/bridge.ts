@@ -9,6 +9,8 @@ import type {
   MeetingMode,
   ProviderSettingsPublic,
   SessionState,
+  SpeechModelName,
+  SpeechModelsResponse,
   TranscriptSegment,
 } from "./types.js";
 
@@ -84,6 +86,10 @@ type AvaletBridge = {
     setOpacity: (opacity: number) => Promise<void>;
     setCollapsed: (collapsed: boolean) => Promise<void>;
   };
+  speech: {
+    models: () => Promise<SpeechModelsResponse>;
+    downloadModel: (model: SpeechModelName) => Promise<void>;
+  };
   app: {
     toggleMainWindow: () => Promise<void>;
     quit: () => Promise<void>;
@@ -117,6 +123,9 @@ type AvaletBridge = {
     onReconnectAudioRequested: (cb: (channel: "me" | "other" | "both") => void) => () => void;
     onTranscriptionError: (cb: (message: string) => void) => () => void;
     onTranscriptionRecovered: (cb: () => void) => () => void;
+    onModelProgress: (cb: (e: { model: string; bytes: number; total: number }) => void) => () => void;
+    onModelDone: (cb: (e: { model: string }) => void) => () => void;
+    onModelError: (cb: (e: { model: string; message: string }) => void) => () => void;
     onMeetingModeChanged: (cb: (mode: MeetingMode) => void) => () => void;
     onTranscriptSegment: (cb: (segment: TranscriptSegment) => void) => () => void;
     onMeetingStarted: (cb: (meeting: Meeting) => void) => () => void;

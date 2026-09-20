@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
-import { MEETING_MODES, type MeetingMode, type ProviderSettingsPublic, type SessionState } from "../lib/types.js";
+import {
+  MEETING_MODES,
+  SPEECH_MODEL_NAMES,
+  type MeetingMode,
+  type ProviderSettingsPublic,
+  type SessionState,
+  type SpeechModelName,
+  type SpeechModelsResponse,
+} from "../lib/types.js";
 import { UI_STRINGS, type PermState, type UiLanguage } from "../lib/i18n.js";
 import { PROVIDER_PRESETS_UI } from "../providers/presets.js";
 import { startAudioCapture, type AudioCaptureHandle } from "../capture/audio-capture.js";
@@ -39,7 +47,11 @@ export function SettingsPanel() {
   const [screenshotText, setScreenshotTextState] = useState(false);
   const [ocrAvailable, setOcrAvailable] = useState(false);
   const [speechLanguage, setSpeechLanguageState] = useState<"ru" | "en" | "auto">("ru");
-  const [speechModel, setSpeechModelState] = useState<"small" | "medium" | "turbo">("small");
+  const [speechModel, setSpeechModelState] = useState<SpeechModelName>("small");
+  const [models, setModels] = useState<SpeechModelsResponse | null>(null);
+  const [modelProgress, setModelProgress] = useState<Partial<Record<SpeechModelName, number>>>({});
+  const [modelErrors, setModelErrors] = useState<Partial<Record<SpeechModelName, string>>>({});
+  const speechSectionRef = useRef<HTMLElement | null>(null);
 
   const strings = UI_STRINGS[uiLanguage];
   const t = strings.settings;
@@ -59,6 +71,15 @@ export function SettingsPanel() {
     });
     const unsubscribeLanguage = bridge.events.onUiLanguageChanged(setUiLanguage);
     const unsubscribeMode = bridge.events.onMeetingModeChanged(setMeetingModeState);
+    void refreshModels();
+    const unsubscribeModelProgress = bridge.events.onModelProgress(({ model, bytes }) =>
+      setModelProgress((prev) => ({ ...prev, [model as SpeechModelName]: bytes })),
+    );
+    const unsubscribeModelDone = bridge.events.onModelDone(() => void refreshModels(true));
+    const unsubscribeModelError = bridge.events.onModelError(({ model, message }) => {
+      setModelErrors((prev) => ({ ...prev, [model as SpeechModelName]: message }));
+      void refreshModels();
+    });
     // The overlay can't reach this window's MediaStreams directly — it asks
     // (via main) for whichever channel needs reconnecting, and we're the
     // ones actually holding the live AudioCaptureHandle.
@@ -75,6 +96,9 @@ export function SettingsPanel() {
       unsubscribeTheme();
       unsubscribeLanguage();
       unsubscribeMode();
+      unsubscribeModelProgress();
+      unsubscribeModelDone();
+      unsubscribeModelError();
       unsubscribeReconnect();
       unsubscribeTranscriptionError();
       unsubscribeTranscriptionRecovered();
@@ -102,9 +126,32 @@ export function SettingsPanel() {
     await bridge.settings.setSpeech({ language });
   }
 
-  async function handleSpeechModel(model: "small" | "medium" | "turbo") {
+  async function handleSpeechModel(model: SpeechModelName) {
     setSpeechModelState(model);
     await bridge.settings.setSpeech({ model });
+  }
+
+  // After a download, make the new model the active one if the active one is
+  // not on disk (the usual first-run case), so Start works right away.
+  async function refreshModels(afterDownload = false) {
+    const status = await bridge.speech.models();
+    setModels(status);
+    if (!afterDownload || !status.available) return;
+    const all = await bridge.settings.getAll();
+    if (status.models[all.speechModel]?.downloaded) return;
+    const ready = SPEECH_MODEL_NAMES.find((name) => status.models[name]?.downloaded);
+    if (ready) await handleSpeechModel(ready);
+  }
+
+  async function handleDownloadModel(model: SpeechModelName) {
+    setModelErrors((prev) => ({ ...prev, [model]: undefined }));
+    setModelProgress((prev) => ({ ...prev, [model]: 0 }));
+    try {
+      await bridge.speech.downloadModel(model);
+    } catch (e) {
+      setModelErrors((prev) => ({ ...prev, [model]: e instanceof Error ? e.message : String(e) }));
+    }
+    await refreshModels();
   }
 
   async function handleToggleScreenshotText() {
@@ -226,6 +273,13 @@ export function SettingsPanel() {
   // capture is already running (we were merely paused), just unpause.
   async function handleStart() {
     setError(null);
+    const status = await bridge.speech.models();
+    if (!status.available || !status.models[speechModel]?.downloaded) {
+      setModels(status);
+      setError(t.modelNeeded);
+      speechSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     try {
       let handle = captureHandle;
       if (!handle) {
@@ -414,7 +468,7 @@ export function SettingsPanel() {
         ) : null}
       </section>
 
-      <section className="context speech-settings">
+      <section className="context speech-settings" ref={speechSectionRef}>
         <h3 className="section-title">{t.speechTitle}</h3>
         <label className="mode-select">
           {t.speechLanguage}
@@ -426,16 +480,60 @@ export function SettingsPanel() {
             ))}
           </select>
         </label>
-        <label className="mode-select">
-          {t.speechModel}
-          <select value={speechModel} onChange={(e) => void handleSpeechModel(e.target.value as "small" | "medium" | "turbo")}>
-            {(["small", "medium", "turbo"] as const).map((name) => (
-              <option key={name} value={name}>
-                {t.speechModels[name]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="mode-select">
+          <span>{t.speechModel}</span>
+          <div className="model-list">
+            {SPEECH_MODEL_NAMES.map((name) => {
+              const state = models?.models[name];
+              const downloading = Boolean(state?.downloading);
+              const size = state?.sizeBytes ?? 0;
+              const bytes = Math.min(modelProgress[name] ?? state?.bytes ?? 0, size);
+              const percent = size > 0 ? Math.round((bytes / size) * 100) : 0;
+              const gb = (n: number) => (n / 1e9).toFixed(1).replace(".", uiLanguage === "ru" ? "," : ".");
+              return (
+                <div key={name} className={`model-row ${speechModel === name ? "active" : ""}`}>
+                  <label className="model-name">
+                    <input
+                      type="radio"
+                      name="speechModel"
+                      checked={speechModel === name}
+                      disabled={!state?.downloaded}
+                      onChange={() => void handleSpeechModel(name)}
+                    />
+                    <span>
+                      {t.speechModels[name]}
+                      <span className="model-size"> {gb(size)} {t.gb}</span>
+                    </span>
+                  </label>
+                  {downloading ? (
+                    <div className="model-progress" title={`${t.modelDownloading} ${percent}%`}>
+                      <div className="bar">
+                        <div className="fill" style={{ width: `${percent}%` }} />
+                      </div>
+                      <span>
+                        {percent}% ({gb(bytes)} {t.modelOf} {gb(size)} {t.gb})
+                      </span>
+                    </div>
+                  ) : state?.downloaded ? (
+                    <span className="perm-pill granted">{t.modelReady}</span>
+                  ) : (
+                    <button type="button" disabled={!models?.available} onClick={() => void handleDownloadModel(name)}>
+                      {t.modelDownload}
+                    </button>
+                  )}
+                  {modelErrors[name] ? (
+                    <p className="error model-error">
+                      {t.modelError}: {modelErrors[name]}
+                      <br />
+                      {t.modelErrorHint}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          {models && !models.available ? <p className="error">{t.modelUnavailable}</p> : null}
+        </div>
         <p className="hint">{t.speechHint}</p>
       </section>
 

@@ -126,6 +126,11 @@ const api = {
     setCollapsed: (collapsed: boolean): Promise<void> =>
       ipcRenderer.invoke("avalet:overlay-set-collapsed", collapsed),
   },
+  speech: {
+    models: (): Promise<unknown> => ipcRenderer.invoke("avalet:speech-models"),
+    downloadModel: (model: "small" | "medium" | "turbo"): Promise<void> =>
+      ipcRenderer.invoke("avalet:speech-model-download", model),
+  },
   app: {
     toggleMainWindow: (): Promise<void> => ipcRenderer.invoke("avalet:main-toggle"),
     quit: (): Promise<void> => ipcRenderer.invoke("avalet:app-quit"),
@@ -165,6 +170,10 @@ const api = {
       on("avalet:event:reconnect-audio-requested", cb),
     onTranscriptionError: (cb: (message: string) => void) => on("avalet:event:transcription-error", cb),
     onTranscriptionRecovered: (cb: () => void) => on("avalet:event:transcription-recovered", cb),
+    onModelProgress: (cb: (e: { model: string; bytes: number; total: number }) => void) =>
+      on("avalet:event:model-progress", cb),
+    onModelDone: (cb: (e: { model: string }) => void) => on("avalet:event:model-done", cb),
+    onModelError: (cb: (e: { model: string; message: string }) => void) => on("avalet:event:model-error", cb),
     onMeetingModeChanged: (cb: (mode: MeetingMode) => void) => on("avalet:event:meeting-mode-changed", cb),
     onTranscriptSegment: (cb: (segment: TranscriptSegment) => void) => on("avalet:event:transcript-segment", cb),
     onMeetingStarted: (cb: (meeting: Meeting) => void) => on("avalet:event:meeting-started", cb),

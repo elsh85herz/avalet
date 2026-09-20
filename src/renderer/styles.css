@@ -1056,3 +1056,73 @@ select {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* --- Speech model manager --- */
+
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.model-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.model-row.active {
+  border-color: var(--accent);
+}
+
+.model-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-direction: row;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.model-size {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.model-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 150px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.model-progress .bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--card-border);
+  overflow: hidden;
+}
+
+.model-progress .fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.model-error {
+  flex-basis: 100%;
+  font-size: 12px;
+}
+
+.model-row button {
+  padding: 5px 12px;
+  font-size: 12px;
+}

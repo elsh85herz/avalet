@@ -84,6 +84,15 @@ export type UiStrings = {
     speechModel: string;
     speechModels: Record<"small" | "medium" | "turbo", string>;
     speechHint: string;
+    modelDownload: string;
+    modelReady: string;
+    modelDownloading: string;
+    modelNeeded: string;
+    modelError: string;
+    modelErrorHint: string;
+    modelUnavailable: string;
+    modelOf: string;
+    gb: string;
     perm: Record<PermState, string>;
     sessionStates: Record<SessionKey, string>;
   };
@@ -204,12 +213,21 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       speechLanguages: { ru: "Russian", en: "English", auto: "Detect automatically" },
       speechModel: "Accuracy",
       speechModels: {
-        small: "Fast (small, 0.5 GB)",
-        medium: "More accurate (medium, 1.5 GB)",
-        turbo: "Most accurate (turbo, 1.6 GB)",
+        small: "Fast (small)",
+        medium: "More accurate (medium)",
+        turbo: "Most accurate (turbo)",
       },
       speechHint:
-        "Runs on your Mac. A larger model understands speech better but is slower, and is downloaded the first time it is used (a few minutes; a VPN may be needed). Nothing is transcribed until the download finishes. A fixed language is more reliable than detecting it on every phrase.",
+        "Runs on your Mac. A larger model understands speech better but is slower. Download the ones you want here, once; after that they work without internet. A fixed language is more reliable than detecting it on every phrase.",
+      modelDownload: "Download",
+      modelReady: "Downloaded",
+      modelDownloading: "Downloading",
+      modelNeeded: "Download a speech model first (Speech recognition section above), then press Start.",
+      modelError: "Download failed",
+      modelErrorHint: "Check the internet connection. From Russia a VPN may be needed (for example ast-net.ru).",
+      modelUnavailable: "The speech component did not start, so models cannot be managed here. The log has details: ~/Library/Logs/Avalet/avalet.log",
+      modelOf: "of",
+      gb: "GB",
       perm: {
         granted: "Granted",
         denied: "Denied",
@@ -342,12 +360,21 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       speechLanguages: { ru: "Русский", en: "English", auto: "Определять автоматически" },
       speechModel: "Точность",
       speechModels: {
-        small: "Быстро (small, 0,5 ГБ)",
-        medium: "Точнее (medium, 1,5 ГБ)",
-        turbo: "Максимум (turbo, 1,6 ГБ)",
+        small: "Быстро (small)",
+        medium: "Точнее (medium)",
+        turbo: "Максимум (turbo)",
       },
       speechHint:
-        "Работает на вашем Mac. Большая модель лучше понимает речь, но медленнее, и скачивается при первом использовании (несколько минут, может понадобиться VPN). Пока загрузка не закончится, расшифровки не будет. Фиксированный язык надёжнее, чем угадывание на каждой фразе.",
+        "Работает на вашем Mac. Большая модель лучше понимает речь, но медленнее. Скачайте здесь нужные один раз, дальше они работают без интернета. Фиксированный язык надёжнее, чем угадывание на каждой фразе.",
+      modelDownload: "Скачать",
+      modelReady: "Скачана",
+      modelDownloading: "Скачивание",
+      modelNeeded: "Сначала скачайте модель распознавания речи (раздел \"Распознавание речи\" выше), потом нажмите Старт.",
+      modelError: "Не удалось скачать",
+      modelErrorHint: "Проверьте интернет. Из России может понадобиться VPN (например ast-net.ru).",
+      modelUnavailable: "Компонент распознавания речи не запустился, поэтому управлять моделями здесь нельзя. Подробности в логе: ~/Library/Logs/Avalet/avalet.log",
+      modelOf: "из",
+      gb: "ГБ",
       perm: {
         granted: "Разрешено",
         denied: "Запрещено",

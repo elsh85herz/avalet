@@ -40,3 +40,8 @@ export type MeetingListItem = {
 };
 
 export type ExportLabels = { me: string; other: string; summary: string; transcript: string; date: string; mode: string };
+
+export type SpeechModelName = "small" | "medium" | "turbo";
+export const SPEECH_MODEL_NAMES: SpeechModelName[] = ["small", "medium", "turbo"];
+export type SpeechModelState = { downloaded: boolean; downloading: boolean; bytes: number; sizeBytes: number };
+export type SpeechModelsResponse = { available: boolean; models: Partial<Record<SpeechModelName, SpeechModelState>> };

@@ -16,10 +16,12 @@ All responses: ``{"id": <request-id>, "ok": true, "result": ...}`` or
 from __future__ import annotations
 
 import base64
+import glob
 import io
 import json
 import os
 import sys
+import threading
 import time
 import traceback
 import wave
@@ -36,10 +38,15 @@ COMPUTE_TYPE = os.environ.get("AVALET_WHISPER_COMPUTE", "int8")
 PAUSE_THRESHOLD_SECONDS = float(os.environ.get("AVALET_PAUSE_THRESHOLD", "0.6"))
 
 
+# Replies come from the main loop, progress events from a download thread.
+_emit_lock = threading.Lock()
+
+
 def _emit(response: dict) -> None:
-    sys.stdout.write(json.dumps(response, ensure_ascii=False))
-    sys.stdout.write("\n")
-    sys.stdout.flush()
+    with _emit_lock:
+        sys.stdout.write(json.dumps(response, ensure_ascii=False))
+        sys.stdout.write("\n")
+        sys.stdout.flush()
 
 
 def _log(message: str) -> None:
@@ -47,24 +54,113 @@ def _log(message: str) -> None:
     sys.stderr.flush()
 
 
+# Size of each model's weights file on the Hugging Face Hub (checked
+# 2026-09-20); the small config and tokenizer files add a few MB. Used only to
+# show download progress.
+MODEL_SIZE_BYTES = {"small": 484_000_000, "medium": 1_528_000_000, "turbo": 1_618_000_000}
+MODEL_FOLDER = {"small": "faster-whisper-small", "medium": "faster-whisper-medium", "turbo": "faster-whisper-large-v3-turbo"}
+
 _model = None
 _model_name = None
+_downloads: dict[str, threading.Thread] = {}
+
+
+def _local_model_path(name: str) -> str | None:
+    """Path of an already downloaded model, or None. Never touches the network."""
+    from faster_whisper.utils import download_model
+
+    try:
+        return download_model(name, local_files_only=True)
+    except Exception:  # noqa: BLE001 - not cached yet
+        return None
 
 
 def _get_model(name: str | None = None):
-    """Loads the requested model once and keeps it; switching drops the old one."""
+    """Loads the requested model once and keeps it; switching drops the old one.
+
+    Downloading is a separate, visible step (see download_model below), so a
+    model that is not on disk is an error here, not a silent multi-minute wait.
+    """
     global _model, _model_name
     wanted = name if name in ALLOWED_MODELS else DEFAULT_MODEL
     if _model is None or _model_name != wanted:
         from faster_whisper import WhisperModel  # type: ignore
 
+        path = _local_model_path(wanted)
+        if path is None:
+            raise RuntimeError(f"model_not_downloaded:{wanted}")
         _model = None
         _log(f"loading whisper model={wanted!r} compute={COMPUTE_TYPE!r}")
         started = time.time()
-        _model = WhisperModel(wanted, device="auto", compute_type=COMPUTE_TYPE)
+        _model = WhisperModel(path, device="auto", compute_type=COMPUTE_TYPE)
         _model_name = wanted
         _log(f"model loaded in {time.time() - started:.2f}s")
     return _model
+
+
+def _cached_bytes(name: str) -> int:
+    from huggingface_hub.constants import HF_HUB_CACHE
+
+    total = 0
+    for folder in glob.glob(os.path.join(HF_HUB_CACHE, f"models--*--{MODEL_FOLDER[name]}")):
+        for root, _dirs, files in os.walk(os.path.join(folder, "blobs")):
+            for file in files:
+                try:
+                    total += os.path.getsize(os.path.join(root, file))
+                except OSError:
+                    pass
+    return total
+
+
+def _download_worker(name: str) -> None:
+    from faster_whisper.utils import download_model
+
+    stop = threading.Event()
+
+    def report() -> None:
+        while not stop.wait(1.0):
+            _emit({"event": "model-progress", "model": name, "bytes": _cached_bytes(name), "total": MODEL_SIZE_BYTES[name]})
+
+    threading.Thread(target=report, daemon=True).start()
+    _log(f"downloading whisper model={name!r}")
+    try:
+        download_model(name)
+        stop.set()
+        _log(f"downloaded whisper model={name!r}")
+        _emit({"event": "model-done", "model": name})
+    except Exception as error:  # noqa: BLE001
+        stop.set()
+        _log(f"download of {name!r} failed: {error}")
+        _emit({"event": "model-error", "model": name, "message": str(error)})
+    finally:
+        _downloads.pop(name, None)
+
+
+def _model_status() -> dict:
+    models = {}
+    for name in ("small", "medium", "turbo"):
+        downloading = name in _downloads
+        models[name] = {
+            "downloaded": (not downloading) and _local_model_path(name) is not None,
+            "downloading": downloading,
+            "bytes": _cached_bytes(name) if downloading else 0,
+            "sizeBytes": MODEL_SIZE_BYTES[name],
+        }
+    return {"available": True, "models": models}
+
+
+def _start_download(params: dict) -> dict:
+    name = params.get("model")
+    if name not in ALLOWED_MODELS:
+        raise ValueError(f"unknown model: {name!r}")
+    if name in _downloads:
+        return {"started": False}
+    if _local_model_path(name) is not None:
+        return {"started": False, "already": True}
+    worker = threading.Thread(target=_download_worker, args=(name,), daemon=True)
+    _downloads[name] = worker
+    worker.start()
+    return {"started": True}
 
 
 def _wav_base64_to_float_pcm(audio_base64: str) -> tuple[list[float], int]:
@@ -150,6 +246,10 @@ def _handle(message: dict) -> dict:
     try:
         if command == "ping":
             return {"id": request_id, "ok": True, "result": {"ready": True}}
+        if command == "model_status":
+            return {"id": request_id, "ok": True, "result": _model_status()}
+        if command == "download_model":
+            return {"id": request_id, "ok": True, "result": _start_download(params)}
         if command == "transcribe_chunk":
             return {"id": request_id, "ok": True, "result": _transcribe_chunk(params)}
         raise ValueError(f"unknown command: {command!r}")
