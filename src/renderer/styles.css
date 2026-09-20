@@ -11,6 +11,10 @@
   --danger: #ff453a;
   --ok: #32d74b;
   --warn: #ffd60a;
+  /* Tones for TEXT: the fills above are too pale to read as text on the light theme. */
+  --ok-text: #32d74b;
+  --danger-text: #ff453a;
+  --accent-text: #0a84ff;
   /* Translucent "card" fill for content sitting over the vibrancy blur
      (electron/main.ts `vibrancy: "sidebar"`) — same idea as the frosted
      grouped-list rows in System Settings. */
@@ -35,6 +39,9 @@
   --danger: #ff3b30;
   --ok: #34c759;
   --warn: #ff9f0a;
+  --ok-text: #1f7a35;
+  --danger-text: #d70015;
+  --accent-text: #0055d4;
   --card-bg: rgba(0, 0, 0, 0.035);
   --card-border: rgba(0, 0, 0, 0.08);
   --overlay-tint: rgba(255, 255, 255, 0.55);
@@ -147,7 +154,7 @@ input[type="range"] {
 .badge {
   margin-left: auto;
   font-size: 11px;
-  color: var(--ok);
+  color: var(--ok-text);
   border: 1px solid var(--ok);
   border-radius: 999px;
   padding: 2px 8px;
@@ -243,13 +250,13 @@ button:disabled {
 
 .perm-pill.granted {
   border-color: var(--ok);
-  color: var(--ok);
+  color: var(--ok-text);
 }
 
 .perm-pill.denied,
 .perm-pill.restricted {
   border-color: var(--danger);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .mic-picker {
@@ -402,7 +409,7 @@ button:disabled {
 }
 
 .error {
-  color: var(--danger);
+  color: var(--danger-text);
   margin: 0;
 }
 
@@ -624,7 +631,7 @@ button:disabled {
 }
 
 .block-text.error {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .block-empty {
@@ -656,7 +663,7 @@ button:disabled {
    its own. */
 .process-btn {
   border-color: var(--accent) !important;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .ask-row {
@@ -765,7 +772,7 @@ button:disabled {
 .mode-chip {
   font-size: 10px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   border: 1px solid var(--accent);
   border-radius: 999px;
   padding: 1px 7px;
@@ -822,7 +829,7 @@ button:disabled {
 }
 
 .meeting-meta .badge.live {
-  color: var(--ok);
+  color: var(--ok-text);
   border-color: var(--ok);
 }
 
@@ -835,18 +842,18 @@ button:disabled {
 
 .meeting-actions .notice {
   font-size: 12px;
-  color: var(--ok);
+  color: var(--ok-text);
 }
 
 button.danger {
   background: transparent;
-  color: var(--danger);
+  color: var(--danger-text);
   border: 1px solid var(--danger);
 }
 
 .link-btn {
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-text);
   padding: 0;
   font-size: 12px;
   align-self: flex-start;
@@ -911,7 +918,7 @@ button.danger {
 }
 
 .segment.me .segment-speaker {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .meetings-list {
@@ -983,7 +990,7 @@ select {
 
 .help-btn.on,
 .pin-btn.on {
-  color: var(--accent);
+  color: var(--accent-text);
   border-color: var(--accent);
 }
 
@@ -1023,7 +1030,7 @@ select {
 }
 
 .mode-help div.active dt {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .mode-help dd {

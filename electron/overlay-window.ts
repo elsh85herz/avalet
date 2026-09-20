@@ -1,4 +1,4 @@
-import { BrowserWindow, screen } from "electron";
+import { app, BrowserWindow, screen } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getOverlayOpacity } from "./settings-store.js";
@@ -56,6 +56,8 @@ export function createOverlayWindow(preloadPath: string, entryUrl: string): Brow
 
   win.setAlwaysOnTop(true, "screen-saver");
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  // That flag can hide the Dock icon on macOS; keep the app visible there.
+  if (isMac) app.dock?.show();
   win.setOpacity(getOverlayOpacity());
 
   // Keeps the overlay out of screen-share / screen-recording capture on

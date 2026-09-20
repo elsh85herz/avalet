@@ -101,6 +101,7 @@ function createMainWindow(): void {
     // material System Settings uses) with inset traffic lights — the HTML
     // body stays transparent (styles.css) and lets it show through. Other
     // platforms fall back to a plain opaque window, same as before.
+    show: false,
     backgroundColor: isMac ? undefined : "#0b0d10",
     titleBarStyle: isMac ? "hiddenInset" : undefined,
     trafficLightPosition: isMac ? { x: 16, y: 16 } : undefined,
@@ -116,6 +117,18 @@ function createMainWindow(): void {
   // own screen share and recordings (macOS, Windows 10 2004+).
   win.setContentProtection(true);
   applyMainPinned(win, getMainPinned());
+  // Launched from Finder the window can open behind other apps: the "visible
+  // on full screen" flag below turns the app into a background-style process
+  // that does not get activated by itself. Show, raise and activate it
+  // explicitly, and put the Dock icon back.
+  win.once("ready-to-show", () => {
+    win.show();
+    win.moveTop();
+    if (isMac) {
+      app.dock?.show();
+      app.focus({ steal: true });
+    }
+  });
   void win.loadURL(entryUrl("main"));
   if (devServerUrl) win.webContents.openDevTools({ mode: "detach" });
   mainWindow = win;
@@ -523,6 +536,12 @@ async function runScreenshotMode(dir: string): Promise<void> {
   main.setSize(480, 1700);
   await wait(1500);
   await shoot(main, "main-settings-dark");
+  applyTheme("light");
+  main.webContents.send("avalet:event:theme-changed", "light");
+  await wait(500);
+  await shoot(main, "main-settings-light");
+  applyTheme("dark");
+  main.webContents.send("avalet:event:theme-changed", "dark");
   main.setSize(480, 720);
   const overlay = createOverlayWindow(preloadPath, entryUrl("overlay"));
   showOverlayWindow();

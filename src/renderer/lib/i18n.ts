@@ -78,6 +78,8 @@ export type UiStrings = {
     screenshotTextOn: string;
     screenshotTextOff: string;
     screenshotTextUnavailable: string;
+    perm: Record<PermState, string>;
+    sessionStates: Record<SessionKey, string>;
   };
   modes: Record<MeetingModeKey, string>;
   modeHelp: Record<MeetingModeKey, string>;
@@ -111,6 +113,8 @@ export type UiStrings = {
   };
 };
 
+export type PermState = "granted" | "denied" | "restricted" | "not-determined" | "unknown";
+export type SessionKey = "idle" | "listening" | "paused";
 export type MeetingModeKey = "free" | "requirements" | "grooming" | "demo" | "interview";
 
 export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
@@ -178,8 +182,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       stop: "Stop",
       resetHistory: "End meeting",
       startHint: "Start asks for mic and screen-share (system audio) permissions and opens the overlay. Stop freezes live output but keeps blocks in the overlay for paging. End meeting closes the record; the next Start opens a new one.",
-      clearBlocks: "Clear suggestions",
-      clearBlocksTitle: "Remove the suggestion blocks from the overlay. The meeting and its transcript are kept.",
+      clearBlocks: "Clear overlay",
+      clearBlocksTitle: "Remove the suggestions from the overlay. The meeting and its transcript are kept.",
       quit: "Quit Avalet",
       quitHint: "Stops listening, saves the current meeting, and closes the app.",
       pinTitle: "This window floats above others. Click to make it an ordinary window.",
@@ -189,6 +193,14 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       screenshotTextOn: "Screenshots also carry the text recognized on your Mac, for exact names, numbers and code. Adds up to about a second to each answer.",
       screenshotTextOff: "Fastest: screenshots go to models that see images as a picture only. Models that cannot see images always get the recognized text.",
       screenshotTextUnavailable: "Text recognition is not available in this build (it needs the Xcode Command Line Tools when building from source). Models that see images still work.",
+      perm: {
+        granted: "Granted",
+        denied: "Denied",
+        restricted: "Restricted",
+        "not-determined": "Not asked yet",
+        unknown: "Unknown",
+      },
+      sessionStates: { idle: "Idle", listening: "Listening", paused: "Paused" },
     },
     modes: {
       free: "Free",
@@ -297,8 +309,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       stop: "Стоп",
       resetHistory: "Завершить встречу",
       startHint: "Старт запросит доступ к микрофону и к экрану (для звука собеседника) и откроет оверлей. Стоп замораживает подсказки, но оставляет их в оверлее для пролистывания. Завершить встречу закрывает запись, следующий Старт откроет новую.",
-      clearBlocks: "Очистить подсказки",
-      clearBlocksTitle: "Убрать накопленные блоки подсказок из оверлея. Встреча и транскрипт остаются.",
+      clearBlocks: "Очистить оверлей",
+      clearBlocksTitle: "Убрать накопленные подсказки из оверлея. Встреча и транскрипт остаются.",
       quit: "Выйти из Avalet",
       quitHint: "Останавливает прослушивание, сохраняет текущую встречу и закрывает приложение.",
       pinTitle: "Окно закреплено поверх других. Нажмите, чтобы сделать его обычным.",
@@ -308,6 +320,14 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       screenshotTextOn: "К скриншоту добавляется текст, распознанный на вашем Mac, для точных имён, чисел и кода. Добавляет до секунды к каждому ответу.",
       screenshotTextOff: "Быстрее всего: моделям с картинками скриншот уходит только изображением. Моделям без картинок распознанный текст отправляется всегда.",
       screenshotTextUnavailable: "Распознавание текста в этой сборке недоступно (при сборке из исходников нужны Xcode Command Line Tools). Модели с картинками работают как раньше.",
+      perm: {
+        granted: "Разрешено",
+        denied: "Запрещено",
+        restricted: "Ограничено",
+        "not-determined": "Ещё не запрашивался",
+        unknown: "Неизвестно",
+      },
+      sessionStates: { idle: "Ожидание", listening: "Слушаю", paused: "Пауза" },
     },
     modes: {
       free: "Свободный",

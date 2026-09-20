@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
 import { MEETING_MODES, type MeetingMode, type ProviderSettingsPublic, type SessionState } from "../lib/types.js";
-import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
+import { UI_STRINGS, type PermState, type UiLanguage } from "../lib/i18n.js";
 import { PROVIDER_PRESETS_UI } from "../providers/presets.js";
 import { startAudioCapture, type AudioCaptureHandle } from "../capture/audio-capture.js";
 import { IconHelp, IconMoon, IconSun } from "../icons.js";
@@ -31,6 +31,11 @@ export function SettingsPanel() {
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
   const [meetingMode, setMeetingModeState] = useState<MeetingMode>("free");
   const [modeHelpOpen, setModeHelpOpen] = useState(false);
+  // macOS keeps reporting "not-determined" for the microphone in some setups
+  // (permission held by the terminal in dev, or granted before this app asked)
+  // even though capture works. Device labels only show up once access exists,
+  // and a running capture proves it, so either overrides the OS status.
+  const [micWorks, setMicWorks] = useState(false);
   const [screenshotText, setScreenshotTextState] = useState(false);
   const [ocrAvailable, setOcrAvailable] = useState(false);
 
@@ -135,7 +140,10 @@ export function SettingsPanel() {
   async function initDeviceDetection() {
     const perms = await bridge.permissions.check();
     setPermissions(perms);
-    if (perms.mic === "granted") void detectMicrophones();
+    // Labels are only populated when access exists, and reading them does not prompt.
+    const known = (await navigator.mediaDevices.enumerateDevices()).some((d) => d.kind === "audioinput" && d.label);
+    if (known) setMicWorks(true);
+    if (perms.mic === "granted" || known) void detectMicrophones();
     if (perms.screen === "granted") void detectScreens();
   }
 
@@ -147,6 +155,7 @@ export function SettingsPanel() {
       probe.getTracks().forEach((track) => track.stop());
       const devices = await navigator.mediaDevices.enumerateDevices();
       setMicDevices(devices.filter((d) => d.kind === "audioinput"));
+      setMicWorks(true);
       await refreshPermissions();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -214,6 +223,7 @@ export function SettingsPanel() {
         });
         setCaptureHandle(handle);
         captureHandleRef.current = handle;
+        setMicWorks(true);
       }
       await bridge.session.start();
       await refreshPermissions();
@@ -243,6 +253,9 @@ export function SettingsPanel() {
     await bridge.session.reset();
   }
 
+  const micStatus: PermState = micWorks ? "granted" : ((permissions?.mic as PermState | undefined) ?? "unknown");
+  const screenStatus: PermState = (permissions?.screen as PermState | undefined) ?? "unknown";
+  const permLabel = (state: PermState) => t.perm[state] ?? state;
   const degradedChannel = audioDegraded.me && audioDegraded.other ? "both" : audioDegraded.other ? "other" : "me";
   const degradedMessage =
     degradedChannel === "both" ? t.audioLostBoth : degradedChannel === "other" ? t.audioLostOther : t.audioLostMe;
@@ -338,11 +351,11 @@ export function SettingsPanel() {
       <section className="permissions">
         <div className="perm-row">
           <span>{t.microphone}</span>
-          <span className={`perm-pill ${permissions?.mic ?? "unknown"}`}>{permissions?.mic ?? "…"}</span>
+          <span className={`perm-pill ${micStatus}`}>{permissions ? permLabel(micStatus) : "…"}</span>
         </div>
         <div className="perm-row">
           <span>{t.screenRecording}</span>
-          <span className={`perm-pill ${permissions?.screen ?? "unknown"}`}>{permissions?.screen ?? "…"}</span>
+          <span className={`perm-pill ${screenStatus}`}>{permissions ? permLabel(screenStatus) : "…"}</span>
         </div>
         <div className="mic-picker">
           <select value={preferredMicId} onChange={(e) => void handleMicChange(e.target.value)}>
@@ -459,7 +472,7 @@ export function SettingsPanel() {
           {!ocrAvailable ? t.screenshotTextUnavailable : screenshotText ? t.screenshotTextOn : t.screenshotTextOff}
         </p>
         <p className="state">
-          {t.sessionLabel}: {sessionState}
+          {t.sessionLabel}: {t.sessionStates[sessionState]}
         </p>
         {error ? <p className="error">{error}</p> : null}
         <div className="buttons">
