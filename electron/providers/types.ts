@@ -72,7 +72,7 @@ export type GenerateRequest = {
   model: string;
   systemPrompt: string;
   transcript: string;
-  /** Raw PNG bytes, base64-encoded, no data: prefix. */
+  /** Raw JPEG bytes, base64-encoded, no data: prefix. */
   screenshotBase64?: string;
   /** Output cap; defaults to a short live block. Summaries pass more. */
   maxTokens?: number;

@@ -14,7 +14,7 @@ export async function streamOpenAICompatible(request: GenerateRequest): Promise<
   const userContent: unknown = request.screenshotBase64
     ? [
         { type: "text", text: request.transcript },
-        { type: "image_url", image_url: { url: `data:image/png;base64,${request.screenshotBase64}` } },
+        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${request.screenshotBase64}` } },
       ]
     : request.transcript;
 

@@ -13,7 +13,8 @@ import { fileURLToPath } from "node:url";
 import { initMain as initAudioLoopbackMain } from "electron-audio-loopback";
 import { PythonRuntime } from "./python-runtime.js";
 import { captureScreenshot } from "./ipc/screenshot.js";
-import { isOcrAvailable, recognizeScreenText } from "./ocr/index.js";
+import { isOcrAvailable, recognizeScreenText, warmUpOcr } from "./ocr/index.js";
+import { logLine } from "./log.js";
 import { checkMicAccess, checkScreenAccess } from "./ipc/permissions.js";
 import { listScreenSources } from "./ipc/screen-sources.js";
 import { appendHistoryBlock, clearHistory, getHistory, type HistoryBlock } from "./history-store.js";
@@ -417,6 +418,7 @@ function registerIpc(): void {
         console.error("[main] python-sidecar failed to start:", error);
       });
     }
+    void warmUpOcr().catch(() => {});
     const meeting = startMeeting({
       titlePrefix: getUiLanguage() === "ru" ? "Встреча" : "Meeting",
       mode: getMeetingMode(),
@@ -552,6 +554,7 @@ async function runScreenshotMode(dir: string): Promise<void> {
 }
 
 app.whenReady().then(() => {
+  logLine(`[app] Avalet ${app.getVersion()} on ${process.platform}/${process.arch}, ${app.isPackaged ? "packaged" : "dev"}`);
   nativeTheme.themeSource = getTheme();
   registerIpc();
   if (process.platform === "darwin" && app.dock) {

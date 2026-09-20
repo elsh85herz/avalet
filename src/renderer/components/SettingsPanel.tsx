@@ -31,7 +31,7 @@ export function SettingsPanel() {
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
   const [meetingMode, setMeetingModeState] = useState<MeetingMode>("free");
   const [modeHelpOpen, setModeHelpOpen] = useState(false);
-  const [screenshotText, setScreenshotTextState] = useState(true);
+  const [screenshotText, setScreenshotTextState] = useState(false);
   const [ocrAvailable, setOcrAvailable] = useState(false);
 
   const strings = UI_STRINGS[uiLanguage];

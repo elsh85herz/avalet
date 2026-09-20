@@ -1,15 +1,20 @@
 import { desktopCapturer, screen } from "electron";
 
+// JPEG rather than PNG: encoding a full-screen PNG takes hundreds of
+// milliseconds and produces megabytes, JPEG is several times faster and
+// smaller with no visible loss for text at these qualities.
 // The image sent to a vision model is downscaled (models resize anyway and a
-// smaller payload is faster); the copy used for text recognition keeps more
-// pixels, because small UI text is the first thing lost when shrinking.
+// smaller payload uploads faster); the copy used for text recognition keeps
+// more pixels, because small UI text is the first thing lost when shrinking.
 const MODEL_WIDTH = 1280;
-const OCR_WIDTH = 2560;
+const MODEL_QUALITY = 80;
+const OCR_WIDTH = 1920;
+const OCR_QUALITY = 92;
 
 export type Screenshot = {
-  /** PNG, base64, no data: prefix, MODEL_WIDTH wide. */
+  /** JPEG, base64, no data: prefix, at most MODEL_WIDTH wide. */
   base64: string;
-  /** PNG, base64, up to OCR_WIDTH wide, for text recognition. */
+  /** JPEG, base64, at most OCR_WIDTH wide, for text recognition. */
   ocrBase64: string;
   width: number;
   height: number;
@@ -29,11 +34,11 @@ export async function captureScreenshot(): Promise<Screenshot> {
 
   const full = source.thumbnail;
   const size = full.getSize();
-  const model = size.width > MODEL_WIDTH ? full.resize({ width: MODEL_WIDTH, quality: "best" }) : full;
+  const model = size.width > MODEL_WIDTH ? full.resize({ width: MODEL_WIDTH, quality: "good" }) : full;
   const modelSize = model.getSize();
   return {
-    base64: model.toPNG().toString("base64"),
-    ocrBase64: full.toPNG().toString("base64"),
+    base64: model.toJPEG(MODEL_QUALITY).toString("base64"),
+    ocrBase64: full.toJPEG(OCR_QUALITY).toString("base64"),
     width: modelSize.width,
     height: modelSize.height,
   };

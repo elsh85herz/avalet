@@ -14,7 +14,7 @@ Local-first and bring-your-own-LLM: audio never leaves your Mac, transcription r
 - **Drafts on demand.** Ask for a database schema, an ER diagram, an API contract, a process flow, and you get a concrete draft with stated assumptions, then it gets revised as new details arrive.
 - **Who said what.** Your mic and the system audio are captured as two channels, so the transcript is tagged "me" / "other" and the model doesn't mistake your own words for a question addressed to you.
 - **Meeting context.** Paste the ticket, spec, or agenda before the call; every suggestion is grounded in it.
-- **Manual ask, quick actions, screenshot.** Type a question any time, tap "Summarize" / "Risks?" / "Ask a question" / "Explain this", or send a screenshot of your screen for a priority read. Models that see images (Claude, OpenAI, DeepSeek) get the picture plus the text recognized on your Mac for exact wording; models that do not (local ones) still get the screen as recognized text. If a provider refuses the image, Avalet retries with the text.
+- **Manual ask, quick actions, screenshot.** Type a question any time, tap "Summarize" / "Risks?" / "Ask a question" / "Explain this", or send a screenshot of your screen for a priority read. Models that see images (Claude, OpenAI, DeepSeek) get the picture, which is the fast path; an optional setting adds the text recognized on your Mac for exact names, numbers and code (about a second slower). Models that do not (local ones) always get the screen as recognized text. If a provider refuses the image, Avalet retries with the text.
 - **Meeting modes.** Requirements gathering, grooming and estimation, demo and acceptance, interview, or free: each shifts what the assistant pays attention to.
 - **Transcript and meeting summary.** Every call is saved as a meeting with a timestamped, speaker-tagged transcript. One button writes the summary in an analyst's format: decisions, open questions, requirements, risks, tasks. Export to Markdown or copy as plain text.
 - **Stop / Resume / history.** Stop freezes live output without losing anything, page through earlier blocks, resume instantly. History is kept on disk.
@@ -84,6 +84,7 @@ system audio (loopback)               5s WAV chunks, tagged "other"
 - **Unsigned build.** See the install steps above. Code signing and auto-update are planned.
 - **Speech model is downloaded from Hugging Face** on first run. If that's slow or blocked on your network, use a VPN for the first download (ours: [ast-net.ru](https://ast-net.ru)); the model is cached afterwards. Bundling the model with the app is on the roadmap.
 - **Text recognition on screenshots is macOS only** for now (Apple Vision, works offline). Building from source needs the Xcode Command Line Tools (`xcode-select --install`); the downloadable app already includes it. On other platforms screenshots go to vision models as images only.
+- **Logs and timings** are written to `~/Library/Logs/Avalet/avalet.log` (timings and errors only, never meeting text, screen text, or keys). Attach it when reporting slowness.
 - **Consent.** Recording a call may require the other participants' consent depending on your jurisdiction. Avalet shows a visible listening indicator, but consent is on whoever runs it.
 
 ## Roadmap

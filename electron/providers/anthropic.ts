@@ -14,7 +14,7 @@ export async function streamAnthropic(request: GenerateRequest): Promise<string>
   if (request.screenshotBase64) {
     content.push({
       type: "image",
-      source: { type: "base64", media_type: "image/png", data: request.screenshotBase64 },
+      source: { type: "base64", media_type: "image/jpeg", data: request.screenshotBase64 },
     });
   }
 

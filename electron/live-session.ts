@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { generate } from "./providers/index.js";
 import { PROVIDER_PRESETS } from "./providers/types.js";
 import { isImageRejection } from "./providers/errors.js";
+import { logLine } from "./log.js";
 import {
   getApiKey,
   getAutoDetectEnabled,
@@ -73,6 +74,15 @@ const TRANSCRIPT_CHAR_BUDGET = 2_200;
 // "revise the draft" continuity — answers are meant to be short already,
 // this just guards against one runaway response bloating every prompt after it.
 const LAST_ANSWER_CHAR_BUDGET = 3_000;
+// A model that sees the image should not wait long for the extra recognized
+// text: past this the request goes out with the image alone.
+const OCR_WAIT_BUDGET_MS = 1_200;
+// Transcribing a 5s chunk slower than this is worth a line in the log.
+const SLOW_TRANSCRIBE_MS = 2_000;
+
+function withBudget<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
+}
 
 export type LiveBlock = {
   id: string;
@@ -178,10 +188,13 @@ export class LiveSession {
     let text: string;
     let endsWithPause = false;
     try {
+      const startedAt = Date.now();
       const result = await this.pythonRuntime.call<{ text: string; ends_with_pause?: boolean }>(
         "transcribe_chunk",
         { audio_base64: audioBase64 },
       );
+      const took = Date.now() - startedAt;
+      if (took > SLOW_TRANSCRIBE_MS) logLine(`[timing] slow transcription: ${took}ms for a 5s chunk (${channel})`);
       text = result.text.trim();
       endsWithPause = Boolean(result.ends_with_pause);
       if (this.consecutiveTranscriptionFailures > 0) {
@@ -296,15 +309,24 @@ export class LiveSession {
     let screenshot: string | undefined;
     let screenText: string | undefined;
     let ocrImage: string | undefined;
+    const t0 = Date.now();
     if (options.includeScreenshot) {
       const shot = await this.captureScreen().catch(() => null);
+      const tCapture = Date.now();
       if (shot) {
         ocrImage = shot.ocrImage;
-        if (preset?.supportsVision) screenshot = shot.image;
-        if (!preset?.supportsVision || getScreenshotTextEnabled()) {
-          screenText = (await this.recognizeText(shot.ocrImage).catch(() => null)) ?? undefined;
+        const sees = Boolean(preset?.supportsVision);
+        if (sees) screenshot = shot.image;
+        if (!sees || getScreenshotTextEnabled()) {
+          const recognition = this.recognizeText(shot.ocrImage).catch(() => null);
+          // A model that cannot see the image has nothing else to go on, so it
+          // waits for the text; one that can does not wait long.
+          screenText = (sees ? await withBudget(recognition, OCR_WAIT_BUDGET_MS) : await recognition) ?? undefined;
         }
       }
+      logLine(
+        `[timing] screenshot: capture ${tCapture - t0}ms, recognition ${Date.now() - tCapture}ms, image ${screenshot ? "yes" : "no"}, text ${screenText ? screenText.length : 0} chars`,
+      );
     }
     // Give the model its own last answer back, so "revise the draft" in the
     // system prompt has something concrete to revise instead of an empty
@@ -334,6 +356,7 @@ export class LiveSession {
         screenshotBase64: image,
         signal: this.abortController!.signal,
         onDelta: (delta) => {
+          if (!collected) logLine(`[timing] first token ${Date.now() - t0}ms (${providerId}, ${settings.model})`);
           collected += delta;
           this.events.onBlockDelta(block.id, delta);
         },
@@ -351,6 +374,7 @@ export class LiveSession {
         console.warn("[live-session] provider refused the image, retrying with recognized text");
         await run(undefined, text);
       }
+      logLine(`[timing] block done ${Date.now() - t0}ms, ${collected.length} chars`);
       this.lastAnswer = collected.slice(0, LAST_ANSWER_CHAR_BUDGET);
       this.events.onBlockDone(block.id);
     } catch (error) {

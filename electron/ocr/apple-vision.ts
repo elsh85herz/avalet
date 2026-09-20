@@ -31,7 +31,7 @@ export const appleVisionEngine: OcrEngine = {
   },
 
   async recognize(png, languages) {
-    const file = path.join(os.tmpdir(), `avalet-ocr-${randomUUID()}.png`);
+    const file = path.join(os.tmpdir(), `avalet-ocr-${randomUUID()}.img`);
     fs.writeFileSync(file, png);
     try {
       const stdout = await new Promise<string>((resolve, reject) => {
