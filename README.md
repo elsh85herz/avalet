@@ -84,6 +84,7 @@ system audio (loopback)               5s WAV chunks, tagged "other"
 - **Unsigned build.** See the install steps above. Code signing and auto-update are planned.
 - **Speech model is downloaded from Hugging Face** on first run. If that's slow or blocked on your network, use a VPN for the first download (ours: [ast-net.ru](https://ast-net.ru)); the model is cached afterwards. Bundling the model with the app is on the roadmap.
 - **Text recognition on screenshots is macOS only** for now (Apple Vision, works offline). Building from source needs the Xcode Command Line Tools (`xcode-select --install`); the downloadable app already includes it. On other platforms screenshots go to vision models as images only.
+- **DeepSeek runs with reasoning switched off** (`thinking: disabled`): `deepseek-flash` otherwise thinks before every answer, which adds seconds. Screenshots need `deepseek-flash`; `deepseek-v4-pro` does not take images (Avalet then falls back to recognized text).
 - **Logs and timings** are written to `~/Library/Logs/Avalet/avalet.log` (timings and errors only, never meeting text, screen text, or keys). Attach it when reporting slowness.
 - **Consent.** Recording a call may require the other participants' consent depending on your jurisdiction. Avalet shows a visible listening indicator, but consent is on whoever runs it.
 

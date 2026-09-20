@@ -9,5 +9,5 @@ export async function generate(request: GenerateRequest): Promise<string> {
   const preset = PROVIDER_PRESETS.find((p) => p.id === request.providerId);
   const kind = preset?.kind ?? "openai-compatible";
   if (kind === "anthropic") return streamAnthropic(request);
-  return streamOpenAICompatible(request);
+  return streamOpenAICompatible(preset?.requestExtras ? { ...request, extraBody: preset.requestExtras } : request);
 }

@@ -25,6 +25,7 @@ export async function streamOpenAICompatible(request: GenerateRequest): Promise<
     method: "POST",
     headers,
     body: JSON.stringify({
+      ...request.extraBody,
       model: request.model,
       max_tokens: request.maxTokens ?? DEFAULT_MAX_TOKENS,
       stream: true,

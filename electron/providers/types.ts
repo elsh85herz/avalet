@@ -16,6 +16,8 @@ export type ProviderPreset = {
   defaultModel: string;
   /** Whether this preset's default model accepts image content (screenshots). */
   supportsVision: boolean;
+  /** Extra top-level fields merged into every chat-completions request body (openai-compatible only). */
+  requestExtras?: Record<string, unknown>;
 };
 
 // Presets cover the three cloud providers asked for; "custom" lets anyone
@@ -48,6 +50,11 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     // tokens per image, resized to about 1300x1300.
     defaultModel: "deepseek-flash",
     supportsVision: true,
+    // deepseek-flash reasons before answering by default (thinking mode on,
+    // effort high, per DeepSeek's Thinking Mode guide, checked 2026-09-20),
+    // which delays the first word by seconds. A live suggestion needs the
+    // answer immediately, so reasoning is switched off.
+    requestExtras: { thinking: { type: "disabled" } },
   },
   {
     id: "custom",
@@ -74,6 +81,8 @@ export type GenerateRequest = {
   transcript: string;
   /** Raw JPEG bytes, base64-encoded, no data: prefix. */
   screenshotBase64?: string;
+  /** Provider-specific body fields, filled in from the preset by generate(). */
+  extraBody?: Record<string, unknown>;
   /** Output cap; defaults to a short live block. Summaries pass more. */
   maxTokens?: number;
   signal: AbortSignal;
