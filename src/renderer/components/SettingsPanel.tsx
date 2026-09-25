@@ -29,6 +29,10 @@ export function SettingsPanel() {
   const [contextSaved, setContextSaved] = useState(true);
   const [agendaDraft, setAgendaDraft] = useState("");
   const [agendaSaved, setAgendaSaved] = useState(true);
+  const contextSavedRef = useRef(true);
+  const agendaSavedRef = useRef(true);
+  contextSavedRef.current = contextSaved;
+  agendaSavedRef.current = agendaSaved;
   const agendaFileRef = useRef<HTMLInputElement | null>(null);
   const [autoDetectEnabled, setAutoDetectEnabledState] = useState(true);
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
@@ -63,6 +67,9 @@ export function SettingsPanel() {
     });
     const unsubscribeLanguage = bridge.events.onUiLanguageChanged(setUiLanguage);
     const unsubscribeMode = bridge.events.onMeetingModeChanged(setMeetingModeState);
+    // A meeting starting re-reads the stored briefing so this screen shows
+    // exactly what the meeting was started with.
+    const unsubscribeMeetingStarted = bridge.events.onMeetingStarted(() => void refresh());
     // The overlay can't reach this window's MediaStreams directly — it asks
     // (via main) for whichever channel needs reconnecting, and we're the
     // ones actually holding the live AudioCaptureHandle.
@@ -79,6 +86,7 @@ export function SettingsPanel() {
       unsubscribeTheme();
       unsubscribeLanguage();
       unsubscribeMode();
+      unsubscribeMeetingStarted();
       unsubscribeReconnect();
       unsubscribeTranscriptionError();
       unsubscribeTranscriptionRecovered();
@@ -89,8 +97,9 @@ export function SettingsPanel() {
     const all = await bridge.settings.getAll();
     setSelectedProviderId(all.selectedProviderId);
     setProviders(all.providers);
-    setContextDraft(all.sessionContext);
-    setAgendaDraft(all.agendaText);
+    // Never overwrite text that is typed but not saved yet.
+    if (contextSavedRef.current) setContextDraft(all.sessionContext);
+    if (agendaSavedRef.current) setAgendaDraft(all.agendaText);
     setAutoDetectEnabledState(all.autoDetectEnabled);
     setThemeState(all.theme);
     setUiLanguage(all.uiLanguage);
@@ -141,9 +150,23 @@ export function SettingsPanel() {
     setContextSaved(true);
   }
 
-  async function handleSaveAgenda(text: string) {
+  // Briefing and agenda save themselves shortly after typing stops, so what
+  // Start picks up (and what the summary later uses) is always what is shown.
+  useEffect(() => {
+    if (contextSaved) return;
+    const timer = setTimeout(() => void handleSaveContext(), 500);
+    return () => clearTimeout(timer);
+  }, [contextDraft, contextSaved]);
+
+  useEffect(() => {
+    if (agendaSaved) return;
+    const timer = setTimeout(() => void handleSaveAgenda(agendaDraft, false), 500);
+    return () => clearTimeout(timer);
+  }, [agendaDraft, agendaSaved]);
+
+  async function handleSaveAgenda(text: string, rewriteDraft = true) {
     const normalized = parseAgendaText(text).join("\n");
-    setAgendaDraft(normalized);
+    if (rewriteDraft) setAgendaDraft(normalized);
     await bridge.settings.setAgenda(normalized);
     setAgendaSaved(true);
   }
@@ -258,6 +281,8 @@ export function SettingsPanel() {
         captureHandleRef.current = handle;
         setMicWorks(true);
       }
+      if (!contextSaved) await handleSaveContext();
+      if (!agendaSaved) await handleSaveAgenda(agendaDraft, false);
       await bridge.session.start();
       await refreshPermissions();
     } catch (e) {
@@ -502,9 +527,7 @@ export function SettingsPanel() {
             rows={4}
           />
         </label>
-        <button type="button" onClick={() => void handleSaveContext()} disabled={contextSaved}>
-          {contextSaved ? t.contextSaved : t.contextSave}
-        </button>
+        <p className="hint">{contextSaved ? t.contextSaved : "..."}</p>
         <label>
           {t.agendaLabel} <span className="optional">{t.agendaOptional}</span>
           <textarea
@@ -518,9 +541,7 @@ export function SettingsPanel() {
           />
         </label>
         <div className="agenda-edit-actions">
-          <button type="button" onClick={() => void handleSaveAgenda(agendaDraft)} disabled={agendaSaved}>
-            {agendaSaved ? t.agendaSaved : t.agendaSave}
-          </button>
+          <span className="hint">{agendaSaved ? t.agendaSaved : "..."}</span>
           <button type="button" onClick={() => agendaFileRef.current?.click()}>
             {t.agendaLoadFile}
           </button>

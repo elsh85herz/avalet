@@ -1,6 +1,6 @@
-export type MeetingMode = "free" | "requirements" | "grooming" | "demo" | "interview";
+export type MeetingMode = "free" | "requirements" | "grooming" | "demo" | "review" | "interview";
 
-export const MEETING_MODES: MeetingMode[] = ["free", "requirements", "grooming", "demo", "interview"];
+export const MEETING_MODES: MeetingMode[] = ["free", "requirements", "grooming", "demo", "review", "interview"];
 
 export function isMeetingMode(value: unknown): value is MeetingMode {
   return typeof value === "string" && (MEETING_MODES as string[]).includes(value);
@@ -37,6 +37,13 @@ export const MODE_INSTRUCTIONS: Record<MeetingMode, string> = {
     "Do not praise the demo, do not suggest new features; this meeting is about matching what was agreed.",
   ].join(" "),
 
+  review: [
+    "MEETING MODE: DOCUMENT REVIEW. The analyst is presenting a document (methodology, specification, design) to colleagues and collecting remarks and decisions on it. The briefing usually holds the document outline and the open questions the analyst wants closed.",
+    "Listen for: remarks on the text (which section, what exactly to change, who said it); decisions on the open questions (accepted, rejected, needs a check, and by whom and by when); questions about the document that the analyst has to answer; statements that contradict the document or a decision already recorded in the briefing.",
+    "When a question about the document is asked, give the analyst one or two sentences to say aloud, taken from the briefing when it has a prepared answer. When a remark is made, restate it in one line as 'Замечание: раздел X, суть, кто сказал'. When a decision is made, restate it as 'Решение: ...' with the owner and the deadline if they were named. If something is claimed as a fact about a system, integration or process and the document does not confirm it, say 'не подтверждено, уточнить у ...'.",
+    "Do not re-explain the document section by section, do not suggest new content unless a remark asks for it.",
+  ].join(" "),
+
   interview: [
     "MEETING MODE: TECHNICAL INTERVIEW OR ASSESSMENT. The analyst is being interviewed for a systems or business analyst role; the other side asks questions, sometimes shows a case or task on screen.",
     "Answer the question that was actually asked, in a structure that sounds natural when spoken aloud, in this order: (1) one-sentence direct answer or definition; (2) how it works or the key points, 2-4 short bullets; (3) one concrete example from practice, described generically (a payments, lending, or onboarding flow in a bank or fintech), never inventing named employers or products; (4) trade-offs, limitations, or common mistakes; (5) one closing sentence. Then add one line starting with 'Возможный следующий вопрос:' anticipating the interviewer's follow-up.",
@@ -70,6 +77,10 @@ export const MODE_SUMMARY: Record<MeetingMode, SummarySpec> = {
   demo: {
     headings: ["Обсуждения", "Принято", "Отклонения от требований", "Не проверено", "Открытые вопросы"],
     guidance: "'Принято' lists what was shown and matches the requirements. 'Отклонения от требований' states each deviation with the requirement it violates. 'Не проверено' lists states and cases that were not demonstrated (empty, error, permissions, boundaries).",
+  },
+  review: {
+    headings: ["Обсуждения", "Замечания к документу", "Решения по открытым вопросам", "Поручения и сроки", "Новые вопросы и риски"],
+    guidance: "'Замечания к документу': one line per remark as 'раздел - суть - кто сказал'. 'Решения по открытым вопросам': one line per question from the briefing or agenda that was actually discussed, as 'вопрос - принято / отклонено / нужна проверка - формулировка'; a question that nobody discussed is written as 'не обсуждали', never guessed from the briefing. 'Поручения и сроки' repeats the agreed follow-ups with owner and deadline as said. 'Новые вопросы и риски' holds only what was raised in the call and is absent from the briefing.",
   },
   interview: {
     headings: ["Вопросы интервьюера", "Мои ответы (кратко)", "Слабые места", "Что повторить", "Итог"],

@@ -12,8 +12,8 @@ export type LiveBlockDeltaEvent = { id: string; delta: string };
 export type LiveBlockErrorEvent = { id: string; message: string };
 export type HistoryBlock = { id: string; text: string; status: "done" | "error"; createdAt: number };
 
-export type MeetingMode = "free" | "requirements" | "grooming" | "demo" | "interview";
-export const MEETING_MODES: MeetingMode[] = ["free", "requirements", "grooming", "demo", "interview"];
+export type MeetingMode = "free" | "requirements" | "grooming" | "demo" | "review" | "interview";
+export const MEETING_MODES: MeetingMode[] = ["free", "requirements", "grooming", "demo", "review", "interview"];
 
 export type TranscriptSegment = { at: number; speaker: "me" | "other"; text: string };
 

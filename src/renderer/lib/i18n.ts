@@ -147,7 +147,7 @@ export type UiStrings = {
 
 export type PermState = "granted" | "denied" | "restricted" | "not-determined" | "unknown";
 export type SessionKey = "idle" | "listening" | "paused";
-export type MeetingModeKey = "free" | "requirements" | "grooming" | "demo" | "interview";
+export type MeetingModeKey = "free" | "requirements" | "grooming" | "demo" | "review" | "interview";
 
 export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
   en: {
@@ -257,6 +257,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       requirements: "Requirements",
       grooming: "Grooming",
       demo: "Demo / acceptance",
+      review: "Document review",
       interview: "Interview",
     },
     modeHelp: {
@@ -264,6 +265,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       requirements: "A session with a stakeholder: turns wishes into testable requirements, catches contradictions, suggests what to clarify.",
       grooming: "Estimating and splitting a task: scope, dependencies, hidden work, a split into slices with acceptance criteria.",
       demo: "Accepting what is shown: compares it with the requirements, finds unverified states, prepares the sign-off conditions.",
+      review: "You present a document: notes remarks by section, catches decisions on open questions with owner and deadline, prepares short answers from your briefing.",
       interview: "You are the one answering: a complete, structured answer with an example and the likely follow-up question.",
     },
     notesTitle: "Show or hide the notes window (transcript, summary, settings)",
@@ -421,6 +423,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       requirements: "Сбор требований",
       grooming: "Груминг и оценка",
       demo: "Демо и приёмка",
+      review: "Ревью документа",
       interview: "Интервью",
     },
     modeHelp: {
@@ -428,6 +431,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       requirements: "Встреча с заказчиком: превращает пожелания в проверяемые требования, ловит противоречия, подсказывает, что уточнить.",
       grooming: "Оценка и разбиение задачи: границы, зависимости, скрытая работа, декомпозиция на куски с критериями приёмки.",
       demo: "Приёмка показанного: сверяет с требованиями, ищет непроверенные состояния, готовит условия для подписи.",
+      review: "Вы показываете документ: фиксирует замечания по разделам, ловит решения по открытым вопросам с ответственным и сроком, готовит короткие ответы из вашего брифа.",
       interview: "Отвечаете вы: развёрнутый структурный ответ с примером и вероятным следующим вопросом.",
     },
     notesTitle: "Показать или скрыть окно конспекта (транскрипт, итог, настройки)",

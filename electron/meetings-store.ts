@@ -129,6 +129,14 @@ export function setCurrentMode(mode: MeetingMode): void {
   scheduleFlush();
 }
 
+// The briefing lives on the first screen and is one value: editing it during
+// a call updates the running meeting too, so the summary uses what is shown.
+export function setCurrentContext(context: string): void {
+  if (!current || current.endedAt) return;
+  current.context = context;
+  scheduleFlush();
+}
+
 export function renameMeeting(id: string, title: string): void {
   const meeting = current?.id === id ? current : readMeeting(id);
   if (!meeting) return;

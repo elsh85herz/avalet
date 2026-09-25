@@ -32,6 +32,7 @@ import {
   renameMeeting,
   setAgenda,
   setCurrentMode,
+  setCurrentContext,
   startMeeting,
 } from "./meetings-store.js";
 import { summarizeMeeting } from "./meeting-summary.js";
@@ -426,6 +427,7 @@ function registerIpc(): void {
   ipcMain.handle("avalet:context-set", (_event, text: unknown) => {
     if (typeof text !== "string") throw new Error("text must be a string");
     setSessionContext(text);
+    setCurrentContext(text);
   });
 
   ipcMain.handle("avalet:auto-detect-set", (_event, enabled: unknown) => {
