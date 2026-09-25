@@ -660,6 +660,8 @@ async function runScreenshotMode(dir: string): Promise<void> {
 app.whenReady().then(() => {
   logLine(`[app] Avalet ${app.getVersion()} on ${process.platform}/${process.arch}, ${app.isPackaged ? "packaged" : "dev"}`);
   nativeTheme.themeSource = getTheme();
+  // Every launch starts fully opaque; the slider on the overlay then adjusts both windows.
+  setOverlayOpacity(1);
   registerIpc();
   if (process.platform === "darwin" && app.dock) {
     const dockIcon = nativeImage.createFromPath(iconPath);

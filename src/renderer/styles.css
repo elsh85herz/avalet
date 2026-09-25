@@ -1219,13 +1219,3 @@ select {
   align-items: center;
   justify-content: center;
 }
-
-.header-opacity {
-  -webkit-app-region: no-drag;
-  width: 150px;
-  margin-left: auto;
-}
-
-.header-opacity + .pin-btn {
-  margin-left: 8px;
-}
