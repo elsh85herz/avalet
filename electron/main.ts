@@ -126,6 +126,7 @@ function createMainWindow(): void {
   // Same as the overlay: the transcript and summary stay out of the user's
   // own screen share and recordings (macOS, Windows 10 2004+).
   win.setContentProtection(true);
+  win.setOpacity(getOverlayOpacity());
   applyMainPinned(win, getMainPinned());
   // Launched from Finder the window can open behind other apps: the "visible
   // on full screen" flag below turns the app into a background-style process
@@ -438,7 +439,14 @@ function registerIpc(): void {
   ipcMain.handle("avalet:overlay-set-opacity", (_event, opacity: unknown) => {
     if (typeof opacity !== "number" || Number.isNaN(opacity)) throw new Error("opacity must be a number");
     setOverlayOpacity(opacity);
-    setOverlayWindowOpacity(getOverlayOpacity());
+    const applied = getOverlayOpacity();
+    // One setting drives every window: overlay and main, and every open slider follows.
+    setOverlayWindowOpacity(applied);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setOpacity(applied);
+      mainWindow.webContents.send("avalet:event:opacity-changed", applied);
+    }
+    broadcastToOverlay("avalet:event:opacity-changed", applied);
   });
 
   ipcMain.handle("avalet:overlay-set-collapsed", (_event, collapsed: unknown) => {

@@ -118,6 +118,7 @@ type AvaletBridge = {
     onHistoryCleared: (cb: () => void) => () => void;
     onAutoDetectChanged: (cb: (enabled: boolean) => void) => () => void;
     onThemeChanged: (cb: (theme: "dark" | "light") => void) => () => void;
+    onOpacityChanged: (cb: (opacity: number) => void) => () => void;
     onUiLanguageChanged: (cb: (language: "ru" | "en") => void) => () => void;
     onAudioDegraded: (cb: (state: { me: boolean; other: boolean }) => void) => () => void;
     onReconnectAudioRequested: (cb: (channel: "me" | "other" | "both") => void) => () => void;

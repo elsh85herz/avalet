@@ -83,6 +83,7 @@ export function OverlayApp() {
         document.documentElement.dataset.theme = theme;
       }),
       bridge.events.onUiLanguageChanged(setUiLanguage),
+      bridge.events.onOpacityChanged(setOpacity),
       bridge.events.onMeetingModeChanged(setMeetingMode),
       bridge.events.onAudioDegraded(setAudioDegraded),
       bridge.events.onTranscriptionError(setTranscriptionError),

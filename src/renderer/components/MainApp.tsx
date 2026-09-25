@@ -15,6 +15,7 @@ export function MainApp() {
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
   const [current, setCurrent] = useState<Meeting | null>(null);
   const [pinned, setPinned] = useState(true);
+  const [opacity, setOpacity] = useState(1);
 
   async function togglePinned() {
     const next = !pinned;
@@ -26,10 +27,12 @@ export function MainApp() {
     void bridge.settings.getAll().then((all) => {
       setUiLanguage(all.uiLanguage);
       setPinned(all.mainPinned);
+      setOpacity(all.overlayOpacity);
     });
     void bridge.meetings.current().then(setCurrent);
     const unsubscribers = [
       bridge.events.onUiLanguageChanged(setUiLanguage),
+      bridge.events.onOpacityChanged(setOpacity),
       bridge.events.onMeetingStarted((meeting) => {
         setCurrent(meeting);
         setTab("meeting");
@@ -50,6 +53,21 @@ export function MainApp() {
               {t.tabs[id]}
             </button>
           ))}
+          <label className="opacity-control header-opacity" title={t.opacityTitle}>
+            <span>{t.opacityLabel}</span>
+            <input
+              type="range"
+              min={0.2}
+              max={1}
+              step={0.05}
+              value={opacity}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                setOpacity(value);
+                void bridge.overlay.setOpacity(value);
+              }}
+            />
+          </label>
           <button
             type="button"
             className={`pin-btn ${pinned ? "on" : ""}`}

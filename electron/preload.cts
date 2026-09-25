@@ -184,6 +184,7 @@ const api = {
     onHistoryCleared: (cb: () => void) => on("avalet:event:history-cleared", cb),
     onAutoDetectChanged: (cb: (enabled: boolean) => void) => on("avalet:event:auto-detect-changed", cb),
     onThemeChanged: (cb: (theme: "dark" | "light") => void) => on("avalet:event:theme-changed", cb),
+    onOpacityChanged: (cb: (opacity: number) => void) => on("avalet:event:opacity-changed", cb),
     onUiLanguageChanged: (cb: (language: "ru" | "en") => void) =>
       on("avalet:event:ui-language-changed", cb),
     onAudioDegraded: (cb: (state: { me: boolean; other: boolean }) => void) =>
