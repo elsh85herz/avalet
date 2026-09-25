@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import type { MeetingMode } from "./modes.js";
+import type { ActionItem, AgendaStatusItem } from "./summary-format.js";
 
 export type TranscriptSegment = {
   at: number;
@@ -20,6 +21,12 @@ export type Meeting = {
   transcript: TranscriptSegment[];
   summary?: string;
   summaryAt?: number;
+  /** Questions to get answered on this call, one per entry; may be edited during the meeting. */
+  agenda?: string[];
+  /** Per-question outcome from the last summary: closed or still open. */
+  agendaStatus?: AgendaStatusItem[];
+  /** Action points extracted by the last summary. */
+  actions?: ActionItem[];
 };
 
 export type MeetingListItem = {
@@ -76,7 +83,13 @@ export function getCurrentMeeting(): Meeting | null {
   return current;
 }
 
-export function startMeeting(input: { title?: string; titlePrefix?: string; mode: MeetingMode; context: string }): Meeting {
+export function startMeeting(input: {
+  title?: string;
+  titlePrefix?: string;
+  mode: MeetingMode;
+  context: string;
+  agenda?: string[];
+}): Meeting {
   if (current && !current.endedAt) return current;
   const startedAt = Date.now();
   current = {
@@ -86,6 +99,7 @@ export function startMeeting(input: { title?: string; titlePrefix?: string; mode
     mode: input.mode,
     context: input.context,
     transcript: [],
+    agenda: input.agenda ?? [],
   };
   writeMeeting(current);
   return current;
@@ -123,11 +137,33 @@ export function renameMeeting(id: string, title: string): void {
   else writeMeeting(meeting);
 }
 
-export function setSummary(id: string, summary: string): void {
+export function setAgenda(id: string, agenda: string[]): Meeting | null {
+  const meeting = current?.id === id ? current : readMeeting(id);
+  if (!meeting) return null;
+  meeting.agenda = agenda;
+  // Statuses belong to the old question list; they are recomputed by the next summary.
+  if (meeting.agendaStatus) {
+    const byQuestion = new Map(meeting.agendaStatus.map((item) => [item.question, item]));
+    meeting.agendaStatus = agenda.map((question) => byQuestion.get(question) ?? { question, closed: false, note: "" });
+  }
+  if (meeting === current) scheduleFlush();
+  else writeMeeting(meeting);
+  return meeting;
+}
+
+export function setSummary(
+  id: string,
+  summary: string,
+  analysis?: { agendaStatus: AgendaStatusItem[]; actions: ActionItem[] } | null,
+): void {
   const meeting = current?.id === id ? current : readMeeting(id);
   if (!meeting) return;
   meeting.summary = summary;
   meeting.summaryAt = Date.now();
+  if (analysis) {
+    meeting.agendaStatus = analysis.agendaStatus;
+    meeting.actions = analysis.actions;
+  }
   if (meeting === current) flushNow();
   else writeMeeting(meeting);
 }
@@ -198,6 +234,12 @@ export function transcriptToText(meeting: Meeting, labels: { me: string; other: 
   return meeting.transcript
     .map((seg) => `[${formatClock(seg.at, meeting.startedAt)}] ${seg.speaker === "me" ? labels.me : labels.other}: ${seg.text}`)
     .join("\n");
+}
+
+/** Raw transcript with no summary and no processing: title, date, then one line per phrase. */
+export function transcriptToRawText(meeting: Meeting, labels: { me: string; other: string; date: string }): string {
+  const header = [meeting.title, `${labels.date}: ${new Date(meeting.startedAt).toLocaleString()}`, ""];
+  return [...header, transcriptToText(meeting, labels), ""].join("\n");
 }
 
 export function meetingToMarkdown(

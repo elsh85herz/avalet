@@ -51,24 +51,25 @@ export const MODE_INSTRUCTIONS: Record<MeetingMode, string> = {
 // because 'decisions / requirements / tasks' make no sense for it.
 export type SummarySpec = { headings: string[]; guidance: string };
 
-const ANALYST_HEADINGS = ["Решения", "Открытые вопросы", "Требования", "Риски", "Задачи"];
-
+// Action points and the agenda checklist are not headings here: they come
+// back as structured JSON after the text (see meeting-summary.ts) and are
+// rendered as a table and checkmarks. "Обсуждения" is written per topic.
 export const MODE_SUMMARY: Record<MeetingMode, SummarySpec> = {
   free: {
-    headings: ANALYST_HEADINGS,
-    guidance: "Requirements are phrased as testable statements. Tasks name what has to be done and, when said, who and by when. Open questions are phrased so they can be sent as-is to the person who has to answer.",
+    headings: ["Обсуждения", "Решения", "Открытые вопросы", "Риски"],
+    guidance: "Open questions are phrased so they can be sent as-is to the person who has to answer.",
   },
   requirements: {
-    headings: ["Решения", "Требования", "Границы (не входит)", "Открытые вопросы", "Риски", "Задачи"],
-    guidance: "Put the most effort into 'Требования': each as one testable line with the actor ('Клиент может ...', 'Система должна ...'), grouped by flow when there are many; include data and non-functional constraints that were actually stated. Under 'Открытые вопросы' list exactly what was left ambiguous, each phrased as a question to a named role. 'Границы (не входит)' lists what was explicitly excluded.",
+    headings: ["Обсуждения", "Требования", "Границы (не входит)", "Открытые вопросы", "Риски"],
+    guidance: "Put extra effort into 'Требования': each as one testable line with the actor ('Клиент может ...', 'Система должна ...'), grouped by flow when there are many; include data and non-functional constraints that were actually stated. Under 'Открытые вопросы' list exactly what was left ambiguous, each phrased as a question to a named role. 'Границы (не входит)' lists what was explicitly excluded.",
   },
   grooming: {
-    headings: ["Решения", "Объём и границы", "Декомпозиция", "Открытые вопросы", "Риски", "Задачи"],
+    headings: ["Обсуждения", "Объём и границы", "Декомпозиция", "Открытые вопросы", "Риски"],
     guidance: "'Декомпозиция' lists the slices the team agreed on or that were proposed, each with its acceptance criterion and, if mentioned, the estimate. 'Открытые вопросы' are the unknowns that block estimation. 'Риски' include hidden work that was raised (migrations, flags, monitoring, rollback).",
   },
   demo: {
-    headings: ["Принято", "Отклонения от требований", "Не проверено", "Открытые вопросы", "Задачи"],
-    guidance: "'Принято' lists what was shown and matches the requirements. 'Отклонения от требований' states each deviation with the requirement it violates. 'Не проверено' lists states and cases that were not demonstrated (empty, error, permissions, boundaries). 'Задачи' are fixes with owners and, if said, deadlines.",
+    headings: ["Обсуждения", "Принято", "Отклонения от требований", "Не проверено", "Открытые вопросы"],
+    guidance: "'Принято' lists what was shown and matches the requirements. 'Отклонения от требований' states each deviation with the requirement it violates. 'Не проверено' lists states and cases that were not demonstrated (empty, error, permissions, boundaries).",
   },
   interview: {
     headings: ["Вопросы интервьюера", "Мои ответы (кратко)", "Слабые места", "Что повторить", "Итог"],

@@ -27,6 +27,8 @@ type StoreShape = {
   preferredScreenSourceId: string;
   /** Free-text briefing (ticket/spec/agenda) pasted before a call, folded into the system prompt. */
   sessionContext: string;
+  /** Agenda for the next call: one question per line. Copied into each new meeting, where it stays editable. */
+  agendaText: string;
   /** When false, LiveSession only responds to askManual() — no automatic periodic suggestions. */
   autoDetectEnabled: boolean;
   /** Overlay window opacity, 0.2-1. Adjustable live from the overlay itself. */
@@ -61,6 +63,7 @@ const defaults: StoreShape = {
   preferredMicDeviceId: "",
   preferredScreenSourceId: "",
   sessionContext: "",
+  agendaText: "",
   autoDetectEnabled: true,
   overlayOpacity: 1,
   theme: "dark",
@@ -88,6 +91,14 @@ export function getPreferredScreenSourceId(): string {
 
 export function setPreferredScreenSourceId(sourceId: string): void {
   store.set("preferredScreenSourceId", sourceId);
+}
+
+export function getAgendaText(): string {
+  return store.get("agendaText") ?? "";
+}
+
+export function setAgendaText(text: string): void {
+  store.set("agendaText", text);
 }
 
 export function getSessionContext(): string {

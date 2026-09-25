@@ -1,4 +1,6 @@
 import type {
+  ActionItem,
+  AgendaStatusItem,
   ExportLabels,
   HistoryBlock,
   LiveBlockDeltaEvent,
@@ -18,6 +20,7 @@ type AvaletBridge = {
       selectedProviderId: string;
       providers: ProviderSettingsPublic[];
       sessionContext: string;
+      agendaText: string;
       autoDetectEnabled: boolean;
       overlayOpacity: number;
       theme: "dark" | "light";
@@ -37,6 +40,7 @@ type AvaletBridge = {
     updateProvider: (providerId: string, patch: { model?: string; baseUrl?: string }) => Promise<void>;
     setApiKey: (providerId: string, apiKey: string) => Promise<void>;
     setContext: (text: string) => Promise<void>;
+    setAgenda: (text: string) => Promise<void>;
     setAutoDetect: (enabled: boolean) => Promise<void>;
     setTheme: (theme: "dark" | "light") => Promise<void>;
     setUiLanguage: (language: "ru" | "en") => Promise<void>;
@@ -101,6 +105,8 @@ type AvaletBridge = {
     delete: (id: string) => Promise<void>;
     summarize: (id: string) => Promise<string>;
     export: (id: string, labels: ExportLabels, modeLabel: string) => Promise<string | null>;
+    exportTranscript: (id: string, labels: ExportLabels) => Promise<string | null>;
+    setAgenda: (id: string, agenda: string[]) => Promise<Meeting | null>;
     toText: (id: string, labels: ExportLabels, modeLabel: string) => Promise<string>;
   };
   events: {
@@ -122,7 +128,9 @@ type AvaletBridge = {
     onMeetingStarted: (cb: (meeting: Meeting) => void) => () => void;
     onMeetingEnded: (cb: (meeting: Meeting | null) => void) => () => void;
     onSummaryDelta: (cb: (e: { id: string; delta: string }) => void) => () => void;
-    onSummaryDone: (cb: (e: { id: string; text: string }) => void) => () => void;
+    onSummaryDone: (
+      cb: (e: { id: string; text: string; agendaStatus: AgendaStatusItem[] | null; actions: ActionItem[] | null }) => void,
+    ) => () => void;
     onSummaryError: (cb: (e: { id: string; message: string }) => void) => () => void;
   };
 };

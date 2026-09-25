@@ -15,6 +15,7 @@ export type UiStrings = {
   opacityLabel: string;
   opacityTitle: string;
   listeningEmpty: string;
+  copyBlockTitle: string;
   processNowLabel: string;
   processNowTitle: string;
   askPlaceholder: string;
@@ -58,6 +59,12 @@ export type UiStrings = {
     contextPlaceholder: string;
     contextSaved: string;
     contextSave: string;
+    agendaLabel: string;
+    agendaOptional: string;
+    agendaPlaceholder: string;
+    agendaLoadFile: string;
+    agendaSave: string;
+    agendaSaved: string;
     autoSuggest: string;
     autoSuggestOnHint: string;
     autoSuggestOffHint: string;
@@ -104,7 +111,6 @@ export type UiStrings = {
     summarizing: string;
     summaryTitle: string;
     summaryEmpty: string;
-    exportMd: string;
     copyText: string;
     copied: string;
     exported: string;
@@ -116,6 +122,26 @@ export type UiStrings = {
     date: string;
     transcriptTitle: string;
     error: string;
+    exportProtocol: string;
+    exportTranscript: string;
+    agendaToggleTitle: string;
+    agendaTitle: string;
+    agendaEditLabel: string;
+    agendaPlaceholder: string;
+    agendaLoadFile: string;
+    agendaSaveList: string;
+    agendaEmpty: string;
+    agendaNotChecked: string;
+    agendaProgress: string;
+    agendaClosed: string;
+    agendaOpen: string;
+    actionsTitle: string;
+    actionsEmpty: string;
+    participants: string;
+    discussions: string;
+    actionTask: string;
+    actionOwner: string;
+    actionDue: string;
   };
 };
 
@@ -135,6 +161,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
     opacityLabel: "Opacity",
     opacityTitle: "Overlay window opacity",
     listeningEmpty: "Listening: the first suggestion will appear here.",
+    copyBlockTitle: "Copy this suggestion",
     processNowLabel: "Process now",
     processNowTitle:
       "Generate a suggestion from what's been transcribed so far (voice only, no screenshot): auto-suggest is off, so nothing does this on its own",
@@ -179,6 +206,12 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       contextPlaceholder: "Paste the ticket, requirement doc, or agenda for this call…",
       contextSaved: "Saved",
       contextSave: "Save context",
+      agendaLabel: "Agenda",
+      agendaOptional: "(optional: one question per line)",
+      agendaPlaceholder: "Which questions must get an answer on this call, one per line…",
+      agendaLoadFile: "Load from file",
+      agendaSave: "Save agenda",
+      agendaSaved: "Saved",
       autoSuggest: "Auto-suggest during the call",
       autoSuggestOnHint: "Blocks appear automatically as the conversation goes. Turn off to only respond to typed or quick-action questions.",
       autoSuggestOffHint: "Auto-suggest is off: ask questions manually in the overlay or use a quick action.",
@@ -248,7 +281,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       summarizing: "Writing the summary…",
       summaryTitle: "Summary",
       summaryEmpty: "No summary yet. Press \"Meeting summary\" when the call is over (or any time during it).",
-      exportMd: "Export .md",
       copyText: "Copy as text",
       copied: "Copied",
       exported: "Saved",
@@ -260,6 +292,26 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       date: "Date",
       transcriptTitle: "Transcript",
       error: "Error",
+      exportProtocol: "Download protocol",
+      exportTranscript: "Download transcript",
+      agendaToggleTitle: "Agenda and action points",
+      agendaTitle: "Agenda",
+      agendaEditLabel: "Agenda, one question per line",
+      agendaPlaceholder: "Which questions must get an answer on this call…",
+      agendaLoadFile: "Load from file",
+      agendaSaveList: "Save list",
+      agendaEmpty: "No agenda. Add questions above: after \"Summary\" each one gets a checkmark or stays open.",
+      agendaNotChecked: "Not checked yet: press \"Summary\".",
+      agendaProgress: "closed",
+      agendaClosed: "closed",
+      agendaOpen: "open",
+      actionsTitle: "Action points",
+      actionsEmpty: "None yet. They appear after \"Summary\".",
+      participants: "Participants",
+      discussions: "Discussion",
+      actionTask: "Task",
+      actionOwner: "Owner",
+      actionDue: "Due",
     },
   },
   ru: {
@@ -273,6 +325,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
     opacityLabel: "Прозрачность",
     opacityTitle: "Прозрачность окна оверлея",
     listeningEmpty: "Слушаю: первая подсказка появится здесь.",
+    copyBlockTitle: "Скопировать подсказку",
     processNowLabel: "Обработать сейчас",
     processNowTitle:
       "Сгенерировать подсказку из того, что уже расшифровано (только голос, без скриншота): авто-режим выключен, само это не сделает",
@@ -317,6 +370,12 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       contextPlaceholder: "Вставьте тикет, постановку или повестку этой встречи…",
       contextSaved: "Сохранено",
       contextSave: "Сохранить контекст",
+      agendaLabel: "Повестка",
+      agendaOptional: "(по желанию: по вопросу на строку)",
+      agendaPlaceholder: "На какие вопросы нужно получить ответ на этой встрече, по одному на строку…",
+      agendaLoadFile: "Загрузить из файла",
+      agendaSave: "Сохранить повестку",
+      agendaSaved: "Сохранено",
       autoSuggest: "Авто-подсказки во время встречи",
       autoSuggestOnHint: "Подсказки появляются сами по ходу разговора. Выключите, чтобы отвечать только на ваши вопросы и быстрые кнопки.",
       autoSuggestOffHint: "Авто-подсказки выключены: задавайте вопросы в оверлее или используйте быстрые кнопки.",
@@ -386,7 +445,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       summarizing: "Пишу итог…",
       summaryTitle: "Итог",
       summaryEmpty: "Итога пока нет. Нажмите \"Итог встречи\" после звонка (или в любой момент во время него).",
-      exportMd: "Экспорт .md",
       copyText: "Скопировать текстом",
       copied: "Скопировано",
       exported: "Сохранено",
@@ -398,6 +456,26 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       date: "Дата",
       transcriptTitle: "Транскрипт",
       error: "Ошибка",
+      exportProtocol: "Скачать протокол",
+      exportTranscript: "Скачать транскрипт",
+      agendaToggleTitle: "Повестка и экшн-поинты",
+      agendaTitle: "Повестка",
+      agendaEditLabel: "Повестка, по вопросу на строку",
+      agendaPlaceholder: "На какие вопросы нужно получить ответ на этой встрече…",
+      agendaLoadFile: "Загрузить из файла",
+      agendaSaveList: "Сохранить список",
+      agendaEmpty: "Повестки нет. Добавьте вопросы выше: после \"Итога\" у каждого встанет галочка или останется пусто.",
+      agendaNotChecked: "Ещё не проверено: нажмите \"Итог встречи\".",
+      agendaProgress: "закрыто",
+      agendaClosed: "закрыт",
+      agendaOpen: "открыт",
+      actionsTitle: "Экшн-поинты",
+      actionsEmpty: "Пока нет. Появятся после \"Итога встречи\".",
+      participants: "Участники",
+      discussions: "Обсуждения",
+      actionTask: "Наименование",
+      actionOwner: "Ответственный",
+      actionDue: "Срок",
     },
   },
 };

@@ -3,7 +3,7 @@ import { getBridge } from "../lib/bridge.js";
 import type { MeetingMode, SessionState } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { QUICK_ACTIONS } from "../live/quick-actions.js";
-import { IconCamera, IconNotes, IconPause, IconPlay } from "../icons.js";
+import { IconCamera, IconCopy, IconNotes, IconPause, IconPlay } from "../icons.js";
 
 type Block = {
   id: string;
@@ -18,6 +18,7 @@ export function OverlayApp() {
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [askDraft, setAskDraft] = useState("");
   const [asking, setAsking] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [autoDetectEnabled, setAutoDetectEnabled] = useState(true);
   const [opacity, setOpacity] = useState(1);
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
@@ -114,6 +115,24 @@ export function OverlayApp() {
   useEffect(() => {
     void bridge.overlay.setCollapsed(collapsed);
   }, [collapsed]);
+
+  async function copyCurrent() {
+    const text = current?.text;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Clipboard can be refused when the window is not focused: fall back to a hidden textarea.
+      const area = document.createElement("textarea");
+      area.value = text;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      area.remove();
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  }
 
   function goPrev() {
     followLive.current = false;
@@ -273,6 +292,15 @@ export function OverlayApp() {
       </span>
       <button type="button" className="nav-btn" onClick={goNext} disabled={pageIndex >= blocks.length - 1}>
         ▶
+      </button>
+      <button
+        type="button"
+        className="nav-btn copy-btn"
+        title={t.copyBlockTitle}
+        onClick={() => void copyCurrent()}
+        disabled={!current?.text}
+      >
+        {copied ? "✓" : <IconCopy />}
       </button>
     </div>
   );

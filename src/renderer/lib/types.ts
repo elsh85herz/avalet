@@ -17,6 +17,9 @@ export const MEETING_MODES: MeetingMode[] = ["free", "requirements", "grooming",
 
 export type TranscriptSegment = { at: number; speaker: "me" | "other"; text: string };
 
+export type AgendaStatusItem = { question: string; closed: boolean; note: string };
+export type ActionItem = { task: string; owner: string; due: string };
+
 export type Meeting = {
   id: string;
   title: string;
@@ -27,6 +30,9 @@ export type Meeting = {
   transcript: TranscriptSegment[];
   summary?: string;
   summaryAt?: number;
+  agenda?: string[];
+  agendaStatus?: AgendaStatusItem[];
+  actions?: ActionItem[];
 };
 
 export type MeetingListItem = {
@@ -39,4 +45,20 @@ export type MeetingListItem = {
   hasSummary: boolean;
 };
 
-export type ExportLabels = { me: string; other: string; summary: string; transcript: string; date: string; mode: string };
+export type ExportLabels = {
+  me: string;
+  other: string;
+  summary: string;
+  transcript: string;
+  date: string;
+  mode: string;
+  participants: string;
+  agenda: string;
+  discussions: string;
+  actions: string;
+  actionTask: string;
+  actionOwner: string;
+  actionDue: string;
+  agendaClosed: string;
+  agendaOpen: string;
+};

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
 import type { ExportLabels, Meeting, TranscriptSegment } from "../lib/types.js";
+import { parseAgendaText } from "../lib/agenda.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 
 function pad(n: number): string {
@@ -31,6 +32,9 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
   const [summaryDraft, setSummaryDraft] = useState(initial.summary ?? "");
   const [summarizing, setSummarizing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [agendaOpen, setAgendaOpen] = useState(false);
+  const [agendaDraft, setAgendaDraft] = useState((initial.agenda ?? []).join("\n"));
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const followRef = useRef(true);
 
@@ -38,6 +42,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     setMeeting(initial);
     setTitleDraft(initial.title);
     setSummaryDraft(initial.summary ?? "");
+    setAgendaDraft((initial.agenda ?? []).join("\n"));
   }, [initial.id]);
 
   useEffect(() => {
@@ -63,12 +68,18 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
         if (id !== meeting.id) return;
         setSummaryDraft((prev) => prev + delta);
       }),
-      bridge.events.onSummaryDone(({ id, text }) => {
+      bridge.events.onSummaryDone(({ id, text, agendaStatus, actions }) => {
         if (id !== meeting.id) return;
         setSummaryDraft(text);
         setSummarizing(false);
         setMeeting((prev) => {
-          const next = { ...prev, summary: text, summaryAt: Date.now() };
+          const next = {
+            ...prev,
+            summary: text,
+            summaryAt: Date.now(),
+            agendaStatus: agendaStatus ?? prev.agendaStatus,
+            actions: actions ?? prev.actions,
+          };
           onChanged?.(next);
           return next;
         });
@@ -99,6 +110,15 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     transcript: t.meeting.transcriptTitle,
     date: t.meeting.date,
     mode: t.modeLabel,
+    participants: t.meeting.participants,
+    agenda: t.meeting.agendaTitle,
+    discussions: t.meeting.discussions,
+    actions: t.meeting.actionsTitle,
+    actionTask: t.meeting.actionTask,
+    actionOwner: t.meeting.actionOwner,
+    actionDue: t.meeting.actionDue,
+    agendaClosed: t.meeting.agendaClosed,
+    agendaOpen: t.meeting.agendaOpen,
   };
 
   async function commitTitle() {
@@ -126,9 +146,31 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     }
   }
 
-  async function exportMd() {
+  async function exportProtocol() {
     const saved = await bridge.meetings.export(meeting.id, labels, t.modes[meeting.mode]);
     if (saved) setNotice(t.meeting.exported);
+  }
+
+  async function exportTranscript() {
+    const saved = await bridge.meetings.exportTranscript(meeting.id, labels);
+    if (saved) setNotice(t.meeting.exported);
+  }
+
+  async function saveAgenda(text: string) {
+    const agenda = parseAgendaText(text);
+    setAgendaDraft(agenda.join("\n"));
+    const updated = await bridge.meetings.setAgenda(meeting.id, agenda);
+    if (updated) {
+      setMeeting((prev) => ({ ...prev, agenda: updated.agenda, agendaStatus: updated.agendaStatus }));
+      onChanged?.(updated);
+    }
+  }
+
+  async function loadAgendaFile(file: File | undefined) {
+    if (!file) return;
+    const text = await file.text();
+    await saveAgenda(agendaDraft ? `${agendaDraft}\n${text}` : text);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function copyText() {
@@ -141,6 +183,13 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     await bridge.meetings.delete(meeting.id);
     onDeleted?.();
   }
+
+  // Agenda checkmarks come from the last summary; before it every question is open.
+  const agendaItems = (meeting.agendaStatus && meeting.agendaStatus.length > 0
+    ? meeting.agendaStatus
+    : (meeting.agenda ?? []).map((question) => ({ question, closed: false, note: "" })));
+  const agendaTotal = agendaItems.length;
+  const agendaClosedCount = agendaItems.filter((item) => item.closed).length;
 
   function onTranscriptScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
@@ -176,10 +225,13 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
         <button type="button" onClick={() => void summarize()} disabled={summarizing || meeting.transcript.length === 0}>
           {summarizing ? t.meeting.summarizing : t.meeting.summarize}
         </button>
-        <button type="button" onClick={() => void exportMd()} disabled={meeting.transcript.length === 0}>
-          {t.meeting.exportMd}
+        <button type="button" onClick={() => void exportProtocol()} disabled={!meeting.summary}>
+          {t.meeting.exportProtocol}
         </button>
-        <button type="button" onClick={() => void copyText()} disabled={meeting.transcript.length === 0}>
+        <button type="button" onClick={() => void exportTranscript()} disabled={meeting.transcript.length === 0}>
+          {t.meeting.exportTranscript}
+        </button>
+        <button type="button" onClick={() => void copyText()} disabled={!meeting.summary}>
           {t.meeting.copyText}
         </button>
         {!live && onDeleted ? (
@@ -188,6 +240,87 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
           </button>
         ) : null}
         {notice ? <span className="notice">{notice}</span> : null}
+      </div>
+
+      <div className="meeting-agenda">
+        <button
+          type="button"
+          className="agenda-toggle"
+          aria-expanded={agendaOpen}
+          title={t.meeting.agendaToggleTitle}
+          onClick={() => setAgendaOpen((open) => !open)}
+        >
+          <span className={`chevron ${agendaOpen ? "open" : ""}`}>▸</span>
+          <span>{t.meeting.agendaToggleTitle}</span>
+          {agendaTotal > 0 ? (
+            <span className="agenda-progress">
+              {agendaClosedCount}/{agendaTotal} {t.meeting.agendaProgress}
+            </span>
+          ) : null}
+        </button>
+        {agendaOpen ? (
+          <div className="agenda-body">
+            <h3>{t.meeting.agendaTitle}</h3>
+            {agendaItems.length === 0 ? (
+              <p className="hint">{t.meeting.agendaEmpty}</p>
+            ) : (
+              <ul className="agenda-list">
+                {agendaItems.map((item) => (
+                  <li key={item.question} className={item.closed ? "closed" : "open"}>
+                    <span className="agenda-check" aria-label={item.closed ? t.meeting.agendaClosed : t.meeting.agendaOpen}>
+                      {item.closed ? "✓" : ""}
+                    </span>
+                    <span className="agenda-text">
+                      {item.question}
+                      {item.note ? <span className="agenda-note">{item.note}</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {agendaItems.length > 0 && !meeting.agendaStatus ? <p className="hint">{t.meeting.agendaNotChecked}</p> : null}
+            <label className="agenda-edit">
+              {t.meeting.agendaEditLabel}
+              <textarea
+                value={agendaDraft}
+                rows={4}
+                placeholder={t.meeting.agendaPlaceholder}
+                onChange={(e) => setAgendaDraft(e.target.value)}
+              />
+            </label>
+            <div className="agenda-edit-actions">
+              <button type="button" onClick={() => void saveAgenda(agendaDraft)}>
+                {t.meeting.agendaSaveList}
+              </button>
+              <button type="button" onClick={() => fileInputRef.current?.click()}>
+                {t.meeting.agendaLoadFile}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,text/plain"
+                hidden
+                onChange={(e) => void loadAgendaFile(e.target.files?.[0])}
+              />
+            </div>
+
+            <h3>{t.meeting.actionsTitle}</h3>
+            {(meeting.actions ?? []).length === 0 ? (
+              <p className="hint">{t.meeting.actionsEmpty}</p>
+            ) : (
+              <ul className="action-list">
+                {(meeting.actions ?? []).map((action, i) => (
+                  <li key={`${i}-${action.task}`}>
+                    <span className="action-task">{action.task}</span>
+                    <span className="action-meta">
+                      {action.owner || "-"} · {action.due || "-"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <div className="meeting-summary">

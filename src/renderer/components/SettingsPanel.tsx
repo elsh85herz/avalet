@@ -5,6 +5,7 @@ import { UI_STRINGS, type PermState, type UiLanguage } from "../lib/i18n.js";
 import { PROVIDER_PRESETS_UI } from "../providers/presets.js";
 import { startAudioCapture, type AudioCaptureHandle } from "../capture/audio-capture.js";
 import { IconHelp, IconMoon, IconSun } from "../icons.js";
+import { parseAgendaText } from "../lib/agenda.js";
 
 export function SettingsPanel() {
   const bridge = getBridge();
@@ -26,6 +27,9 @@ export function SettingsPanel() {
   const [preferredScreenId, setPreferredScreenId] = useState("");
   const [contextDraft, setContextDraft] = useState("");
   const [contextSaved, setContextSaved] = useState(true);
+  const [agendaDraft, setAgendaDraft] = useState("");
+  const [agendaSaved, setAgendaSaved] = useState(true);
+  const agendaFileRef = useRef<HTMLInputElement | null>(null);
   const [autoDetectEnabled, setAutoDetectEnabledState] = useState(true);
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
@@ -86,6 +90,7 @@ export function SettingsPanel() {
     setSelectedProviderId(all.selectedProviderId);
     setProviders(all.providers);
     setContextDraft(all.sessionContext);
+    setAgendaDraft(all.agendaText);
     setAutoDetectEnabledState(all.autoDetectEnabled);
     setThemeState(all.theme);
     setUiLanguage(all.uiLanguage);
@@ -134,6 +139,20 @@ export function SettingsPanel() {
   async function handleSaveContext() {
     await bridge.settings.setContext(contextDraft);
     setContextSaved(true);
+  }
+
+  async function handleSaveAgenda(text: string) {
+    const normalized = parseAgendaText(text).join("\n");
+    setAgendaDraft(normalized);
+    await bridge.settings.setAgenda(normalized);
+    setAgendaSaved(true);
+  }
+
+  async function handleLoadAgendaFile(file: File | undefined) {
+    if (!file) return;
+    const text = await file.text();
+    await handleSaveAgenda(agendaDraft ? `${agendaDraft}\n${text}` : text);
+    if (agendaFileRef.current) agendaFileRef.current.value = "";
   }
 
   async function handleToggleAutoDetect() {
@@ -486,6 +505,33 @@ export function SettingsPanel() {
         <button type="button" onClick={() => void handleSaveContext()} disabled={contextSaved}>
           {contextSaved ? t.contextSaved : t.contextSave}
         </button>
+        <label>
+          {t.agendaLabel} <span className="optional">{t.agendaOptional}</span>
+          <textarea
+            value={agendaDraft}
+            onChange={(e) => {
+              setAgendaDraft(e.target.value);
+              setAgendaSaved(false);
+            }}
+            placeholder={t.agendaPlaceholder}
+            rows={4}
+          />
+        </label>
+        <div className="agenda-edit-actions">
+          <button type="button" onClick={() => void handleSaveAgenda(agendaDraft)} disabled={agendaSaved}>
+            {agendaSaved ? t.agendaSaved : t.agendaSave}
+          </button>
+          <button type="button" onClick={() => agendaFileRef.current?.click()}>
+            {t.agendaLoadFile}
+          </button>
+          <input
+            ref={agendaFileRef}
+            type="file"
+            accept=".txt,.md,text/plain"
+            hidden
+            onChange={(e) => void handleLoadAgendaFile(e.target.files?.[0])}
+          />
+        </div>
       </section>
 
       <section className="session-controls">

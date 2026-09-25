@@ -43,40 +43,44 @@ export function MainApp() {
 
   return (
     <div className="main-app">
-      <nav className="tabs">
-        {(["settings", "meeting", "meetings"] as Tab[]).map((id) => (
-          <button key={id} type="button" className={`tab ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
-            {t.tabs[id]}
+      <header className="app-header">
+        <nav className="tabs">
+          {(["settings", "meeting", "meetings"] as Tab[]).map((id) => (
+            <button key={id} type="button" className={`tab ${tab === id ? "active" : ""}`} onClick={() => setTab(id)}>
+              {t.tabs[id]}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`pin-btn ${pinned ? "on" : ""}`}
+            onClick={() => void togglePinned()}
+            title={pinned ? t.settings.pinTitle : t.settings.unpinTitle}
+          >
+            <IconPin />
           </button>
-        ))}
-        <button
-          type="button"
-          className={`pin-btn ${pinned ? "on" : ""}`}
-          onClick={() => void togglePinned()}
-          title={pinned ? t.settings.pinTitle : t.settings.unpinTitle}
-        >
-          <IconPin />
-        </button>
-      </nav>
-      <div className={tab === "settings" ? "" : "tab-hidden"}>
-        <SettingsPanel />
-      </div>
-      {tab === "meeting" ? (
-        current ? (
-          <div className="tab-body">
-            <MeetingView meeting={current} uiLanguage={uiLanguage} live />
-          </div>
-        ) : (
-          <div className="tab-body">
-            <p className="hint">{t.meeting.noCurrent}</p>
-          </div>
-        )
-      ) : null}
-      {tab === "meetings" ? (
-        <div className="tab-body">
-          <MeetingsList uiLanguage={uiLanguage} />
+        </nav>
+      </header>
+      <div className="app-scroll">
+        <div className={tab === "settings" ? "" : "tab-hidden"}>
+          <SettingsPanel />
         </div>
-      ) : null}
+        {tab === "meeting" ? (
+          current ? (
+            <div className="tab-body">
+              <MeetingView meeting={current} uiLanguage={uiLanguage} live />
+            </div>
+          ) : (
+            <div className="tab-body">
+              <p className="hint">{t.meeting.noCurrent}</p>
+            </div>
+          )
+        ) : null}
+        {tab === "meetings" ? (
+          <div className="tab-body">
+            <MeetingsList uiLanguage={uiLanguage} />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

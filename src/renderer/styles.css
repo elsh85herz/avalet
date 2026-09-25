@@ -142,7 +142,7 @@ input[type="range"] {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 10px;
-  cursor: pointer;
+  cursor: default;
   transition: background 0.12s ease, border-color 0.12s ease;
 }
 
@@ -203,7 +203,7 @@ button {
   color: white;
   padding: 8px 14px;
   font-size: 13px;
-  cursor: pointer;
+  cursor: default;
   transition: filter 0.12s ease, transform 0.08s ease;
 }
 
@@ -350,7 +350,7 @@ button:disabled {
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  cursor: pointer;
+  cursor: default;
 }
 
 /* Native-style iOS/macOS toggle switch, built from a plain checkbox —
@@ -370,7 +370,7 @@ button:disabled {
   margin: 0;
   border-radius: 999px;
   background: rgba(120, 120, 128, 0.32);
-  cursor: pointer;
+  cursor: default;
   position: relative;
   transition: background 0.15s ease;
 }
@@ -708,14 +708,32 @@ button:disabled {
 .main-app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Fixed header: the 40px top band is reserved for the native window buttons
+   (traffic lights, see trafficLightPosition in electron/main.ts) and the tabs
+   sit below it. Only .app-scroll scrolls, so content never slides under the
+   system buttons or the tabs. */
+.app-header {
+  flex: none;
+  -webkit-app-region: drag;
+  padding-top: 40px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.app-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .tabs {
   -webkit-app-region: drag;
   display: flex;
   gap: 4px;
-  padding: 40px 24px 0;
+  padding: 0 24px 10px;
 }
 
 .tab {
@@ -1055,4 +1073,149 @@ select {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* --- Agenda and action points (meeting view) --- */
+
+.meeting-agenda {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+}
+
+.agenda-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.agenda-toggle:hover:not(:disabled) {
+  filter: none;
+}
+
+.chevron {
+  display: inline-block;
+  color: var(--muted);
+  transition: transform 0.12s ease;
+}
+
+.chevron.open {
+  transform: rotate(90deg);
+}
+
+.agenda-progress {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.agenda-body {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agenda-body h3 {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.agenda-list,
+.action-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agenda-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.agenda-check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.agenda-list li.closed .agenda-check {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #0b0d10;
+}
+
+.agenda-note {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.action-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.action-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.agenda-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.agenda-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Summary, transcript and overlay suggestions are selectable text. */
+.summary-text,
+.segment-text,
+.block-text {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }

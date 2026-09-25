@@ -14,6 +14,8 @@ type SessionState = "idle" | "listening" | "paused";
 type HistoryBlock = { id: string; text: string; status: "done" | "error"; createdAt: number };
 type MeetingMode = "free" | "requirements" | "grooming" | "demo" | "interview";
 type TranscriptSegment = { at: number; speaker: "me" | "other"; text: string };
+type AgendaStatusItem = { question: string; closed: boolean; note: string };
+type ActionItem = { task: string; owner: string; due: string };
 type Meeting = {
   id: string;
   title: string;
@@ -24,6 +26,9 @@ type Meeting = {
   transcript: TranscriptSegment[];
   summary?: string;
   summaryAt?: number;
+  agenda?: string[];
+  agendaStatus?: AgendaStatusItem[];
+  actions?: ActionItem[];
 };
 type MeetingListItem = {
   id: string;
@@ -34,7 +39,23 @@ type MeetingListItem = {
   segmentCount: number;
   hasSummary: boolean;
 };
-type ExportLabels = { me: string; other: string; summary: string; transcript: string; date: string; mode: string };
+type ExportLabels = {
+  me: string;
+  other: string;
+  summary: string;
+  transcript: string;
+  date: string;
+  mode: string;
+  participants: string;
+  agenda: string;
+  discussions: string;
+  actions: string;
+  actionTask: string;
+  actionOwner: string;
+  actionDue: string;
+  agendaClosed: string;
+  agendaOpen: string;
+};
 
 function on<T>(channel: string, callback: (payload: T) => void): () => void {
   const listener = (_event: unknown, payload: T) => callback(payload);
@@ -48,6 +69,7 @@ const api = {
       selectedProviderId: string;
       providers: ProviderSettingsPublic[];
       sessionContext: string;
+      agendaText: string;
       autoDetectEnabled: boolean;
       overlayOpacity: number;
       theme: "dark" | "light";
@@ -71,6 +93,7 @@ const api = {
     setApiKey: (providerId: string, apiKey: string): Promise<void> =>
       ipcRenderer.invoke("avalet:settings-set-api-key", providerId, apiKey),
     setContext: (text: string): Promise<void> => ipcRenderer.invoke("avalet:context-set", text),
+    setAgenda: (text: string): Promise<void> => ipcRenderer.invoke("avalet:agenda-set", text),
     setAutoDetect: (enabled: boolean): Promise<void> =>
       ipcRenderer.invoke("avalet:auto-detect-set", enabled),
     setTheme: (theme: "dark" | "light"): Promise<void> => ipcRenderer.invoke("avalet:theme-set", theme),
@@ -145,6 +168,10 @@ const api = {
     summarize: (id: string): Promise<string> => ipcRenderer.invoke("avalet:meetings-summarize", id),
     export: (id: string, labels: ExportLabels, modeLabel: string): Promise<string | null> =>
       ipcRenderer.invoke("avalet:meetings-export", id, labels, modeLabel),
+    exportTranscript: (id: string, labels: ExportLabels): Promise<string | null> =>
+      ipcRenderer.invoke("avalet:meetings-export-transcript", id, labels),
+    setAgenda: (id: string, agenda: string[]): Promise<Meeting | null> =>
+      ipcRenderer.invoke("avalet:meetings-set-agenda", id, agenda),
     toText: (id: string, labels: ExportLabels, modeLabel: string): Promise<string> =>
       ipcRenderer.invoke("avalet:meetings-to-text", id, labels, modeLabel),
   },
@@ -170,7 +197,9 @@ const api = {
     onMeetingStarted: (cb: (meeting: Meeting) => void) => on("avalet:event:meeting-started", cb),
     onMeetingEnded: (cb: (meeting: Meeting | null) => void) => on("avalet:event:meeting-ended", cb),
     onSummaryDelta: (cb: (e: { id: string; delta: string }) => void) => on("avalet:event:summary-delta", cb),
-    onSummaryDone: (cb: (e: { id: string; text: string }) => void) => on("avalet:event:summary-done", cb),
+    onSummaryDone: (
+      cb: (e: { id: string; text: string; agendaStatus: AgendaStatusItem[] | null; actions: ActionItem[] | null }) => void,
+    ) => on("avalet:event:summary-done", cb),
     onSummaryError: (cb: (e: { id: string; message: string }) => void) => on("avalet:event:summary-error", cb),
   },
 };

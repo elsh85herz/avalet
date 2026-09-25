@@ -19,7 +19,7 @@ import { checkMicAccess, checkScreenAccess } from "./ipc/permissions.js";
 import { listScreenSources } from "./ipc/screen-sources.js";
 import { appendHistoryBlock, clearHistory, getHistory, type HistoryBlock } from "./history-store.js";
 import { LiveSession, type LiveBlock } from "./live-session.js";
-import { isMeetingMode } from "./modes.js";
+import { isMeetingMode, MODE_SUMMARY } from "./modes.js";
 import {
   appendSegment,
   deleteMeeting,
@@ -27,13 +27,15 @@ import {
   flushCurrentMeeting,
   getCurrentMeeting,
   listMeetings,
-  meetingToMarkdown,
+  transcriptToRawText,
   readMeeting,
   renameMeeting,
+  setAgenda,
   setCurrentMode,
   startMeeting,
 } from "./meetings-store.js";
 import { summarizeMeeting } from "./meeting-summary.js";
+import { buildProtocolMarkdown, parseAgendaText } from "./summary-format.js";
 import {
   getAllProviderSettings,
   getAutoDetectEnabled,
@@ -46,10 +48,12 @@ import {
   getPreferredMicDeviceId,
   getPreferredScreenSourceId,
   getSelectedProviderId,
+  getAgendaText,
   getSessionContext,
   getTheme,
   getUiLanguage,
   hasApiKey,
+  setAgendaText,
   setApiKey,
   setAutoDetectEnabled,
   setMainPinned,
@@ -221,23 +225,40 @@ function applyTheme(theme: "dark" | "light"): void {
   if (!isMac) mainWindow?.setBackgroundColor(theme === "light" ? "#f5f5f7" : "#0b0d10");
 }
 
-function renderMeeting(id: string, labels: unknown, modeLabel: unknown): string {
+function pickLabels(labels: unknown): (key: string, fallback: string) => string {
+  const l = (labels ?? {}) as Record<string, unknown>;
+  return (key, fallback) => (typeof l[key] === "string" ? (l[key] as string) : fallback);
+}
+
+function renderProtocol(id: string, labels: unknown, modeLabel: unknown): string {
   const meeting = readMeeting(id);
   if (!meeting) throw new Error("meeting not found");
-  const l = (labels ?? {}) as Record<string, unknown>;
-  const pick = (key: string, fallback: string) => (typeof l[key] === "string" ? (l[key] as string) : fallback);
-  return meetingToMarkdown(
+  const pick = pickLabels(labels);
+  return buildProtocolMarkdown(
     meeting,
     {
-      me: pick("me", "Me"),
-      other: pick("other", "Other"),
-      summary: pick("summary", "Summary"),
-      transcript: pick("transcript", "Transcript"),
       date: pick("date", "Date"),
       mode: pick("mode", "Mode"),
+      participants: pick("participants", "Participants"),
+      agenda: pick("agenda", "Agenda"),
+      discussions: pick("discussions", "Discussion"),
+      actions: pick("actions", "Agreements and tasks"),
+      actionTask: pick("actionTask", "Task"),
+      actionOwner: pick("actionOwner", "Owner"),
+      actionDue: pick("actionDue", "Due"),
+      agendaClosed: pick("agendaClosed", "closed"),
+      agendaOpen: pick("agendaOpen", "open"),
     },
     typeof modeLabel === "string" ? modeLabel : meeting.mode,
+    MODE_SUMMARY[meeting.mode].headings,
   );
+}
+
+function renderRawTranscript(id: string, labels: unknown): string {
+  const meeting = readMeeting(id);
+  if (!meeting) throw new Error("meeting not found");
+  const pick = pickLabels(labels);
+  return transcriptToRawText(meeting, { me: pick("me", "Me"), other: pick("other", "Other"), date: pick("date", "Date") });
 }
 
 function registerIpc(): void {
@@ -262,6 +283,7 @@ function registerIpc(): void {
       hasApiKey: hasApiKey(s.providerId),
     })),
     sessionContext: getSessionContext(),
+    agendaText: getAgendaText(),
     autoDetectEnabled: getAutoDetectEnabled(),
     overlayOpacity: getOverlayOpacity(),
     theme: getTheme(),
@@ -336,10 +358,15 @@ function registerIpc(): void {
     summaryAbort = controller;
     flushCurrentMeeting();
     try {
-      const text = await summarizeMeeting(id, controller.signal, {
+      const { text, analysis } = await summarizeMeeting(id, controller.signal, {
         onDelta: (delta) => mainWindow?.webContents.send("avalet:event:summary-delta", { id, delta }),
       });
-      mainWindow?.webContents.send("avalet:event:summary-done", { id, text });
+      mainWindow?.webContents.send("avalet:event:summary-done", {
+        id,
+        text,
+        agendaStatus: analysis?.agendaStatus ?? null,
+        actions: analysis?.actions ?? null,
+      });
       return text;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -350,26 +377,49 @@ function registerIpc(): void {
     }
   });
 
+  async function saveFile(defaultName: string, filterName: string, extension: string, content: string): Promise<string | null> {
+    const safe = defaultName.replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80);
+    const options = {
+      defaultPath: path.join(app.getPath("documents"), `${safe}.${extension}`),
+      filters: [{ name: filterName, extensions: [extension] }],
+    };
+    const result = mainWindow ? await dialog.showSaveDialog(mainWindow, options) : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) return null;
+    fs.writeFileSync(result.filePath, content, "utf8");
+    return result.filePath;
+  }
+
+  // The protocol: agenda checklist, per-topic discussion and the action table. No transcript in it.
   ipcMain.handle("avalet:meetings-export", async (_event, id: unknown, labels: unknown, modeLabel: unknown) => {
     if (typeof id !== "string") throw new Error("id must be a string");
     const meeting = readMeeting(id);
     if (!meeting) throw new Error("meeting not found");
-    const markdown = renderMeeting(id, labels, modeLabel);
-    const safeTitle = meeting.title.replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80);
-    const options = {
-      defaultPath: path.join(app.getPath("documents"), `${safeTitle}.md`),
-      filters: [{ name: "Markdown", extensions: ["md"] }],
-    };
-    const result = mainWindow ? await dialog.showSaveDialog(mainWindow, options) : await dialog.showSaveDialog(options);
-    if (result.canceled || !result.filePath) return null;
-    fs.writeFileSync(result.filePath, markdown, "utf8");
-    return result.filePath;
+    return saveFile(meeting.title, "Markdown", "md", renderProtocol(id, labels, modeLabel));
   });
 
-  // Plain-text variant for the clipboard: same content, markdown headings stripped.
+  // The raw transcript exactly as recognized, without any model processing.
+  ipcMain.handle("avalet:meetings-export-transcript", async (_event, id: unknown, labels: unknown) => {
+    if (typeof id !== "string") throw new Error("id must be a string");
+    const meeting = readMeeting(id);
+    if (!meeting) throw new Error("meeting not found");
+    return saveFile(`${meeting.title} - transcript`, "Text", "txt", renderRawTranscript(id, labels));
+  });
+
+  // Plain-text variant of the protocol for the clipboard: markdown marks stripped.
   ipcMain.handle("avalet:meetings-to-text", (_event, id: unknown, labels: unknown, modeLabel: unknown) => {
     if (typeof id !== "string") throw new Error("id must be a string");
-    return renderMeeting(id, labels, modeLabel).replace(/^#+ /gm, "");
+    return renderProtocol(id, labels, modeLabel).replace(/^#+ /gm, "").replace(/\*\*/g, "");
+  });
+
+  ipcMain.handle("avalet:meetings-set-agenda", (_event, id: unknown, agenda: unknown) => {
+    if (typeof id !== "string") throw new Error("id must be a string");
+    if (!Array.isArray(agenda) || agenda.some((q) => typeof q !== "string")) throw new Error("agenda must be a string array");
+    return setAgenda(id, (agenda as string[]).map((q) => q.trim()).filter(Boolean));
+  });
+
+  ipcMain.handle("avalet:agenda-set", (_event, text: unknown) => {
+    if (typeof text !== "string") throw new Error("text must be a string");
+    setAgendaText(text);
   });
 
   ipcMain.handle("avalet:context-set", (_event, text: unknown) => {
@@ -456,6 +506,7 @@ function registerIpc(): void {
       titlePrefix: getUiLanguage() === "ru" ? "Встреча" : "Meeting",
       mode: getMeetingMode(),
       context: getSessionContext(),
+      agenda: parseAgendaText(getAgendaText()),
     });
     mainWindow?.webContents.send("avalet:event:meeting-started", meeting);
     createOverlayWindow(preloadPath, entryUrl("overlay"));
