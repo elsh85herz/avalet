@@ -92,6 +92,32 @@ test("cancel stops the download, keeps the partial file, and Continue resumes", 
   m.dispose();
 });
 
+test("cancel then Continue resumes from the partial file, never from zero", async () => {
+  const { m, row, events, spawnCount } = manager("ok", 60);
+  m.download("small");
+  await until(() => row("small").percent >= 30);
+  m.cancel("small");
+  const cancelled = row("small");
+  assert.equal(cancelled.state, "absent");
+  assert.ok(cancelled.bytes >= cancelled.sizeBytes * 0.3, "the partial file stays");
+  assert.ok(cancelled.percent >= 30, "the row shows how far it got");
+
+  const from = events.length;
+  m.download("small");
+  await until(() => row("small").state === "ready", 15_000);
+  const during = events
+    .slice(from)
+    .map((rows) => rows.find((r) => r.name === "small")!)
+    .filter((r) => r.state === "downloading");
+  assert.ok(during.length > 0);
+  assert.ok(
+    during.every((r) => r.bytes >= cancelled.bytes),
+    `progress after Continue went below the partial size: ${during.map((r) => r.percent).join(",")}`,
+  );
+  assert.equal(spawnCount(), 2);
+  m.dispose();
+});
+
 test("delete removes a downloaded model", async () => {
   const { m, row } = manager("ok");
   m.download("small");

@@ -127,9 +127,15 @@ Resume rule: read `CLOUD_TASK_2.md` (current task, 0.2.0-rc.2) and `CLOUD_TASK.m
   - E2E: model missing (before and after Start, Download in place, Start waits then listens), unchecked key with Check. Screenshots: `simple-key-unchecked-dark`, `simple-home-ready-dark`, `simple-start-waits-for-model-dark`; `simple-settings-model-downloading-dark` removed.
   - Verified: `npm run check` (142/142), `xvfb-run ... npx playwright test` 14/14.
 
+- Step 5 (robustness around real use):
+  - `model-manager.test.ts`: cancel at 30%+ keeps the partial file and percent; Continue never reports less than the partial size (fake download fixture). Wizard E2E: Cancel shows "Partly downloaded", the percent and Continue; Continue resumes from there. Screenshot `wizard-3-model-partial-dark`.
+  - Start during the first download explains and waits (done in Step 4, E2E `simple-start-waits-for-model-dark`).
+  - `electron/log.ts`: identical lines within 10 min are counted, not repeated; key-shaped strings redacted. `electron/log-hygiene.test.ts`: repeat suppression, redaction, and a full own-key meeting with a canary in the transcript/context and the key: neither reaches the log.
+  - Verified: `npm run check` (146/146), `xvfb-run ... npx playwright test` 14/14.
+
 ## rc.2: In progress
 
-- Step 5 (robustness: download resume, log hygiene).
+- Step 6 (docs and versioning, REPORT section).
 
 ## rc.2: Next
 

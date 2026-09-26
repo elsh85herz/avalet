@@ -39,6 +39,7 @@ Made by the E2E suite (`npm run e2e:xvfb`) on Linux under Xvfb: real app, fake c
 - [`wizard-2-own-key-ok-dark.png`](wizard-2-own-key-ok-dark.png)
 - [`wizard-3-model-dark.png`](wizard-3-model-dark.png)
 - [`wizard-3-model-downloading-dark.png`](wizard-3-model-downloading-dark.png)
+- [`wizard-3-model-partial-dark.png`](wizard-3-model-partial-dark.png)
 - [`wizard-3-model-ready-dark.png`](wizard-3-model-ready-dark.png)
 - [`wizard-4-context-try-it-dark.png`](wizard-4-context-try-it-dark.png)
 - [`wizard-4-context-try-it-light.png`](wizard-4-context-try-it-light.png)

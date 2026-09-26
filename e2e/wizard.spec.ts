@@ -34,6 +34,18 @@ test("first-run wizard: permissions, trial, model download, context and try it",
     await expect(page.locator('[data-model="small"]')).toHaveClass(/downloading/);
     await page.waitForTimeout(500);
     await shot(page, "wizard-3-model-downloading-dark");
+    // Cancel keeps what was downloaded: the row shows the partial size and Continue.
+    await page.locator('[data-model="small"]').getByRole("button", { name: /Отменить|Cancel/ }).click();
+    const small = page.locator('[data-model="small"]');
+    await expect(small).toContainText(/Скачана частично|Partly downloaded/);
+    await expect(small.locator(".model-percent")).toContainText("%");
+    await shot(page, "wizard-3-model-partial-dark");
+    const partialPercent = Number((await small.locator(".model-percent").innerText()).match(/(\d+)%/)![1]);
+    expect(partialPercent).toBeGreaterThan(0);
+    await small.getByRole("button", { name: /Продолжить|Continue/ }).click();
+    await expect(small).toHaveClass(/downloading/);
+    const resumedPercent = Number((await small.locator(".model-percent").innerText()).match(/(\d+)%/)![1]);
+    expect(resumedPercent).toBeGreaterThanOrEqual(partialPercent);
     await expect(page.locator('[data-model="small"]')).toHaveClass(/ready/, { timeout: 20_000 });
     await shot(page, "wizard-3-model-ready-dark");
 
