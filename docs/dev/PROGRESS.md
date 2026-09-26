@@ -62,13 +62,19 @@ Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work con
   - Self-review: see REPORT; fixed overlay hardening and double Start.
   - Verified: `npm run check` (129 unit/integration tests), `xvfb-run -a npx playwright test` 11/11.
 
+- Step 6 (packaging and CI):
+  - `.github/workflows/ci.yml` (Ubuntu: install, check, coverage summary, build, E2E under Xvfb, screenshots as artifact).
+  - `.github/workflows/release-mac.yml` (manual and `v*` tags; arm64 on macos-15, x64 on macos-15-intel; setup-python, venv, `dist:mac:unsigned`, artifacts; draft release only on tags; cost note).
+  - Builder config checked with `npx electron-builder --linux dir` here (packs; contents listed in DECISIONS). `.dmg` not buildable here.
+  - `docs/dev/MAC_VERIFY.md` (10 steps with expected results), version `0.2.0-rc.1`, `CHANGELOG.md`.
+
 ## In progress
 
-- Step 6: CI and macOS release workflow, builder config check, MAC_VERIFY, version bump, CHANGELOG.
+- Step 7: READMEs, market check; then CLEANUP scan and REPORT.
 
 ## Next
 
-- Step 7, final report.
+- Final report.
 
 ## Blockers
 

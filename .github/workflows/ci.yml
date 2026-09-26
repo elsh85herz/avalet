@@ -1,0 +1,58 @@
+name: CI
+
+# Every push and pull request: typecheck, UI copy check, unit and integration
+# tests, then the Electron app end to end under Xvfb (fake capture, fake
+# speech model, mock billing server and mock model; no real services).
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck, i18n check, unit and integration tests
+        run: npm run check
+
+      - name: Coverage summary
+        run: npm run test:coverage 2>&1 | grep -E '^# (all files|.*\|)' | tail -60
+
+      - name: System packages for Electron under Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libgtk-3-0 libnss3 libasound2t64 libgbm1 libxss1 libxtst6
+
+      - name: Build
+        run: npm run build
+
+      - name: E2E (Playwright + Electron under Xvfb)
+        run: xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test
+
+      - name: Screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screens
+          path: |
+            docs/screens/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

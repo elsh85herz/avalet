@@ -6,11 +6,21 @@ export default {
     output: "release",
   },
   // Test code never ships: *.test.js files and the test-only helpers.
-  files: ["dist-electron/**/*", "!dist-electron/**/*.test.js", "!dist-electron/testing/**", "dist/**/*", "package.json"],
+  // server-mock/, test/ and e2e/ are never listed, so they never ship.
+  files: [
+    "dist-electron/**/*",
+    "!dist-electron/**/*.test.js",
+    "!dist-electron/testing/**",
+    "dist/**/*",
+    "assets/icon.png",
+    "package.json",
+  ],
+  // No auto-update yet: do not generate app-update.yml.
+  publish: null,
   // .venv is bundled (must be created with `python3 -m venv --copies .venv`
   // via scripts/setup-python.sh — a symlinked venv breaks once copied here).
   extraResources: [
-    { from: "python-sidecar", to: "python-sidecar", filter: ["**/*", "!.venv/.gitignore"] },
+    { from: "python-sidecar", to: "python-sidecar", filter: ["**/*", "!.venv/.gitignore", "!**/__pycache__/**", "!**/*.pyc"] },
     // Native helpers built by scripts/build-native.sh (screenshot text recognition).
     { from: "native/bin", to: "native" },
   ],
@@ -19,6 +29,8 @@ export default {
   icon: "assets/icon.png",
   mac: {
     target: ["dmg", "zip"],
+    // One build per architecture (the bundled Python venv is arch-specific).
+    artifactName: "${productName}-${version}-${arch}.${ext}",
     category: "public.app-category.productivity",
     hardenedRuntime: true,
     entitlements: "assets/entitlements.mac.plist",

@@ -1,0 +1,101 @@
+name: Release (macOS)
+
+# Builds the unsigned macOS app: one job per architecture, because the bundled
+# Python venv (faster-whisper) is architecture specific and cannot be made
+# universal. Uploads .dmg and .zip as workflow artifacts; on a version tag
+# (v*) it also creates a DRAFT GitHub release with them. No secrets, no
+# signing, no notarization (see README, "Install on macOS").
+#
+# Cost note: in a PRIVATE repository macOS minutes are billed at a multiplier
+# (10x the Linux rate at the time of writing), so each run of this workflow
+# is expensive; in a public repository standard runners are free.
+#
+# Runner labels (checked 2026-09-26): macos-15 is Apple Silicon (arm64);
+# macos-15-intel is the last Intel (x64) image, available until August 2027.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check the runner architecture
+        run: |
+          echo "uname -m: $(uname -m)"
+          case "${{ matrix.arch }}:$(uname -m)" in
+            arm64:arm64|x64:x86_64) ;;
+            *) echo "runner architecture does not match ${{ matrix.arch }}"; exit 1 ;;
+          esac
+
+      - name: Install
+        run: npm ci
+
+      - name: Tests
+        run: npm run check
+
+      - name: Python sidecar venv (bundled into the app)
+        run: ./scripts/setup-python.sh
+
+      - name: Build the unsigned app (.dmg and .zip)
+        run: npm run dist:mac:unsigned
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: avalet-macos-${{ matrix.arch }}
+          path: |
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  draft-release:
+    name: draft release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-artifacts
+          merge-multiple: true
+
+      - name: Create a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist-artifacts/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --draft \
+            --title "Avalet ${GITHUB_REF_NAME}" \
+            --notes "Unsigned build. Install steps: README, Install on macOS. Check with docs/dev/MAC_VERIFY.md before publishing."
