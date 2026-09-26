@@ -68,9 +68,11 @@ Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work con
   - Builder config checked with `npx electron-builder --linux dir` here (packs; contents listed in DECISIONS). `.dmg` not buildable here.
   - `docs/dev/MAC_VERIFY.md` (10 steps with expected results), version `0.2.0-rc.1`, `CHANGELOG.md`.
 
+- Step 7 (docs): README.md and README.ru.md (new flow, two access modes, screenshots table, honest limitations: built-in provider not live, checklist unverified), `docs/dev/market-check.md` (8 products, 10 criteria, dated sources).
+
 ## In progress
 
-- Step 7: READMEs, market check; then CLEANUP scan and REPORT.
+- Final: CLEANUP scan, REPORT.
 
 ## Next
 

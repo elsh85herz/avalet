@@ -62,3 +62,5 @@ One line each: decision, reason.
 - The release workflow runs `npm run check` before building and refuses to build when `uname -m` does not match the matrix arch. Reason: a wrong-arch venv would ship silently.
 - electron-builder: `publish: null` (no app-update.yml; there is no updater), `assets/icon.png` added to `files` (main.ts loads it at runtime; it was missing from packages), `__pycache__` excluded, per-arch artifact names. Verified by packing `--linux dir` here: the asar holds only dist-electron (no tests, no testing helpers), dist and package.json.
 - No `minimumSystemVersion` set. Reason: the mic-only fallback works below macOS 13.2; the README states 13.2 for system audio.
+- READMEs say plainly that "Avalet without keys" is not live yet and that the live checklist is unverified. Reason: CLOUD_TASK "honest limitations"; the server and the real signing key do not exist.
+- market-check.md stays internal (docs/dev) and names other products; nothing user-facing does. Reason: CLOUD_TASK rule on competitor names in user-facing text.
