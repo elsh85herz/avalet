@@ -16,6 +16,8 @@ export type UiStrings = {
   opacityTitle: string;
   listeningEmpty: string;
   copyBlockTitle: string;
+  prevBlock: string;
+  nextBlock: string;
   processNowLabel: string;
   processNowTitle: string;
   askPlaceholder: string;
@@ -101,6 +103,7 @@ export type UiStrings = {
     clearBlocksTitle: string;
     quit: string;
     quitHint: string;
+    openLogs: string;
     pinTitle: string;
     unpinTitle: string;
     modeHelpTitle: string;
@@ -119,6 +122,78 @@ export type UiStrings = {
     liveTrackerOff: string;
     perm: Record<PermState, string>;
     sessionStates: Record<SessionKey, string>;
+  };
+  wizard: {
+    stepOf: string;
+    skip: string;
+    back: string;
+    next: string;
+    finish: string;
+    permTitle: string;
+    permIntro: string;
+    micWhy: string;
+    screenWhy: string;
+    allow: string;
+    howToFix: string;
+    permNotMac: string;
+    accessTitle: string;
+    avaletChoice: string;
+    avaletChoiceDesc: string;
+    ownChoice: string;
+    ownChoiceDesc: string;
+    provider: string;
+    saveAndTest: string;
+    testing: string;
+    testOk: string;
+    modelTitle: string;
+    modelDesc: string;
+    continueInBackground: string;
+    contextTitle: string;
+    roleLabel: string;
+    optional: string;
+    rolePlaceholder: string;
+    tryIt: string;
+    tryTitle: string;
+    micLevel: string;
+    micLevelNone: string;
+    micUnavailable: string;
+    sampleTitle: string;
+    sampleLoading: string;
+    sampleFallback: string;
+    secondsLeft: string;
+  };
+  simple: {
+    start: string;
+    pause: string;
+    resume: string;
+    end: string;
+    statusIdle: string;
+    statusListening: string;
+    statusPaused: string;
+    contextToggle: string;
+    noMeeting: string;
+    settings: string;
+    back: string;
+    appearance: string;
+    theme: string;
+    themeDark: string;
+    themeLight: string;
+    interfaceLanguage: string;
+    opacity: string;
+    advancedMode: string;
+    advancedHint: string;
+    simpleMode: string;
+    simpleHint: string;
+    runSetup: string;
+    needAccess: string;
+    setUpAccess: string;
+    micBlocked: string;
+    openSystemSettings: string;
+    tryAgain: string;
+    speechBroken: string;
+    reconnect: string;
+    moreActions: string;
+    fewerActions: string;
   };
   access: {
     title: string;
@@ -144,6 +219,8 @@ export type UiStrings = {
     expired: string;
     invalid: string;
     checkoutPending: string;
+    activationFailed: string;
+    noKeychain: string;
     paid: string;
     perMonth: string;
     paywallTitle: string;
@@ -254,6 +331,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
     opacityTitle: "Opacity of all Avalet windows",
     listeningEmpty: "Listening: the first suggestion will appear here.",
     copyBlockTitle: "Copy this suggestion",
+    prevBlock: "Previous suggestion",
+    nextBlock: "Next suggestion",
     processNowLabel: "Process now",
     processNowTitle:
       "Generate a suggestion from what's been transcribed so far (voice only, no screenshot): auto-suggest is off, so nothing does this on its own",
@@ -339,6 +418,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       clearBlocks: "Clear overlay",
       clearBlocksTitle: "Remove the suggestions from the overlay. The meeting and its transcript are kept.",
       quit: "Quit Avalet",
+      openLogs: "Open the log folder",
       quitHint: "Stops listening, saves the current meeting, and closes the app.",
       pinTitle: "This window floats above others. Click to make it an ordinary window.",
       unpinTitle: "Keep this window above other windows during the call.",
@@ -370,6 +450,78 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       },
       sessionStates: { idle: "Idle", listening: "Listening", paused: "Paused" },
     },
+    wizard: {
+      stepOf: "Step {n} of {total}",
+      skip: "Skip for now",
+      back: "Back",
+      next: "Continue",
+      finish: "Finish",
+      permTitle: "Let Avalet hear the call",
+      permIntro: "macOS asks once for each. You can change it later in System Settings.",
+      micWhy: "Microphone: to transcribe what you say.",
+      screenWhy: "Screen recording: macOS requires it to capture the other side's audio. Screenshots are taken only when you press the camera button.",
+      allow: "Allow",
+      howToFix: "How to fix",
+      permNotMac: "This system does not ask for these permissions separately, nothing to do here.",
+      accessTitle: "How should Avalet reach a language model?",
+      avaletChoice: "Avalet, no keys",
+      avaletChoiceDesc: "{n} tokens free to start, no card. Later Pro for {price}.",
+      ownChoice: "My own key",
+      ownChoiceDesc: "Claude, ChatGPT, DeepSeek or a local model. Free in Avalet; you pay the provider directly.",
+      provider: "Provider",
+      saveAndTest: "Save and test",
+      testing: "Testing",
+      testOk: "The key works.",
+      modelTitle: "Download the speech model",
+      modelDesc: "Speech is recognized on this Mac, nothing is uploaded. The recommended model is {size}; on a normal connection that takes 2 to 5 minutes, once.",
+      continueInBackground: "Continue, it finishes in the background",
+      contextTitle: "What is your next meeting about?",
+      roleLabel: "What is this project or your role?",
+      optional: "(optional)",
+      rolePlaceholder: "For example: analyst on a card limits project in a bank's mobile app",
+      tryIt: "Try it",
+      tryTitle: "A 20-second check",
+      micLevel: "Microphone level: say a few words",
+      micLevelNone: "No sound yet. Check that the right microphone is selected.",
+      micUnavailable: "The microphone is not available. You can allow it in System Settings and try again.",
+      sampleTitle: "What a suggestion looks like for a sample conversation",
+      sampleLoading: "Asking the model",
+      sampleFallback: "Here is an example of what it would say:",
+      secondsLeft: "{n} s",
+    },
+    simple: {
+      start: "Start",
+      pause: "Pause",
+      resume: "Resume",
+      end: "End meeting",
+      statusIdle: "Ready. Press Start when the call begins.",
+      statusListening: "Listening",
+      statusPaused: "Paused. The meeting stays open until you end it.",
+      contextToggle: "Context and agenda",
+      noMeeting: "No meeting yet. Press Start when the call begins, the transcript appears here.",
+      settings: "Settings",
+      back: "Back",
+      appearance: "Appearance",
+      theme: "Theme",
+      themeDark: "Dark",
+      themeLight: "Light",
+      interfaceLanguage: "Interface language",
+      opacity: "Window opacity",
+      advancedMode: "Advanced mode",
+      advancedHint: "Every setting: providers, models, thresholds, screenshot text, logs.",
+      simpleMode: "Simple mode",
+      simpleHint: "Back to the essentials: start, stop, context, transcript, summary.",
+      runSetup: "Run setup again",
+      needAccess: "Suggestions need a language model: add your key or start the free trial.",
+      setUpAccess: "Set up access",
+      micBlocked: "Avalet cannot use the microphone.",
+      openSystemSettings: "Open System Settings",
+      tryAgain: "Try again",
+      speechBroken: "Speech recognition is not keeping up right now.",
+      reconnect: "Reconnect",
+      moreActions: "More actions",
+      fewerActions: "Fewer actions",
+    },
     access: {
       title: "Access",
       ownOk: "Your own key: free, no limits. Calls go straight from this Mac to the provider.",
@@ -394,6 +546,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       expired: "Your Pro period has ended. The transcript and your meetings stay on this Mac.",
       invalid: "The answer from the Avalet server could not be verified, so it was not accepted.",
       checkoutPending: "Waiting for the payment to finish in your browser.",
+      activationFailed: "Could not reach the Avalet server. Check the internet connection and try again.",
+      noKeychain: "This system has no secure key storage, so Avalet cannot keep a trial here. Use your own key instead.",
       paid: "I have paid",
       perMonth: "per month",
       paywallTitle: "Avalet tokens are used up",
@@ -512,6 +666,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
     opacityTitle: "Прозрачность всех окон Avalet",
     listeningEmpty: "Слушаю: первая подсказка появится здесь.",
     copyBlockTitle: "Скопировать подсказку",
+    prevBlock: "Предыдущая подсказка",
+    nextBlock: "Следующая подсказка",
     processNowLabel: "Обработать сейчас",
     processNowTitle:
       "Сгенерировать подсказку из того, что уже расшифровано (только голос, без скриншота): авто-режим выключен, само это не сделает",
@@ -597,6 +753,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       clearBlocks: "Очистить оверлей",
       clearBlocksTitle: "Убрать накопленные подсказки из оверлея. Встреча и транскрипт остаются.",
       quit: "Выйти из Avalet",
+      openLogs: "Открыть папку с логами",
       quitHint: "Останавливает прослушивание, сохраняет текущую встречу и закрывает приложение.",
       pinTitle: "Окно закреплено поверх других. Нажмите, чтобы сделать его обычным.",
       unpinTitle: "Держать окно поверх других во время звонка.",
@@ -628,6 +785,78 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       },
       sessionStates: { idle: "Ожидание", listening: "Слушаю", paused: "Пауза" },
     },
+    wizard: {
+      stepOf: "Шаг {n} из {total}",
+      skip: "Пропустить",
+      back: "Назад",
+      next: "Дальше",
+      finish: "Готово",
+      permTitle: "Разрешите Avalet слышать звонок",
+      permIntro: "macOS спрашивает один раз для каждого. Потом это можно поменять в Системных настройках.",
+      micWhy: "Микрофон: чтобы расшифровывать то, что говорите вы.",
+      screenWhy: "Запись экрана: без неё macOS не даёт захватить звук собеседника. Скриншоты делаются только когда вы нажимаете кнопку с камерой.",
+      allow: "Разрешить",
+      howToFix: "Как исправить",
+      permNotMac: "Эта система не спрашивает такие разрешения отдельно, здесь ничего делать не нужно.",
+      accessTitle: "Через что Avalet будет обращаться к языковой модели?",
+      avaletChoice: "Avalet, без ключей",
+      avaletChoiceDesc: "{n} токенов бесплатно для начала, без карты. Потом Pro за {price}.",
+      ownChoice: "Мой ключ",
+      ownChoiceDesc: "Claude, ChatGPT, DeepSeek или локальная модель. В Avalet бесплатно, платите провайдеру напрямую.",
+      provider: "Провайдер",
+      saveAndTest: "Сохранить и проверить",
+      testing: "Проверяем",
+      testOk: "Ключ работает.",
+      modelTitle: "Скачайте модель распознавания речи",
+      modelDesc: "Речь распознаётся на этом Mac, ничего не отправляется наружу. Рекомендуемая модель весит {size}; при обычном интернете это 2-5 минут, один раз.",
+      continueInBackground: "Дальше, докачается в фоне",
+      contextTitle: "О чём ваша следующая встреча?",
+      roleLabel: "Что это за проект или какая у вас роль?",
+      optional: "(необязательно)",
+      rolePlaceholder: "Например: аналитик проекта лимитов по картам в мобильном приложении банка",
+      tryIt: "Попробовать",
+      tryTitle: "Проверка за 20 секунд",
+      micLevel: "Уровень микрофона: скажите пару слов",
+      micLevelNone: "Звука пока нет. Проверьте, что выбран нужный микрофон.",
+      micUnavailable: "Микрофон недоступен. Разрешите его в Системных настройках и попробуйте снова.",
+      sampleTitle: "Как выглядит подсказка на примере разговора",
+      sampleLoading: "Спрашиваем модель",
+      sampleFallback: "Вот пример того, что она подскажет:",
+      secondsLeft: "{n} с",
+    },
+    simple: {
+      start: "Старт",
+      pause: "Пауза",
+      resume: "Продолжить",
+      end: "Завершить встречу",
+      statusIdle: "Всё готово. Нажмите Старт, когда начнётся звонок.",
+      statusListening: "Слушаю",
+      statusPaused: "Пауза. Встреча остаётся открытой, пока вы её не завершите.",
+      contextToggle: "Контекст и повестка",
+      noMeeting: "Встречи ещё нет. Нажмите Старт, когда начнётся звонок, расшифровка появится здесь.",
+      settings: "Настройки",
+      back: "Назад",
+      appearance: "Внешний вид",
+      theme: "Тема",
+      themeDark: "Тёмная",
+      themeLight: "Светлая",
+      interfaceLanguage: "Язык интерфейса",
+      opacity: "Прозрачность окон",
+      advancedMode: "Расширенный режим",
+      advancedHint: "Все настройки: провайдеры, модели, пороги, текст со скриншотов, логи.",
+      simpleMode: "Простой режим",
+      simpleHint: "Только главное: старт, пауза, контекст, расшифровка, итог.",
+      runSetup: "Пройти настройку заново",
+      needAccess: "Для подсказок нужна языковая модель: добавьте свой ключ или начните бесплатно.",
+      setUpAccess: "Настроить доступ",
+      micBlocked: "Avalet не может использовать микрофон.",
+      openSystemSettings: "Открыть Системные настройки",
+      tryAgain: "Попробовать снова",
+      speechBroken: "Распознавание речи сейчас не успевает.",
+      reconnect: "Переподключить",
+      moreActions: "Ещё действия",
+      fewerActions: "Меньше действий",
+    },
     access: {
       title: "Доступ",
       ownOk: "Свой ключ: бесплатно и без лимитов. Запросы идут с этого Mac прямо к провайдеру.",
@@ -652,6 +881,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       expired: "Период Pro закончился. Расшифровки и встречи остаются на этом Mac.",
       invalid: "Ответ сервера Avalet не прошёл проверку подписи, поэтому не принят.",
       checkoutPending: "Ждём, когда оплата завершится в браузере.",
+      activationFailed: "Не удалось связаться с сервером Avalet. Проверьте интернет и попробуйте снова.",
+      noKeychain: "В этой системе нет защищённого хранилища ключей, поэтому пробный период здесь не сохранить. Подключите свой ключ.",
       paid: "Я оплатил",
       perMonth: "в месяц",
       paywallTitle: "Токены Avalet закончились",

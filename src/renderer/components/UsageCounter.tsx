@@ -13,9 +13,10 @@ export function useUsage(): UsageSummary | null {
   return usage;
 }
 
-/** 1234 -> "1.2k", 1234567 -> "1.2M"; plain below a thousand. */
+/** 1234 -> "1.2k", 500000 -> "500k", 5000000 -> "5M"; plain below a thousand. */
 export function compactTokens(n: number, language: UiLanguage): string {
-  const text = n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(Math.round(n));
+  const short = (value: number) => (value >= 10 || Number.isInteger(value) ? String(Math.round(value)) : value.toFixed(1));
+  const text = n >= 1e6 ? `${short(n / 1e6)}M` : n >= 1e3 ? `${short(n / 1e3)}k` : String(Math.round(n));
   return language === "ru" ? text.replace(".", ",").replace("k", " тыс.").replace("M", " млн") : text;
 }
 

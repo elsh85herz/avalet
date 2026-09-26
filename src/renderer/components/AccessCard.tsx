@@ -78,7 +78,12 @@ export function AccessCard({ uiLanguage, onUseOwnKey, onUseAvalet }: Props) {
   } else {
     switch (access.status) {
       case "not-activated":
-        text = t.notActivated.replace("{n}", fmt(access.trialBudget));
+        text =
+          access.syncError === "no_keychain"
+            ? t.noKeychain
+            : access.syncError
+              ? t.activationFailed
+              : t.notActivated.replace("{n}", fmt(access.trialBudget));
         primary = { label: t.startTrial, onClick: () => void run(() => bridge.billing.activateTrial()) };
         secondary = { label: t.useOwnKey, onClick: onUseOwnKey };
         break;

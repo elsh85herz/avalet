@@ -13,8 +13,11 @@
   --warn: #ffd60a;
   /* Tones for TEXT: the fills above are too pale to read as text on the light theme. */
   --ok-text: #32d74b;
-  --danger-text: #ff453a;
-  --accent-text: #0a84ff;
+  --danger-text: #ff6961;
+  --accent-text: #409cff;
+  /* Fill for primary buttons: dark enough for white text (WCAG AA 4.5:1). */
+  --accent-fill: #0062cc;
+  --focus: #6cb4ff;
   /* Translucent "card" fill for content sitting over the vibrancy blur
      (electron/main.ts `vibrancy: "sidebar"`) — same idea as the frosted
      grouped-list rows in System Settings. */
@@ -34,14 +37,16 @@
   --panel: #ffffff;
   --border: #d8d8dc;
   --text: #1d1d1f;
-  --muted: #6e6e73;
+  --muted: #5c5c61;
   --accent: #007aff;
   --danger: #ff3b30;
   --ok: #34c759;
   --warn: #ff9f0a;
-  --ok-text: #1f7a35;
-  --danger-text: #d70015;
+  --ok-text: #17662b;
+  --danger-text: #b8000f;
   --accent-text: #0055d4;
+  --accent-fill: #0062cc;
+  --focus: #0055d4;
   --card-bg: rgba(0, 0, 0, 0.035);
   --card-border: rgba(0, 0, 0, 0.08);
   --overlay-tint: rgba(255, 255, 255, 0.55);
@@ -196,15 +201,44 @@ input[type="range"] {
   flex: 1;
 }
 
+/* Plain buttons are quiet; the one main action on a screen is .primary. */
 button {
-  background: var(--accent);
-  border: none;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
-  color: white;
+  color: var(--text);
   padding: 8px 14px;
   font-size: 13px;
+  font-family: inherit;
   cursor: default;
   transition: filter 0.12s ease, transform 0.08s ease;
+}
+
+button.primary {
+  background: var(--accent-fill);
+  border-color: transparent;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+button.big {
+  padding: 10px 22px;
+  font-size: 15px;
+}
+
+/* Keyboard focus is always visible, in both themes. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 button:hover:not(:disabled) {
@@ -522,7 +556,7 @@ button:disabled {
 
 .auto-btn.on {
   background: var(--ok);
-  color: #062;
+  color: #003311;
   font-weight: 600;
 }
 
@@ -546,7 +580,7 @@ button:disabled {
 
 .session-btn.on {
   background: var(--ok);
-  color: #062;
+  color: #003311;
 }
 
 .session-btn.off {
@@ -1531,4 +1565,363 @@ a {
   border-radius: 10px;
   background: var(--card-bg);
   font-size: 12px;
+}
+
+/* --- shared form layout --- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.field select,
+.field input[type="text"],
+.field input[type="password"],
+.field textarea,
+.field-row select {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.context-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.save-state {
+  margin: 0;
+  min-height: 1.3em;
+}
+
+.ok-text {
+  color: var(--ok-text);
+  font-size: 12px;
+}
+
+.own-key {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.own-key-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.own-key-actions .error {
+  margin: 0;
+  font-size: 12px;
+}
+
+.opacity-field input[type="range"] {
+  flex: 1;
+  max-width: 220px;
+}
+
+/* --- first-run wizard --- */
+
+.wizard {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.wizard-top {
+  -webkit-app-region: drag;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 24px 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.wizard-top .lang-btn {
+  margin-left: auto;
+}
+
+.wizard-step {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.wizard-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dot-step {
+  width: 18px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--card-border);
+}
+
+.dot-step.on {
+  background: var(--accent-fill);
+}
+
+.wizard-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wizard h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.wizard h1:focus {
+  outline: none;
+}
+
+.wizard-nav {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px 20px;
+  border-top: 1px solid var(--card-border);
+}
+
+.wizard-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wizard-nav-right .link-btn {
+  align-self: center;
+}
+
+.choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+
+.choice strong {
+  font-size: 14px;
+}
+
+.choice span {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.choice.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.perm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.perm-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.perm-item .hint {
+  margin: 0;
+}
+
+.try-it {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.try-it-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.try-it h2,
+.try-it h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.sample {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sample .block-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.mic-level {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.mic-level-head {
+  display: flex;
+  justify-content: space-between;
+}
+
+.progress-fill.level {
+  background: var(--ok);
+  transition: width 0.08s linear;
+}
+
+/* --- Simple level --- */
+
+.simple-home {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.session-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--card-bg);
+}
+
+.session-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.session-card-row.buttons {
+  flex-wrap: wrap;
+}
+
+.session-status {
+  font-size: 13px;
+  /* Status text changes while listening; a fixed line keeps the buttons from moving. */
+  min-height: 1.4em;
+}
+
+.problem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.collapsible {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px 12px;
+}
+
+.settings-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.simple-settings section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gear-btn {
+  margin-left: auto;
+}
+
+.gear-btn + .pin-btn {
+  margin-left: 0;
+}
+
+.level-switch .access-actions {
+  margin-top: 4px;
+}
+
+/* Without macOS vibrancy behind it the tint alone is see-through: other
+   platforms get a solid panel so the text stays readable. */
+:root:not([data-platform="darwin"]) .overlay {
+  background: var(--panel);
+}
+
+.quick-actions button.primary {
+  background: var(--accent-fill);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.paywall-banner .access-actions {
+  align-items: center;
 }

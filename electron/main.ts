@@ -19,6 +19,7 @@ import { AppCore, type Emit, type Handler, type WindowChannel } from "./app-core
 import { PythonRuntime, defaultSidecarCommand, type SidecarCommand } from "./python-runtime.js";
 import { SpeechModelManager } from "./model-manager.js";
 import { UsageLedger } from "./metering/ledger.js";
+import { FakeCapture } from "./fake-capture.js";
 import { BillingService } from "./billing/service.js";
 import { billingConfigFromEnv } from "./billing/config.js";
 import { HttpBillingProvider } from "./billing/http-provider.js";
@@ -130,7 +131,13 @@ function createMainWindow(): void {
 
 /** Only web pages go to the system browser; never file: or custom schemes. */
 function openExternal(url: string): void {
-  if (/^https?:\/\//.test(url)) void shell.openExternal(url);
+  if (!/^https?:\/\//.test(url)) return;
+  // E2E has no browser: the test reads the URL (a mock checkout page) from a file.
+  if (e2e && process.env.AVALET_E2E_EXPORT_DIR) {
+    fs.appendFileSync(path.join(process.env.AVALET_E2E_EXPORT_DIR, "opened-urls.txt"), `${url}\n`);
+    return;
+  }
+  void shell.openExternal(url);
 }
 
 /** The app's pages never navigate or open windows; links go to the system browser only if they are http(s). */
@@ -212,6 +219,8 @@ function electronStore(name: string, defaults: Record<string, unknown> = {}): Ke
 }
 
 function initStores(): void {
+  // Linux CI has no keychain; test mode accepts Electron's plain-text backend there.
+  if (e2e && process.platform === "linux") safeStorage.setUsePlainTextEncryption?.(true);
   configureLog(app.getPath("logs"));
   configurePaths({ isPackaged: app.isPackaged, resourcesPath: process.resourcesPath });
   initSettingsStore(electronStore("avalet-settings"), safeStorage, { forceAdvanced: process.env.AVALET_ADVANCED === "1" });
@@ -286,13 +295,18 @@ function createCore(): AppCore {
     },
     isOcrAvailable,
     chooseSavePath,
+    fakeCapture: e2e,
     onSessionStarted: () => {
       void warmUpOcr().catch(() => {});
       createOverlayWindow(preloadPath, entryUrl("overlay"));
       showOverlayWindow();
+      fakeCapture?.start();
     },
   });
 }
+
+/** E2E only: canned audio into the normal pipeline (see fake-capture.ts). */
+let fakeCapture: FakeCapture | null = null;
 
 function registerIpc(appCore: AppCore): void {
   // Loopback capture picks a screen source itself (no native share picker):
@@ -321,6 +335,9 @@ function registerIpc(appCore: AppCore): void {
       emit("avalet:event:navigate", "access", "main");
     },
     "avalet:app-quit": () => app.quit(),
+    "avalet:open-logs": () => {
+      void shell.openPath(app.getPath("logs"));
+    },
     "avalet:overlay-set-opacity": (opacity) => {
       if (typeof opacity !== "number" || Number.isNaN(opacity)) throw new Error("opacity must be a number");
       setOverlayOpacity(opacity);
@@ -341,6 +358,11 @@ function registerIpc(appCore: AppCore): void {
     },
     "avalet:capture-screenshot": () => captureScreenshot(),
     "avalet:permissions-check": () => ({ mic: checkMicAccess(), screen: checkScreenAccess() }),
+    "avalet:open-privacy-settings": (kind) => {
+      if (!isMac) return;
+      const pane = kind === "screen" ? "Privacy_ScreenCapture" : "Privacy_Microphone";
+      void shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?${pane}`);
+    },
     "avalet:screen-list-sources": () => listScreenSources(),
   };
 
@@ -428,6 +450,17 @@ app.whenReady().then(() => {
   // Every launch starts fully opaque; the opacity slider then adjusts both windows.
   setOverlayOpacity(1);
   core = createCore();
+  if (e2e) {
+    const handler = core.handlers["avalet:capture-audio-chunk"]!;
+    fakeCapture = new FakeCapture(async (audio, channel, meta) => {
+      await handler(audio, channel, meta);
+    });
+    const reset = core.handlers["avalet:session-reset"]!;
+    core.handlers["avalet:session-reset"] = (...args) => {
+      fakeCapture?.reset();
+      return reset(...args);
+    };
+  }
   registerIpc(core);
   core.startBackground();
   if (process.platform === "darwin" && app.dock) {

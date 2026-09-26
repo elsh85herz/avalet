@@ -10,3 +10,6 @@ python-sidecar/__pycache__/
 .env
 native/bin/
 dist-test/
+test-results/
+playwright-report/
+coverage/

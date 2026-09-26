@@ -51,6 +51,10 @@ export type SettingsSnapshot = {
   speechModel: SpeechModelName;
   /** Effective value: the stored choice, or the default for the current level. */
   liveTrackerEnabled: boolean;
+  /** process.platform of the main process ("darwin" on a Mac). */
+  platform: string;
+  /** Test mode: audio comes from a fake feeder in the main process, not from the mic. */
+  fakeCapture: boolean;
 };
 
 export type LiveBlockEvent = { id: string };
@@ -236,6 +240,8 @@ export type AccessState = {
   trialBudget: number;
   /** A checkout was opened in the browser and is being waited for. */
   checkoutPending: boolean;
+  /** Code of the last failed server contact ("network", "no_keychain", a server error code), or null. */
+  syncError: string | null;
 };
 
 export type CancelInfoPublic = { active: boolean; renews: boolean; periodEnd: number | null; manageUrl: string | null };
@@ -252,6 +258,9 @@ export type InvokeMap = {
   "avalet:billing-cancel-info": [[], CancelInfoPublic];
   "avalet:billing-open-manage": [[], void];
   "avalet:provider-test": [[providerId: string], { ok: true } | { ok: false; message: string }];
+  /** Wizard "Try it": one suggestion for a canned transcript, with the current provider and mode. */
+  "avalet:selftest-suggestion": [[], { ok: true; text: string } | { ok: false; message: string }];
+  "avalet:open-privacy-settings": [[kind: "mic" | "screen"], void];
   "avalet:speech-set": [[patch: { language?: SpeechLanguage; model?: SpeechModelName }], void];
   "avalet:speech-models": [[], SpeechModelRow[]];
   "avalet:speech-model-download": [[model: SpeechModelName], void];
@@ -266,6 +275,7 @@ export type InvokeMap = {
   /** Shows the main window on the access settings (from the overlay's paywall). */
   "avalet:main-show-access": [[], void];
   "avalet:app-quit": [[], void];
+  "avalet:open-logs": [[], void];
   "avalet:history-clear": [[], void];
   "avalet:history-get": [[], HistoryBlock[]];
   "avalet:history-append": [[block: { id: string; text: string; status: "done" | "error" }], void];
@@ -400,6 +410,7 @@ export type AvaletApi = {
     openManage: () => Promise<void>;
     /** One tiny real call with the saved key; a human-readable reason when it fails. */
     testProvider: (providerId: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+    selfTest: () => Promise<{ ok: true; text: string } | { ok: false; message: string }>;
   };
   speech: {
     models: () => Promise<SpeechModelRow[]>;
@@ -432,6 +443,8 @@ export type AvaletApi = {
   };
   permissions: {
     check: () => Promise<{ mic: PermissionStatus; screen: PermissionStatus }>;
+    /** Opens the matching pane of System Settings (macOS). */
+    openSettings: (kind: "mic" | "screen") => Promise<void>;
   };
   mic: {
     getPreferred: () => Promise<string>;
@@ -452,6 +465,8 @@ export type AvaletApi = {
   app: {
     toggleMainWindow: () => Promise<void>;
     showAccess: () => Promise<void>;
+    /** Opens the folder with avalet.log (timings and errors only, never meeting text). */
+    openLogs: () => Promise<void>;
     quit: () => Promise<void>;
   };
   tracker: {
@@ -526,6 +541,8 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:billing-cancel-info": true,
   "avalet:billing-open-manage": true,
   "avalet:provider-test": true,
+  "avalet:selftest-suggestion": true,
+  "avalet:open-privacy-settings": true,
   "avalet:speech-set": true,
   "avalet:speech-models": true,
   "avalet:speech-model-download": true,
@@ -539,6 +556,7 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:main-toggle": true,
   "avalet:main-show-access": true,
   "avalet:app-quit": true,
+  "avalet:open-logs": true,
   "avalet:history-clear": true,
   "avalet:history-get": true,
   "avalet:history-append": true,

@@ -49,6 +49,7 @@ const api: AvaletApi = {
     cancelInfo: () => invoke("avalet:billing-cancel-info"),
     openManage: () => invoke("avalet:billing-open-manage"),
     testProvider: (providerId) => invoke("avalet:provider-test", providerId),
+    selfTest: () => invoke("avalet:selftest-suggestion"),
   },
   speech: {
     models: () => invoke("avalet:speech-models"),
@@ -75,6 +76,7 @@ const api: AvaletApi = {
   },
   permissions: {
     check: () => invoke("avalet:permissions-check"),
+    openSettings: (kind) => invoke("avalet:open-privacy-settings", kind),
   },
   mic: {
     getPreferred: () => invoke("avalet:mic-get-preferred"),
@@ -95,6 +97,7 @@ const api: AvaletApi = {
   app: {
     toggleMainWindow: () => invoke("avalet:main-toggle"),
     showAccess: () => invoke("avalet:main-show-access"),
+    openLogs: () => invoke("avalet:open-logs"),
     quit: () => invoke("avalet:app-quit"),
   },
   tracker: {

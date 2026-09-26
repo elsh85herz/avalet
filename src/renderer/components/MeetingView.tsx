@@ -3,6 +3,7 @@ import { getBridge } from "../lib/bridge.js";
 import type { ExportLabels, Meeting, TranscriptSegment } from "../lib/types.js";
 import { parseAgendaText } from "../lib/agenda.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
+import { IconChevron, IconCheck } from "../icons.js";
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -21,10 +22,12 @@ type Props = {
   onBack?: () => void;
   onDeleted?: () => void;
   onChanged?: (meeting: Meeting) => void;
+  /** Simple level: fewer buttons (no copy as text, no agenda file import). */
+  simple?: boolean;
 };
 
 /** Transcript + summary for one meeting, either the live one or a saved one. */
-export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDeleted, onChanged }: Props) {
+export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDeleted, onChanged, simple }: Props) {
   const bridge = getBridge();
   const t = UI_STRINGS[uiLanguage];
   const [meeting, setMeeting] = useState<Meeting>(initial);
@@ -205,7 +208,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
       <div className="meeting-head">
         {onBack ? (
           <button type="button" className="link-btn" onClick={onBack}>
-            ← {t.meeting.back}
+            <IconChevron direction="left" /> {t.meeting.back}
           </button>
         ) : null}
         <input
@@ -235,9 +238,11 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
         <button type="button" onClick={() => void exportTranscript()} disabled={meeting.transcript.length === 0}>
           {t.meeting.exportTranscript}
         </button>
-        <button type="button" onClick={() => void copyText()} disabled={!meeting.summary}>
-          {t.meeting.copyText}
-        </button>
+        {simple ? null : (
+          <button type="button" onClick={() => void copyText()} disabled={!meeting.summary}>
+            {t.meeting.copyText}
+          </button>
+        )}
         {!live && onDeleted ? (
           <button type="button" className="danger" onClick={() => void remove()}>
             {t.meeting.delete}
@@ -254,7 +259,9 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
           title={t.meeting.agendaToggleTitle}
           onClick={() => setAgendaOpen((open) => !open)}
         >
-          <span className={`chevron ${agendaOpen ? "open" : ""}`}>▸</span>
+          <span className={`chevron ${agendaOpen ? "open" : ""}`}>
+            <IconChevron />
+          </span>
           <span>{t.meeting.agendaToggleTitle}</span>
           {agendaTotal > 0 ? (
             <span className="agenda-progress">
@@ -272,7 +279,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
                 {agendaItems.map((item) => (
                   <li key={item.question} className={item.closed ? "closed" : "open"}>
                     <span className="agenda-check" aria-label={item.closed ? t.meeting.agendaClosed : t.meeting.agendaOpen}>
-                      {item.closed ? "✓" : ""}
+                      {item.closed ? <IconCheck /> : null}
                     </span>
                     <span className="agenda-text">
                       {item.question}
@@ -296,9 +303,11 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
               <button type="button" onClick={() => void saveAgenda(agendaDraft)}>
                 {t.meeting.agendaSaveList}
               </button>
-              <button type="button" onClick={() => fileInputRef.current?.click()}>
-                {t.meeting.agendaLoadFile}
-              </button>
+              {simple ? null : (
+                <button type="button" onClick={() => fileInputRef.current?.click()}>
+                  {t.meeting.agendaLoadFile}
+                </button>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"

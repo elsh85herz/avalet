@@ -350,6 +350,27 @@ export class LiveSession {
     await this.runGeneration(prompt, { includeScreenshot: true });
   }
 
+  /**
+   * One suggestion for a given transcript, returned instead of shown: the
+   * wizard's "Try it". Same prompt, provider and metering as a live block.
+   */
+  async sampleSuggestion(transcript: string): Promise<string> {
+    const providerId = getSelectedProviderId();
+    const settings = getProviderSettings(providerId);
+    const { apiKey, baseUrl } = resolveCredentials(providerId);
+    const result = await meteredGenerate("suggestion", {
+      providerId,
+      apiKey,
+      baseUrl,
+      model: settings.model,
+      systemPrompt: buildSystemPrompt(),
+      transcript,
+      signal: AbortSignal.timeout(45_000),
+      onDelta: () => {},
+    });
+    return result.text.trim();
+  }
+
   private async runGeneration(
     promptTranscript: string,
     options: { includeScreenshot?: boolean } = {},

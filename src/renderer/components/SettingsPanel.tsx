@@ -1,222 +1,69 @@
 import { useEffect, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
-import { MEETING_MODES, type MeetingMode, type ProviderSettingsPublic, type SessionState } from "../lib/types.js";
-import { UI_STRINGS, type PermState, type UiLanguage } from "../lib/i18n.js";
+import { SPEECH_LANGUAGES, type SpeechLanguage } from "../lib/types.js";
+import { UI_STRINGS, type PermState } from "../lib/i18n.js";
 import { PROVIDER_PRESETS_UI } from "../providers/presets.js";
-import { startAudioCapture, type AudioCaptureHandle } from "../capture/audio-capture.js";
-import { IconHelp, IconMoon, IconSun } from "../icons.js";
-import { parseAgendaText } from "../lib/agenda.js";
+import { IconMoon, IconSun } from "../icons.js";
+import { useAppSettings } from "../lib/settings.js";
+import { useSession } from "../lib/session.js";
 import { SpeechModels } from "./SpeechModels.js";
 import { UsageCounter } from "./UsageCounter.js";
 import { AccessCard } from "./AccessCard.js";
+import { ContextFields } from "./ContextFields.js";
+import { OpacitySlider } from "./OpacitySlider.js";
 
-export function SettingsPanel() {
+/**
+ * The Advanced level: every setting that exists. Start/Stop and capture are
+ * shared with the Simple level (lib/session.tsx).
+ */
+export function SettingsPanel({ onRunSetup }: { onRunSetup: () => void }) {
   const bridge = getBridge();
-  const [selectedProviderId, setSelectedProviderId] = useState<string>("anthropic");
-  const [providers, setProviders] = useState<ProviderSettingsPublic[]>([]);
+  const { settings, patch, reload } = useAppSettings();
+  const session = useSession();
+  const uiLanguage = settings.uiLanguage;
+  const strings = UI_STRINGS[uiLanguage];
+  const t = strings.settings;
   const [apiKeyDraft, setApiKeyDraft] = useState("");
-  const [sessionState, setSessionState] = useState<SessionState>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [captureHandle, setCaptureHandle] = useState<AudioCaptureHandle | null>(null);
-  // Mirrors captureHandle for the reconnect-request listener below, which
-  // subscribes once on mount and would otherwise close over a stale null.
-  const captureHandleRef = useRef<AudioCaptureHandle | null>(null);
-  const [audioDegraded, setAudioDegraded] = useState({ me: false, other: false });
-  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
+  const [keyTest, setKeyTest] = useState<{ ok: boolean; message: string } | null>(null);
   const [permissions, setPermissions] = useState<{ mic: string; screen: string } | null>(null);
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
   const [preferredMicId, setPreferredMicId] = useState("");
   const [screenSources, setScreenSources] = useState<{ id: string; name: string }[]>([]);
   const [preferredScreenId, setPreferredScreenId] = useState("");
-  const [contextDraft, setContextDraft] = useState("");
-  const [contextSaved, setContextSaved] = useState(true);
-  const [agendaDraft, setAgendaDraft] = useState("");
-  const [agendaSaved, setAgendaSaved] = useState(true);
-  const contextSavedRef = useRef(true);
-  const agendaSavedRef = useRef(true);
-  contextSavedRef.current = contextSaved;
-  agendaSavedRef.current = agendaSaved;
-  const agendaFileRef = useRef<HTMLInputElement | null>(null);
-  const [autoDetectEnabled, setAutoDetectEnabledState] = useState(true);
-  const [theme, setThemeState] = useState<"dark" | "light">("dark");
-  const [uiLanguage, setUiLanguage] = useState<UiLanguage>("ru");
-  const [meetingMode, setMeetingModeState] = useState<MeetingMode>("free");
-  const [modeHelpOpen, setModeHelpOpen] = useState(false);
-  // macOS keeps reporting "not-determined" for the microphone in some setups
-  // (permission held by the terminal in dev, or granted before this app asked)
-  // even though capture works. Device labels only show up once access exists,
-  // and a running capture proves it, so either overrides the OS status.
   const [micWorks, setMicWorks] = useState(false);
-  const [screenshotText, setScreenshotTextState] = useState(false);
-  const [ocrAvailable, setOcrAvailable] = useState(false);
-  const [speechLanguage, setSpeechLanguageState] = useState<"ru" | "en" | "auto">("ru");
-  const [speechModel, setSpeechModelState] = useState<"small" | "medium" | "turbo">("small");
-  const [liveTracker, setLiveTrackerState] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const speechSectionRef = useRef<HTMLElement | null>(null);
-
-  const strings = UI_STRINGS[uiLanguage];
-  const t = strings.settings;
+  const accessRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    void refresh();
     void initDeviceDetection();
     void bridge.mic.getPreferred().then(setPreferredMicId);
     void bridge.screen.getPreferred().then(setPreferredScreenId);
-    const unsubscribeState = bridge.events.onSessionState(setSessionState);
-    // Kept in sync with the overlay's own auto-suggest toggle (see OverlayApp),
-    // since it can now be flipped mid-session from either window.
-    const unsubscribeAutoDetect = bridge.events.onAutoDetectChanged(setAutoDetectEnabledState);
-    const unsubscribeTheme = bridge.events.onThemeChanged((next) => {
-      setThemeState(next);
-      document.documentElement.dataset.theme = next;
+    return bridge.events.onNavigate((to) => {
+      if (to === "access") accessRef.current?.scrollIntoView({ block: "start" });
     });
-    const unsubscribeLanguage = bridge.events.onUiLanguageChanged(setUiLanguage);
-    const unsubscribeMode = bridge.events.onMeetingModeChanged(setMeetingModeState);
-    // A meeting starting re-reads the stored briefing so this screen shows
-    // exactly what the meeting was started with.
-    const unsubscribeMeetingStarted = bridge.events.onMeetingStarted(() => void refresh());
-    // The overlay can't reach this window's MediaStreams directly — it asks
-    // (via main) for whichever channel needs reconnecting, and we're the
-    // ones actually holding the live AudioCaptureHandle.
-    const unsubscribeReconnect = bridge.events.onReconnectAudioRequested((channel) => {
-      void captureHandleRef.current?.reconnect(channel);
-    });
-    const unsubscribeTranscriptionError = bridge.events.onTranscriptionError(setTranscriptionError);
-    const unsubscribeTranscriptionRecovered = bridge.events.onTranscriptionRecovered(() =>
-      setTranscriptionError(null),
-    );
-    return () => {
-      unsubscribeState();
-      unsubscribeAutoDetect();
-      unsubscribeTheme();
-      unsubscribeLanguage();
-      unsubscribeMode();
-      unsubscribeMeetingStarted();
-      unsubscribeReconnect();
-      unsubscribeTranscriptionError();
-      unsubscribeTranscriptionRecovered();
-    };
   }, []);
 
-  async function refresh() {
-    const all = await bridge.settings.getAll();
-    setSelectedProviderId(all.selectedProviderId);
-    setProviders(all.providers);
-    // Never overwrite text that is typed but not saved yet.
-    if (contextSavedRef.current) setContextDraft(all.sessionContext);
-    if (agendaSavedRef.current) setAgendaDraft(all.agendaText);
-    setAutoDetectEnabledState(all.autoDetectEnabled);
-    setThemeState(all.theme);
-    setUiLanguage(all.uiLanguage);
-    setMeetingModeState(all.meetingMode);
-    setScreenshotTextState(all.screenshotText);
-    setOcrAvailable(all.ocrAvailable);
-    setSpeechLanguageState(all.speechLanguage);
-    setSpeechModelState(all.speechModel);
-    setLiveTrackerState(all.liveTrackerEnabled);
-    document.documentElement.dataset.theme = all.theme;
-  }
-
-  async function handleSpeechLanguage(language: "ru" | "en" | "auto") {
-    setSpeechLanguageState(language);
-    await bridge.settings.setSpeech({ language });
-  }
-
-  async function handleSpeechModel(model: "small" | "medium" | "turbo") {
-    setSpeechModelState(model);
-    await bridge.settings.setSpeech({ model });
-  }
-
-  async function handleToggleLiveTracker() {
-    const next = !liveTracker;
-    setLiveTrackerState(next);
-    await bridge.settings.setLiveTracker(next);
-  }
-
-  async function handleToggleScreenshotText() {
-    const next = !screenshotText;
-    setScreenshotTextState(next);
-    await bridge.settings.setScreenshotText(next);
-  }
-
-  async function handleModeChange(mode: MeetingMode) {
-    setMeetingModeState(mode);
-    await bridge.settings.setMeetingMode(mode);
-  }
-
-  async function toggleTheme() {
-    const next = theme === "dark" ? "light" : "dark";
-    setThemeState(next);
-    document.documentElement.dataset.theme = next;
-    await bridge.settings.setTheme(next);
-  }
-
-  async function toggleUiLanguage() {
-    const next = uiLanguage === "ru" ? "en" : "ru";
-    setUiLanguage(next);
-    await bridge.settings.setUiLanguage(next);
-  }
-
-  async function handleSaveContext() {
-    await bridge.settings.setContext(contextDraft);
-    setContextSaved(true);
-  }
-
-  // Briefing and agenda save themselves shortly after typing stops, so what
-  // Start picks up (and what the summary later uses) is always what is shown.
   useEffect(() => {
-    if (contextSaved) return;
-    const timer = setTimeout(() => void handleSaveContext(), 500);
-    return () => clearTimeout(timer);
-  }, [contextDraft, contextSaved]);
-
-  useEffect(() => {
-    if (agendaSaved) return;
-    const timer = setTimeout(() => void handleSaveAgenda(agendaDraft, false), 500);
-    return () => clearTimeout(timer);
-  }, [agendaDraft, agendaSaved]);
-
-  async function handleSaveAgenda(text: string, rewriteDraft = true) {
-    const normalized = parseAgendaText(text).join("\n");
-    if (rewriteDraft) setAgendaDraft(normalized);
-    await bridge.settings.setAgenda(normalized);
-    setAgendaSaved(true);
-  }
-
-  async function handleLoadAgendaFile(file: File | undefined) {
-    if (!file) return;
-    const text = await file.text();
-    await handleSaveAgenda(agendaDraft ? `${agendaDraft}\n${text}` : text);
-    if (agendaFileRef.current) agendaFileRef.current.value = "";
-  }
-
-  async function handleToggleAutoDetect() {
-    const next = !autoDetectEnabled;
-    setAutoDetectEnabledState(next);
-    await bridge.settings.setAutoDetect(next);
-  }
+    if (session.problem?.kind === "model-missing") speechSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [session.problem]);
 
   async function refreshPermissions() {
     setPermissions(await bridge.permissions.check());
   }
 
-  // Populates both pickers on open without making the user press a button
-  // first — but only for whichever of mic/screen access is already granted,
-  // so we don't surprise a first-time user with an OS permission prompt
-  // before they've hit Start. Whatever isn't granted yet keeps its manual
-  // "Detect" button as the fallback.
+  // Populates both pickers without surprising a first-time user with an OS
+  // prompt: only for whichever access is already granted; the rest keep
+  // their manual "Detect" button.
   async function initDeviceDetection() {
     const perms = await bridge.permissions.check();
     setPermissions(perms);
-    // Labels are only populated when access exists, and reading them does not prompt.
     const known = (await navigator.mediaDevices.enumerateDevices()).some((d) => d.kind === "audioinput" && d.label);
     if (known) setMicWorks(true);
     if (perms.mic === "granted" || known) void detectMicrophones();
     if (perms.screen === "granted") void detectScreens();
   }
 
-  // Device labels are only populated once mic access has been granted at
-  // least once — this doubles as a "detect microphones" action for the user.
   async function detectMicrophones() {
     try {
       const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -226,184 +73,146 @@ export function SettingsPanel() {
       setMicWorks(true);
       await refreshPermissions();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setLocalError(e instanceof Error ? e.message : String(e));
     }
   }
 
-  // Screen labels need screen-recording access too (macOS) — same gate as
-  // detectMicrophones, just against desktopCapturer instead of getUserMedia.
   async function detectScreens() {
     try {
-      const sources = await bridge.screen.listSources();
-      setScreenSources(sources);
+      setScreenSources(await bridge.screen.listSources());
       await refreshPermissions();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setLocalError(e instanceof Error ? e.message : String(e));
     }
   }
 
-  async function handleMicChange(deviceId: string) {
-    setPreferredMicId(deviceId);
-    await bridge.mic.setPreferred(deviceId);
-  }
-
-  async function handleScreenChange(sourceId: string) {
-    setPreferredScreenId(sourceId);
-    await bridge.screen.setPreferred(sourceId);
-  }
-
-  const current = providers.find((p) => p.providerId === selectedProviderId);
+  const selectedProviderId = settings.selectedProviderId;
+  const current = settings.providers.find((p) => p.providerId === selectedProviderId);
   const preset = PROVIDER_PRESETS_UI.find((p) => p.id === selectedProviderId);
-  const noKeysSavedYet = providers.length > 0 && !providers.some((p) => p.hasApiKey);
 
   async function handleSelectProvider(providerId: string) {
-    setSelectedProviderId(providerId);
     setApiKeyDraft("");
+    setKeyTest(null);
     await bridge.settings.selectProvider(providerId);
+    await reload();
   }
 
   async function handleFieldChange(field: "model" | "baseUrl" | "backgroundModel", value: string) {
-    setProviders((prev) =>
-      prev.map((p) => (p.providerId === selectedProviderId ? { ...p, [field]: value } : p)),
-    );
+    patch({ providers: settings.providers.map((p) => (p.providerId === selectedProviderId ? { ...p, [field]: value } : p)) });
     await bridge.settings.updateProvider(selectedProviderId, { [field]: value });
   }
 
   async function handleSaveKey() {
     if (!apiKeyDraft) return;
-    await bridge.settings.setApiKey(selectedProviderId, apiKeyDraft);
-    setApiKeyDraft("");
-    await refresh();
-  }
-
-  // Start/Resume: mic + screen permissions are only requested once — if
-  // capture is already running (we were merely paused), just unpause.
-  async function handleStart() {
-    setError(null);
     try {
-      let handle = captureHandle;
-      if (!handle) {
-        handle = await startAudioCapture({
-          onDegradedChange: (state) => {
-            setAudioDegraded(state);
-            void bridge.capture.reportAudioDegraded(state);
-          },
-        });
-        setCaptureHandle(handle);
-        captureHandleRef.current = handle;
-        setMicWorks(true);
-      }
-      if (!contextSaved) await handleSaveContext();
-      if (!agendaSaved) await handleSaveAgenda(agendaDraft, false);
-      const result = await bridge.session.start();
-      if (!result.ok) {
-        setError(strings.models.missingForStart);
-        speechSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-        return;
-      }
-      await refreshPermissions();
+      await bridge.settings.setApiKey(selectedProviderId, apiKeyDraft);
+      setApiKeyDraft("");
+      await reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setLocalError(e instanceof Error ? e.message : String(e));
     }
   }
 
-  async function handleReconnectAudio(channel: "me" | "other" | "both") {
-    await captureHandleRef.current?.reconnect(channel);
+  async function handleTestKey() {
+    setKeyTest(null);
+    const result = await bridge.billing.testProvider(selectedProviderId);
+    setKeyTest(result.ok ? { ok: true, message: strings.wizard.testOk } : { ok: false, message: result.message });
   }
 
-  // Stop only pauses generation — the overlay keeps every block already
-  // shown so it can be paged through, and mic/screen stay granted so Resume
-  // is instant. Full teardown happens in handleReset.
-  async function handleStop() {
-    await bridge.session.stop();
+  async function toggleTheme() {
+    const next = settings.theme === "dark" ? "light" : "dark";
+    patch({ theme: next });
+    await bridge.settings.setTheme(next);
   }
 
-  async function handleReset() {
-    captureHandle?.stop();
-    setCaptureHandle(null);
-    captureHandleRef.current = null;
-    setAudioDegraded({ me: false, other: false });
-    setTranscriptionError(null);
-    await bridge.session.stop();
-    await bridge.session.reset();
+  async function toggleUiLanguage() {
+    const next = uiLanguage === "ru" ? "en" : "ru";
+    patch({ uiLanguage: next });
+    await bridge.settings.setUiLanguage(next);
+  }
+
+  async function setBool(key: "autoDetectEnabled" | "screenshotText" | "liveTrackerEnabled", next: boolean) {
+    patch({ [key]: next });
+    if (key === "autoDetectEnabled") await bridge.settings.setAutoDetect(next);
+    else if (key === "screenshotText") await bridge.settings.setScreenshotText(next);
+    else await bridge.settings.setLiveTracker(next);
   }
 
   const micStatus: PermState = micWorks ? "granted" : ((permissions?.mic as PermState | undefined) ?? "unknown");
   const screenStatus: PermState = (permissions?.screen as PermState | undefined) ?? "unknown";
   const permLabel = (state: PermState) => t.perm[state] ?? state;
-  const degradedChannel = audioDegraded.me && audioDegraded.other ? "both" : audioDegraded.other ? "other" : "me";
-  const degradedMessage =
-    degradedChannel === "both" ? t.audioLostBoth : degradedChannel === "other" ? t.audioLostOther : t.audioLostMe;
+  const degraded = session.audioDegraded;
+  const degradedChannel = degraded.me && degraded.other ? "both" : degraded.other ? "other" : "me";
+  const degradedMessage = degradedChannel === "both" ? t.audioLostBoth : degradedChannel === "other" ? t.audioLostOther : t.audioLostMe;
+  const problem = session.problem;
+  const errorText =
+    problem?.kind === "model-missing" ? strings.models.missingForStart : problem ? problem.message : localError;
 
   return (
-    <main className="settings">
+    <main className="settings" data-testid="advanced-settings">
       <header>
         <div className="header-row">
           <h1>Avalet</h1>
           <div className="header-controls">
-            <button
-              type="button"
-              className="lang-btn"
-              onClick={() => void toggleUiLanguage()}
-              title={UI_STRINGS[uiLanguage].uiLangTitle}
-            >
+            <button type="button" className="lang-btn" onClick={() => void toggleUiLanguage()} title={strings.uiLangTitle} aria-label={strings.uiLangTitle}>
               {uiLanguage === "ru" ? "RU" : "EN"}
             </button>
             <button
               type="button"
               className="theme-btn"
               onClick={() => void toggleTheme()}
-              title={theme === "dark" ? t.themeToLight : t.themeToDark}
+              title={settings.theme === "dark" ? t.themeToLight : t.themeToDark}
+              aria-label={settings.theme === "dark" ? t.themeToLight : t.themeToDark}
             >
-              {theme === "dark" ? <IconSun /> : <IconMoon />}
+              {settings.theme === "dark" ? <IconSun /> : <IconMoon />}
             </button>
           </div>
         </div>
         <p className="subtitle">{t.subtitle}</p>
       </header>
 
-      {noKeysSavedYet ? <div className="onboarding-banner">{t.onboarding}</div> : null}
+      <section className="level-switch">
+        <p className="hint">{strings.simple.simpleHint}</p>
+        <div className="access-actions">
+          <button type="button" onClick={() => void bridge.settings.setUiLevel("simple")} disabled={settings.uiLevelForced} data-testid="to-simple">
+            {strings.simple.simpleMode}
+          </button>
+          <button type="button" onClick={onRunSetup}>
+            {strings.simple.runSetup}
+          </button>
+        </div>
+      </section>
 
-      <section className="access" id="access">
+      <section className="access" ref={accessRef}>
         <h3 className="section-title">{strings.access.title}</h3>
         <AccessCard
           uiLanguage={uiLanguage}
           onUseAvalet={() => void handleSelectProvider("avalet")}
           onUseOwnKey={() => {
-            const withKey = providers.find((p) => p.providerId !== "avalet" && p.hasApiKey);
+            const withKey = settings.providers.find((p) => p.providerId !== "avalet" && p.hasApiKey);
             void handleSelectProvider(withKey?.providerId ?? "anthropic");
           }}
         />
       </section>
 
-      <section className="providers">
+      <section className="providers" role="radiogroup" aria-label={strings.wizard.provider}>
         {PROVIDER_PRESETS_UI.map((p) => {
-          const settings = providers.find((s) => s.providerId === p.id);
+          const saved = settings.providers.find((s) => s.providerId === p.id);
           return (
             <label key={p.id} className={`provider-row ${selectedProviderId === p.id ? "active" : ""}`}>
-              <input
-                type="radio"
-                name="provider"
-                checked={selectedProviderId === p.id}
-                onChange={() => void handleSelectProvider(p.id)}
-              />
+              <input type="radio" name="provider" checked={selectedProviderId === p.id} onChange={() => void handleSelectProvider(p.id)} />
               <span>{p.label}</span>
-              {settings?.hasApiKey ? <span className="badge">{t.keySaved}</span> : null}
+              {saved?.hasApiKey ? <span className="badge">{t.keySaved}</span> : null}
             </label>
           );
         })}
       </section>
 
-      {current && preset && preset.id !== "avalet" ? (
+      {current && preset ? (
         <section className="provider-config">
           <label>
             {t.model}
-            <input
-              type="text"
-              value={current.model}
-              placeholder={preset.modelPlaceholder}
-              onChange={(e) => void handleFieldChange("model", e.target.value)}
-            />
+            <input type="text" value={current.model} placeholder={preset.modelPlaceholder} onChange={(e) => void handleFieldChange("model", e.target.value)} />
           </label>
           <label>
             {t.backgroundModel}
@@ -432,6 +241,7 @@ export function SettingsPanel() {
               <div className="key-row">
                 <input
                   type="password"
+                  autoComplete="off"
                   value={apiKeyDraft}
                   placeholder={current.hasApiKey ? t.apiKeySavedPlaceholder : "sk-..."}
                   onChange={(e) => setApiKeyDraft(e.target.value)}
@@ -441,6 +251,18 @@ export function SettingsPanel() {
                 </button>
               </div>
             </label>
+          ) : null}
+          {preset.id !== "avalet" ? (
+            <div className="own-key-actions">
+              <button type="button" onClick={() => void handleTestKey()} disabled={preset.apiKeyRequired && !current.hasApiKey}>
+                {strings.wizard.saveAndTest}
+              </button>
+              {keyTest ? (
+                <span className={keyTest.ok ? "ok-text" : "error"} role="status">
+                  {keyTest.message}
+                </span>
+              ) : null}
+            </div>
           ) : null}
         </section>
       ) : null}
@@ -460,7 +282,14 @@ export function SettingsPanel() {
           <span className={`perm-pill ${screenStatus}`}>{permissions ? permLabel(screenStatus) : "…"}</span>
         </div>
         <div className="mic-picker">
-          <select value={preferredMicId} onChange={(e) => void handleMicChange(e.target.value)}>
+          <select
+            aria-label={t.microphone}
+            value={preferredMicId}
+            onChange={(e) => {
+              setPreferredMicId(e.target.value);
+              void bridge.mic.setPreferred(e.target.value);
+            }}
+          >
             <option value="">{t.defaultMic}</option>
             {micDevices.map((d) => (
               <option key={d.deviceId} value={d.deviceId}>
@@ -473,7 +302,14 @@ export function SettingsPanel() {
           </button>
         </div>
         <div className="mic-picker">
-          <select value={preferredScreenId} onChange={(e) => void handleScreenChange(e.target.value)}>
+          <select
+            aria-label={t.screenRecording}
+            value={preferredScreenId}
+            onChange={(e) => {
+              setPreferredScreenId(e.target.value);
+              void bridge.screen.setPreferred(e.target.value);
+            }}
+          >
             <option value="">{t.firstScreen}</option>
             {screenSources.map((s) => (
               <option key={s.id} value={s.id}>
@@ -485,18 +321,18 @@ export function SettingsPanel() {
             {t.detectScreens}
           </button>
         </div>
-        {captureHandle && (audioDegraded.me || audioDegraded.other) ? (
+        {session.capturing && (degraded.me || degraded.other) ? (
           <div className="degraded-banner">
             <span>{degradedMessage}</span>
-            <button type="button" onClick={() => void handleReconnectAudio(degradedChannel)}>
+            <button type="button" onClick={() => void session.reconnect(degradedChannel)}>
               {t.reconnect}
             </button>
           </div>
         ) : null}
-        {transcriptionError ? (
+        {session.transcriptionError ? (
           <div className="degraded-banner">
             <span>
-              {t.transcriptionErrorPrefix} {transcriptionError}
+              {t.transcriptionErrorPrefix} {session.transcriptionError}
             </span>
           </div>
         ) : null}
@@ -506,8 +342,15 @@ export function SettingsPanel() {
         <h3 className="section-title">{t.speechTitle}</h3>
         <label className="mode-select">
           {t.speechLanguage}
-          <select value={speechLanguage} onChange={(e) => void handleSpeechLanguage(e.target.value as "ru" | "en" | "auto")}>
-            {(["ru", "en", "auto"] as const).map((code) => (
+          <select
+            value={settings.speechLanguage}
+            onChange={(e) => {
+              const language = e.target.value as SpeechLanguage;
+              patch({ speechLanguage: language });
+              void bridge.settings.setSpeech({ language });
+            }}
+          >
+            {SPEECH_LANGUAGES.map((code) => (
               <option key={code} value={code}>
                 {t.speechLanguages[code]}
               </option>
@@ -518,8 +361,11 @@ export function SettingsPanel() {
           <span>{t.speechModel}</span>
           <SpeechModels
             uiLanguage={uiLanguage}
-            selected={speechModel}
-            onSelect={(model) => void handleSpeechModel(model)}
+            selected={settings.speechModel}
+            onSelect={(model) => {
+              patch({ speechModel: model });
+              void bridge.settings.setSpeech({ model });
+            }}
             allowDelete
           />
         </div>
@@ -527,121 +373,63 @@ export function SettingsPanel() {
       </section>
 
       <section className="context">
-        <div className="mode-select">
-          <div className="mode-label-row">
-            <span>{strings.modeLabel}</span>
-            <button
-              type="button"
-              className={`help-btn ${modeHelpOpen ? "on" : ""}`}
-              onClick={() => setModeHelpOpen((v) => !v)}
-              title={t.modeHelpTitle}
-            >
-              <IconHelp />
-            </button>
-          </div>
-          <select value={meetingMode} onChange={(e) => void handleModeChange(e.target.value as MeetingMode)}>
-            {MEETING_MODES.map((mode) => (
-              <option key={mode} value={mode} title={strings.modeHelp[mode]}>
-                {strings.modes[mode]}
-              </option>
-            ))}
-          </select>
-          <p className="hint">{strings.modeHelp[meetingMode]}</p>
-          {modeHelpOpen ? (
-            <dl className="mode-help">
-              {MEETING_MODES.map((mode) => (
-                <div key={mode} className={mode === meetingMode ? "active" : ""}>
-                  <dt>{strings.modes[mode]}</dt>
-                  <dd>{strings.modeHelp[mode]}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
-        </div>
-        <label>
-          {t.contextLabel} <span className="optional">{t.contextOptional}</span>
-          <textarea
-            value={contextDraft}
-            onChange={(e) => {
-              setContextDraft(e.target.value);
-              setContextSaved(false);
-            }}
-            placeholder={t.contextPlaceholder}
-            rows={4}
-          />
-        </label>
-        <p className="hint">{contextSaved ? t.contextSaved : "..."}</p>
-        <label>
-          {t.agendaLabel} <span className="optional">{t.agendaOptional}</span>
-          <textarea
-            value={agendaDraft}
-            onChange={(e) => {
-              setAgendaDraft(e.target.value);
-              setAgendaSaved(false);
-            }}
-            placeholder={t.agendaPlaceholder}
-            rows={4}
-          />
-        </label>
-        <div className="agenda-edit-actions">
-          <span className="hint">{agendaSaved ? t.agendaSaved : "..."}</span>
-          <button type="button" onClick={() => agendaFileRef.current?.click()}>
-            {t.agendaLoadFile}
-          </button>
-          <input
-            ref={agendaFileRef}
-            type="file"
-            accept=".txt,.md,text/plain"
-            hidden
-            onChange={(e) => void handleLoadAgendaFile(e.target.files?.[0])}
-          />
-        </div>
+        <ContextFields uiLanguage={uiLanguage} advanced />
       </section>
 
       <section className="session-controls">
         <label className="auto-detect-toggle">
           <span className="switch">
-            <input type="checkbox" checked={autoDetectEnabled} onChange={() => void handleToggleAutoDetect()} />
+            <input type="checkbox" checked={settings.autoDetectEnabled} onChange={() => void setBool("autoDetectEnabled", !settings.autoDetectEnabled)} />
           </span>
           {t.autoSuggest}
         </label>
-        <p className="hint">{autoDetectEnabled ? t.autoSuggestOnHint : t.autoSuggestOffHint}</p>
-        <label className="auto-detect-toggle">
-          <span className="switch">
-            <input type="checkbox" checked={liveTracker} onChange={() => void handleToggleLiveTracker()} />
-          </span>
-          {t.liveTracker}
-        </label>
-        <p className="hint">{liveTracker ? t.liveTrackerOn : t.liveTrackerOff}</p>
+        <p className="hint">{settings.autoDetectEnabled ? t.autoSuggestOnHint : t.autoSuggestOffHint}</p>
         <label className="auto-detect-toggle">
           <span className="switch">
             <input
               type="checkbox"
-              checked={screenshotText && ocrAvailable}
-              disabled={!ocrAvailable}
-              onChange={() => void handleToggleScreenshotText()}
+              checked={settings.liveTrackerEnabled}
+              onChange={() => void setBool("liveTrackerEnabled", !settings.liveTrackerEnabled)}
+              data-testid="live-tracker-toggle"
+            />
+          </span>
+          {t.liveTracker}
+        </label>
+        <p className="hint">{settings.liveTrackerEnabled ? t.liveTrackerOn : t.liveTrackerOff}</p>
+        <label className="auto-detect-toggle">
+          <span className="switch">
+            <input
+              type="checkbox"
+              checked={settings.screenshotText && settings.ocrAvailable}
+              disabled={!settings.ocrAvailable}
+              onChange={() => void setBool("screenshotText", !settings.screenshotText)}
             />
           </span>
           {t.screenshotText}
         </label>
         <p className="hint">
-          {!ocrAvailable ? t.screenshotTextUnavailable : screenshotText ? t.screenshotTextOn : t.screenshotTextOff}
+          {!settings.ocrAvailable ? t.screenshotTextUnavailable : settings.screenshotText ? t.screenshotTextOn : t.screenshotTextOff}
         </p>
+        <OpacitySlider uiLanguage={uiLanguage} />
         <p className="state">
-          {t.sessionLabel}: {t.sessionStates[sessionState]}
+          {t.sessionLabel}: {t.sessionStates[session.state]}
         </p>
-        {error ? <p className="error">{error}</p> : null}
+        {errorText ? (
+          <p className="error" role="alert">
+            {errorText}
+          </p>
+        ) : null}
         <div className="buttons">
-          <button type="button" onClick={() => void handleStart()} disabled={sessionState === "listening"}>
-            {sessionState === "paused" ? t.resume : t.start}
+          <button type="button" className="primary" onClick={() => void session.start()} disabled={session.state === "listening"}>
+            {session.state === "paused" ? t.resume : t.start}
           </button>
-          <button type="button" onClick={() => void handleStop()} disabled={sessionState !== "listening"}>
+          <button type="button" onClick={() => void session.pause()} disabled={session.state !== "listening"}>
             {t.stop}
           </button>
           <button type="button" onClick={() => void bridge.history.clear()} title={t.clearBlocksTitle}>
             {t.clearBlocks}
           </button>
-          <button type="button" onClick={() => void handleReset()}>
+          <button type="button" onClick={() => void session.end()}>
             {t.resetHistory}
           </button>
         </div>
@@ -649,6 +437,9 @@ export function SettingsPanel() {
       </section>
 
       <section className="quit-row">
+        <button type="button" onClick={() => void bridge.app.openLogs()}>
+          {t.openLogs}
+        </button>
         <button type="button" className="danger" onClick={() => void bridge.app.quit()}>
           {t.quit}
         </button>

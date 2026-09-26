@@ -22,6 +22,7 @@ export type AccessInput = {
   localUsedSinceIssue: number;
   price?: { amount: number; currency: string; period: "month" };
   checkoutPending?: boolean;
+  syncError?: string | null;
 };
 
 /**
@@ -53,6 +54,7 @@ export function deriveAccess(input: AccessInput): AccessState {
     proBudget: PRO_BUDGET,
     trialBudget: TRIAL_BUDGET,
     checkoutPending: Boolean(input.checkoutPending),
+    syncError: input.syncFailing ? (input.syncError ?? "error") : null,
   };
 
   if (mode === "own") return { ...base, status: input.ownKeyReady ? "ok" : "no-key" };

@@ -3,10 +3,13 @@ import { getBridge } from "../lib/bridge.js";
 import type { MeetingMode, SessionState, TrackerState } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { QUICK_ACTIONS } from "../live/quick-actions.js";
-import { IconCamera, IconCopy, IconNotes, IconPause, IconPlay } from "../icons.js";
+import { IconCamera, IconChevron, IconCopy, IconNotes, IconPause, IconPlay } from "../icons.js";
 import { compactTokens, useUsage } from "./UsageCounter.js";
 import { formatPrice } from "./AccessCard.js";
 import type { AccessState } from "../../../electron/shared/ipc-contract.js";
+
+/** Simple level: the one quick action always visible; the rest sit behind "More actions". */
+const PRIMARY_ACTION = "askQuestion";
 
 const EMPTY_TRACKER: TrackerState = { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled: false };
 
@@ -31,7 +34,7 @@ export function OverlayApp() {
   const [audioDegraded, setAudioDegraded] = useState({ me: false, other: false });
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
-  // "Peeking" lets ◀/▶ pop the strip back open to read a saved block
+  // "Peeking" lets the previous/next buttons pop the strip back open to read a saved block
   // without actually resuming the session — see handleOverlayCollapse.
   const [peeking, setPeeking] = useState(false);
   const [tracker, setTracker] = useState<TrackerState>(EMPTY_TRACKER);
@@ -39,6 +42,8 @@ export function OverlayApp() {
   const [trackerDraft, setTrackerDraft] = useState("");
   const [trackerDraftKind, setTrackerDraftKind] = useState<"question" | "action">("question");
   const [paywall, setPaywall] = useState<AccessState | null>(null);
+  const [uiLevel, setUiLevel] = useState<"simple" | "advanced">("simple");
+  const [moreActions, setMoreActions] = useState(false);
   const followLive = useRef(true);
   // Mirrors `blocks` text keyed by id so the done/error handlers below can
   // read the just-finished text synchronously (functional setState updaters
@@ -46,6 +51,7 @@ export function OverlayApp() {
   const textById = useRef<Record<string, string>>({});
 
   const t = UI_STRINGS[uiLanguage];
+  const advanced = uiLevel === "advanced";
   const usage = useUsage();
   const meetingTokens = usage?.meeting ? usage.meeting.inputTokens + usage.meeting.outputTokens : 0;
 
@@ -56,6 +62,8 @@ export function OverlayApp() {
       document.documentElement.dataset.theme = all.theme;
       setUiLanguage(all.uiLanguage);
       setMeetingMode(all.meetingMode);
+      setUiLevel(all.uiLevel);
+      document.documentElement.dataset.platform = all.platform;
     });
     // The session may already be "listening" by the time this page finishes
     // loading (session-start's state broadcast can't reach a listener that
@@ -85,6 +93,7 @@ export function OverlayApp() {
         void bridge.history.append({ id, text: textById.current[id] ?? "", status: "done" });
       }),
       bridge.events.onPaywall(setPaywall),
+      bridge.events.onUiLevelChanged(setUiLevel),
       bridge.events.onAccessChanged((access) => {
         if (access.canUseAvalet || access.mode === "own") setPaywall(null);
       }),
@@ -309,14 +318,14 @@ export function OverlayApp() {
   // other rows (quick-actions, Process now) appear/disappear.
   const navRow = (
     <div className="overlay-navrow">
-      <button type="button" className="nav-btn" onClick={goPrev} disabled={pageIndex <= 0}>
-        ◀
+      <button type="button" className="nav-btn" onClick={goPrev} disabled={pageIndex <= 0} aria-label={t.prevBlock} title={t.prevBlock}>
+        <IconChevron direction="left" />
       </button>
       <span className="page-counter">
         {blocks.length > 0 ? `${pageIndex + 1} / ${blocks.length}` : "0 / 0"}
       </span>
-      <button type="button" className="nav-btn" onClick={goNext} disabled={pageIndex >= blocks.length - 1}>
-        ▶
+      <button type="button" className="nav-btn" onClick={goNext} disabled={pageIndex >= blocks.length - 1} aria-label={t.nextBlock} title={t.nextBlock}>
+        <IconChevron />
       </button>
       <button
         type="button"
@@ -357,7 +366,9 @@ export function OverlayApp() {
         title={t.tracker.toggleTitle}
         onClick={() => setTrackerOpen((open) => !open)}
       >
-        <span className={`chevron ${trackerOpen ? "open" : ""}`}>▸</span>
+        <span className={`chevron ${trackerOpen ? "open" : ""}`}>
+          <IconChevron />
+        </span>
         <span>{t.tracker.toggle}</span>
         {tracker.agendaStatus.length > 0 ? (
           <span className="tracker-count">
@@ -480,8 +491,8 @@ export function OverlayApp() {
       <div className="overlay overlay-collapsed">
         <div className="overlay-strip">
           <span className={`dot ${sessionState}${hasAudioIssue ? " warn" : ""}`} />
-          {autoButton}
-          {uiLangButton}
+          {advanced ? autoButton : null}
+          {advanced ? uiLangButton : null}
           {screenshotButton}
           {notesButton}
           {sessionButton}
@@ -497,8 +508,8 @@ export function OverlayApp() {
         <span className={`dot ${sessionState}${hasAudioIssue ? " warn" : ""}`} />
         <span className="overlay-title">Avalet</span>
         {meetingMode !== "free" ? <span className="mode-chip">{t.modes[meetingMode]}</span> : null}
-        {autoButton}
-        {uiLangButton}
+        {advanced ? autoButton : null}
+        {advanced ? uiLangButton : null}
         {screenshotButton}
         {notesButton}
         {sessionButton}
@@ -547,21 +558,24 @@ export function OverlayApp() {
         </div>
       ) : null}
 
-      <div className="overlay-controls">
-        <label className="opacity-control" title={t.opacityTitle}>
-          <span>{t.opacityLabel}</span>
-          <input
-            type="range"
-            min={0.2}
-            max={1}
-            step={0.05}
-            value={opacity}
-            onChange={(e) => handleOpacityChange(Number(e.target.value))}
-          />
-        </label>
-      </div>
+      {advanced ? (
+        // Advanced keeps the slider on the overlay, where it was relied on; Simple has it in Settings.
+        <div className="overlay-controls">
+          <label className="opacity-control" title={t.opacityTitle}>
+            <span>{t.opacityLabel}</span>
+            <input
+              type="range"
+              min={0.2}
+              max={1}
+              step={0.05}
+              value={opacity}
+              onChange={(e) => handleOpacityChange(Number(e.target.value))}
+            />
+          </label>
+        </div>
+      ) : null}
 
-      {trackerPanel}
+      {tracker.enabled || tracker.agendaStatus.length > 0 || visibleActions.length > 0 ? trackerPanel : null}
 
       <div className="overlay-body-content">
         {current ? (
@@ -583,11 +597,22 @@ export function OverlayApp() {
             {t.processNowLabel}
           </button>
         ) : null}
-        {QUICK_ACTIONS.map((qa) => (
-          <button key={qa.key} type="button" onClick={() => void ask(qa.prompt)} disabled={asking}>
+        {QUICK_ACTIONS.filter((qa) => advanced || moreActions || qa.key === PRIMARY_ACTION).map((qa) => (
+          <button
+            key={qa.key}
+            type="button"
+            className={qa.key === PRIMARY_ACTION && !advanced ? "primary" : ""}
+            onClick={() => void ask(qa.prompt)}
+            disabled={asking}
+          >
             {t.quickActions[qa.key]}
           </button>
         ))}
+        {advanced ? null : (
+          <button type="button" className="link-btn" aria-expanded={moreActions} onClick={() => setMoreActions((v) => !v)}>
+            {moreActions ? t.simple.fewerActions : t.simple.moreActions}
+          </button>
+        )}
       </div>
 
       <div className="ask-row">

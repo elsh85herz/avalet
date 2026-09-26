@@ -30,7 +30,11 @@
     "ocr:selftest": "bash scripts/ocr-selftest.sh",
     "build:tests": "rimraf dist-electron dist-test && tsc -p tsconfig.node.json && tsc -p tsconfig.test.json",
     "test:coverage": "npm run build:tests && node scripts/run-tests.mjs --experimental-test-coverage",
-    "mock:server": "node server-mock/server.mjs --port 8787"
+    "mock:server": "node server-mock/server.mjs --port 8787",
+    "e2e": "npm run build && playwright test",
+    "e2e:xvfb": "npm run build && xvfb-run -a -s \"-screen 0 1600x1200x24\" playwright test",
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "check": "npm run typecheck && npm run check:i18n && npm test"
   },
   "dependencies": {
     "electron-audio-loopback": "^1.0.5",
@@ -39,6 +43,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

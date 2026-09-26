@@ -44,13 +44,23 @@ Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work con
   - Key test IPC (`provider-test`) with human error text.
   - Verified: typecheck ok, `npm test` 106/106 (billing state machine against server-mock included), app starts under Xvfb.
 
+- Step 4 (Simple level and first run):
+  - `uiLevel` simple/advanced (+ `AVALET_ADVANCED=1`), first-run wizard (4 screens, skippable, Try it with mic meter and a real sample suggestion).
+  - Simple main window (Start/Pause/End, meeting type, context and agenda, transcript, summary, export; one-sentence problems with one button), Simple settings, History.
+  - Advanced = previous settings plus access card, background model, key test, live checklist switch, opacity, log folder.
+  - Overlay simplified in Simple; paywall banner; SVG chevrons instead of arrow glyphs.
+  - Shared contexts: `lib/session.tsx` (capture + start/stop), `lib/settings.tsx`.
+  - `scripts/check-i18n.mjs`; contrast, keyboard and no-layout-jump E2E checks.
+  - Fixed: after "End meeting" the windows kept showing "paused" (state was not re-broadcast).
+  - Verified: `npm run check` ok (typecheck, i18n 313 strings each, 106 unit tests); `xvfb-run npx playwright test` 10/10; 29 screenshots in `docs/screens/`.
+
 ## In progress
 
-- Step 4: first-run wizard and Simple level.
+- Step 5: integration test with fake sidecar and mock provider, coverage, remaining unit tests, self-review.
 
 ## Next
 
-- Steps 5..7 in order.
+- Steps 6..7.
 
 ## Blockers
 

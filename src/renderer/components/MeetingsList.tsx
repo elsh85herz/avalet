@@ -4,7 +4,7 @@ import type { Meeting, MeetingListItem } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { MeetingView } from "./MeetingView.js";
 
-export function MeetingsList({ uiLanguage }: { uiLanguage: UiLanguage }) {
+export function MeetingsList({ uiLanguage, simple }: { uiLanguage: UiLanguage; simple?: boolean }) {
   const bridge = getBridge();
   const t = UI_STRINGS[uiLanguage];
   const [items, setItems] = useState<MeetingListItem[]>([]);
@@ -34,6 +34,7 @@ export function MeetingsList({ uiLanguage }: { uiLanguage: UiLanguage }) {
         meeting={open}
         uiLanguage={uiLanguage}
         live={!open.endedAt}
+        simple={simple}
         onBack={() => {
           setOpen(null);
           void refresh();

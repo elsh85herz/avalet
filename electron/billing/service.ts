@@ -16,6 +16,7 @@ type Stored = {
   exhaustedSignal?: boolean;
   localUsedSinceIssue?: number;
   price?: { amount: number; currency: string; period: "month" };
+  lastErrorCode?: string;
 };
 
 export type BillingServiceDeps = {
@@ -112,6 +113,7 @@ export class BillingService {
       localUsedSinceIssue: stored.localUsedSinceIssue ?? 0,
       price: stored.price,
       checkoutPending: this.checkoutTimer !== null,
+      syncError: stored.lastErrorCode ?? null,
     });
   }
 
@@ -165,10 +167,15 @@ export class BillingService {
   private failed(error: unknown): void {
     const code = error instanceof BillingError ? error.code : "error";
     logLine(`[billing] ${code}: ${error instanceof Error ? error.message : String(error)}`);
-    this.write({ syncFailing: true });
+    this.write({ syncFailing: true, lastErrorCode: code });
   }
 
   async activateTrial(): Promise<AccessState> {
+    // Nothing leaves the machine before a secret can be stored safely.
+    if (!this.deps.secrets.isEncryptionAvailable() && !this.read().installId) {
+      this.write({ syncFailing: true, lastErrorCode: "no_keychain" });
+      return this.emit();
+    }
     try {
       this.accept(await this.provider.getEntitlement());
     } catch (error) {

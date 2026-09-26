@@ -88,6 +88,7 @@ export const WINDOW_CHANNELS = [
   "avalet:main-toggle",
   "avalet:main-show-access",
   "avalet:app-quit",
+  "avalet:open-logs",
   "avalet:overlay-set-opacity",
   "avalet:overlay-set-collapsed",
   "avalet:overlay-show",
@@ -96,6 +97,7 @@ export const WINDOW_CHANNELS = [
   "avalet:theme-set",
   "avalet:capture-screenshot",
   "avalet:permissions-check",
+  "avalet:open-privacy-settings",
   "avalet:screen-list-sources",
 ] as const satisfies readonly InvokeChannel[];
 export type WindowChannel = (typeof WINDOW_CHANNELS)[number];
@@ -121,7 +123,16 @@ export type AppCoreDeps = {
   chooseSavePath: (defaultName: string, filterName: string, extension: string) => Promise<string | null>;
   /** Called on Start, e.g. to open the overlay window. */
   onSessionStarted?: () => void;
+  /** Test mode: the renderer does not capture audio (see fake-capture.ts). */
+  fakeCapture?: boolean;
 };
+
+/** A short made-up exchange for the wizard's "Try it", in the transcript's own format. */
+export const SELFTEST_TRANSCRIPT = [
+  "[Собеседник]: Нам нужно, чтобы клиент мог сам менять лимит по карте прямо в приложении.",
+  "[Я]: Какой лимит: дневной или на одну операцию?",
+  "[Собеседник]: Дневной. И если больше трёхсот тысяч, наверное, нужно какое-то подтверждение.",
+].join("\n");
 
 function requireString(value: unknown, name: string): string {
   if (typeof value !== "string") throw new Error(`${name} must be a string`);
@@ -254,6 +265,8 @@ export class AppCore {
       speechLanguage: getSpeechLanguage(),
       speechModel: getSpeechModel(),
       liveTrackerEnabled: getLiveTrackerEnabled(),
+      platform: process.platform,
+      fakeCapture: Boolean(this.deps.fakeCapture),
     };
   }
 
@@ -329,6 +342,17 @@ export class AppCore {
     };
     h["avalet:billing-cancel-info"] = () => billingOrThrow().cancelInfo();
     h["avalet:billing-open-manage"] = () => billingOrThrow().openManage();
+
+    h["avalet:selftest-suggestion"] = async () => {
+      const language = getUiLanguage();
+      try {
+        return { ok: true, text: await this.liveSession.sampleSuggestion(SELFTEST_TRANSCRIPT) };
+      } catch (error) {
+        const problem = accessProblemOf(error);
+        if (problem) this.handleAccessProblem(problem, false);
+        return { ok: false, message: humanProviderError(error, language) };
+      }
+    };
 
     // One tiny real call, so a wrong key shows up in setup and not in the first meeting.
     h["avalet:provider-test"] = async (rawId) => {
@@ -574,6 +598,9 @@ export class AppCore {
       const ended = endCurrentMeeting();
       emit("avalet:event:history-cleared", undefined, "overlay");
       emit("avalet:event:meeting-ended", ended, "main");
+      // With the transcript cleared the state is "idle" again; windows must hear it.
+      emit("avalet:event:session-state", this.liveSession.getState());
+      emit("avalet:event:tracker-update", this.liveTracker.getState());
     };
 
     h["avalet:mic-get-preferred"] = () => getPreferredMicDeviceId();
