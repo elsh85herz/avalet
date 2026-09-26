@@ -14,8 +14,10 @@ type SessionState = "idle" | "listening" | "paused";
 type HistoryBlock = { id: string; text: string; status: "done" | "error"; createdAt: number };
 type MeetingMode = "free" | "requirements" | "grooming" | "demo" | "interview";
 type TranscriptSegment = { at: number; speaker: "me" | "other"; text: string };
-type AgendaStatusItem = { question: string; closed: boolean; note: string };
-type ActionItem = { task: string; owner: string; due: string };
+type AgendaStatusItem = { question: string; closed: boolean; note: string; active?: boolean; manual?: boolean };
+type ActionState = "proposed" | "confirmed" | "dismissed";
+type ActionItem = { task: string; owner: string; due: string; id?: string; state?: ActionState };
+type TrackerState = { meetingId: string | null; agendaStatus: AgendaStatusItem[]; actions: ActionItem[]; busy: boolean };
 type Meeting = {
   id: string;
   title: string;
@@ -153,6 +155,15 @@ const api = {
     toggleMainWindow: (): Promise<void> => ipcRenderer.invoke("avalet:main-toggle"),
     quit: (): Promise<void> => ipcRenderer.invoke("avalet:app-quit"),
   },
+  tracker: {
+    get: (): Promise<TrackerState> => ipcRenderer.invoke("avalet:tracker-get"),
+    refresh: (): Promise<TrackerState> => ipcRenderer.invoke("avalet:tracker-refresh"),
+    toggleAgenda: (index: number): Promise<TrackerState> => ipcRenderer.invoke("avalet:tracker-toggle-agenda", index),
+    addAgenda: (text: string): Promise<TrackerState> => ipcRenderer.invoke("avalet:tracker-add-agenda", text),
+    setAction: (id: string, state: ActionState): Promise<TrackerState> =>
+      ipcRenderer.invoke("avalet:tracker-set-action", id, state),
+    addAction: (text: string): Promise<TrackerState> => ipcRenderer.invoke("avalet:tracker-add-action", text),
+  },
   history: {
     clear: (): Promise<void> => ipcRenderer.invoke("avalet:history-clear"),
     get: (): Promise<HistoryBlock[]> => ipcRenderer.invoke("avalet:history-get"),
@@ -201,6 +212,7 @@ const api = {
     onSummaryDone: (
       cb: (e: { id: string; text: string; agendaStatus: AgendaStatusItem[] | null; actions: ActionItem[] | null }) => void,
     ) => on("avalet:event:summary-done", cb),
+    onTrackerUpdate: (cb: (state: TrackerState) => void) => on("avalet:event:tracker-update", cb),
     onSummaryError: (cb: (e: { id: string; message: string }) => void) => on("avalet:event:summary-error", cb),
   },
 };

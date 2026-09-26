@@ -1219,3 +1219,166 @@ select {
   align-items: center;
   justify-content: center;
 }
+
+/* --- Live checklist in the overlay: agenda marks and action points --- */
+
+.tracker {
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: no-drag;
+}
+
+.tracker-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  color: var(--text);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.tracker-count {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.tracker-count.new {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tracker-busy {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.tracker-body {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0 12px 10px;
+  font-size: 12px;
+}
+
+.tracker-body h4 {
+  margin: 8px 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.tracker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tracker-list li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  line-height: 1.35;
+}
+
+.tracker-list li.closed .tracker-text {
+  color: var(--muted);
+}
+
+.tracker-check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  padding: 0;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.tracker-list li.closed .tracker-check {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #0b0d10;
+}
+
+.tracker-list li.active .tracker-check {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tracker-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.tracker-note {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tracker-list li.proposed .tracker-text {
+  border-left: 2px solid var(--accent);
+  padding-left: 6px;
+}
+
+.tracker-action-buttons {
+  flex: none;
+  display: flex;
+  gap: 4px;
+}
+
+.tracker-action-buttons button {
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.tracker-hint {
+  margin: 0;
+  color: var(--muted);
+}
+
+.tracker-add {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tracker-add input {
+  flex: 1;
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.tracker-add select {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.tracker-refresh {
+  margin-top: 6px;
+  font-size: 11px;
+}

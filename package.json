@@ -24,7 +24,7 @@
     "dist:mac:unsigned": "npm run build:native && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.config.mjs -c.mac.identity=null --mac dmg zip --publish never",
     "dist:mac:dir": "npm run build:native && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --config electron-builder.config.mjs -c.mac.identity=null --mac dir --publish never",
     "update:mac": "bash scripts/build-and-install.sh",
-    "test": "tsc -p tsconfig.node.json && tsc -p tsconfig.test.json && node --test dist-electron/ocr/layout.test.js dist-electron/providers/errors.test.js dist-electron/providers/generate.test.js dist-electron/echo-filter.test.js dist-electron/summary-format.test.js dist-electron/summary-prompt.test.js dist-test/test/segmenter.test.js dist-test/test/resample.test.js",
+    "test": "tsc -p tsconfig.node.json && tsc -p tsconfig.test.json && node --test dist-electron/live-tracker-logic.test.js dist-electron/ocr/layout.test.js dist-electron/providers/errors.test.js dist-electron/providers/generate.test.js dist-electron/echo-filter.test.js dist-electron/summary-format.test.js dist-electron/summary-prompt.test.js dist-test/test/segmenter.test.js dist-test/test/resample.test.js",
     "build:native": "bash scripts/build-native.sh",
     "predev": "npm run build:native",
     "ocr:selftest": "bash scripts/ocr-selftest.sh"

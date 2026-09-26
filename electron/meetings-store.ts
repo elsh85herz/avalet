@@ -159,6 +159,20 @@ export function setAgenda(id: string, agenda: string[]): Meeting | null {
   return meeting;
 }
 
+/** Live checklist state for the running meeting: agenda marks and action points. */
+export function setLiveAnalysis(
+  id: string,
+  patch: { agendaStatus?: AgendaStatusItem[]; actions?: ActionItem[] },
+): Meeting | null {
+  const meeting = current?.id === id ? current : readMeeting(id);
+  if (!meeting) return null;
+  if (patch.agendaStatus) meeting.agendaStatus = patch.agendaStatus;
+  if (patch.actions) meeting.actions = patch.actions;
+  if (meeting === current) scheduleFlush();
+  else writeMeeting(meeting);
+  return meeting;
+}
+
 export function setSummary(
   id: string,
   summary: string,

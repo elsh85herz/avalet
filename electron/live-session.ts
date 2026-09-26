@@ -116,7 +116,11 @@ export type LiveSessionEvents = {
   /** Fires once transcription succeeds again after having been in error. */
   onTranscriptionRecovered: () => void;
   /** Every non-empty transcribed chunk, in order, for the meeting record. */
-  onTranscriptSegment: (segment: { at: number; speaker: AudioChannel; text: string }) => void;
+  onTranscriptSegment: (
+    segment: { at: number; speaker: AudioChannel; text: string },
+    /** The other side just paused: a natural moment for a checklist refresh. */
+    meta: { endsWithPause: boolean },
+  ) => void;
 };
 
 // Skip the first blip — a single dropped chunk is normal noise (a hiccup in
@@ -259,7 +263,7 @@ export class LiveSession {
   }
 
   private commitSegment(channel: AudioChannel, at: number, text: string, endsWithPause: boolean): void {
-    this.events.onTranscriptSegment({ at, speaker: channel, text });
+    this.events.onTranscriptSegment({ at, speaker: channel, text }, { endsWithPause });
     const label = channel === "other" ? "Собеседник" : "Я";
     this.transcript = `${this.transcript}\n[${label}]: ${text}`.trim().slice(-TRANSCRIPT_CHAR_BUDGET);
     this.segmentSinceTrigger = `${this.segmentSinceTrigger} ${text}`.trim();

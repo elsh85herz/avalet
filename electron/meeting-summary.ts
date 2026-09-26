@@ -4,6 +4,8 @@ import { readMeeting, setSummary, transcriptToText } from "./meetings-store.js";
 import { VisibleTextStream, splitSummary, type MeetingAnalysis } from "./summary-format.js";
 import { buildSummaryPrompt } from "./summary-prompt.js";
 import { MODE_SUMMARY } from "./modes.js";
+import { mergeSummaryAnalysis } from "./live-tracker-logic.js";
+import { randomUUID } from "node:crypto";
 
 // A one-hour meeting is roughly 60k characters of Russian transcript; keep a
 // hard cap so a marathon call can't blow the provider's context window.
@@ -50,7 +52,10 @@ export async function summarizeMeeting(
       if (visible) events.onDelta(visible);
     },
   });
-  const { protocol, analysis } = splitSummary(collected, agenda);
-  setSummary(meetingId, protocol, analysis);
-  return { text: protocol, analysis };
+  const split = splitSummary(collected, agenda);
+  // The live checklist may already hold hand-set marks and confirmed action
+  // points: the summary reads the whole call but must not overwrite them.
+  const analysis = split.analysis ? mergeSummaryAnalysis(meeting, split.analysis, randomUUID) : null;
+  setSummary(meetingId, split.protocol, analysis);
+  return { text: split.protocol, analysis };
 }

@@ -58,6 +58,10 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
         });
       }),
       bridge.events.onMeetingModeChanged((mode) => setMeeting((prev) => ({ ...prev, mode }))),
+      bridge.events.onTrackerUpdate((state) => {
+        if (state.meetingId !== meeting.id) return;
+        setMeeting((prev) => ({ ...prev, agendaStatus: state.agendaStatus, actions: state.actions }));
+      }),
     ];
     return () => unsubscribers.forEach((u) => u());
   }, [live, meeting.id]);
@@ -184,7 +188,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     onDeleted?.();
   }
 
-  // Agenda checkmarks come from the last summary; before it every question is open.
+  // Agenda checkmarks come from the live checklist and the last summary; before either every question is open.
   const agendaItems = (meeting.agendaStatus && meeting.agendaStatus.length > 0
     ? meeting.agendaStatus
     : (meeting.agenda ?? []).map((question) => ({ question, closed: false, note: "" })));
@@ -305,11 +309,11 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
             </div>
 
             <h3>{t.meeting.actionsTitle}</h3>
-            {(meeting.actions ?? []).length === 0 ? (
+            {(meeting.actions ?? []).filter((a) => a.state !== "dismissed").length === 0 ? (
               <p className="hint">{t.meeting.actionsEmpty}</p>
             ) : (
               <ul className="action-list">
-                {(meeting.actions ?? []).map((action, i) => (
+                {(meeting.actions ?? []).filter((a) => a.state !== "dismissed").map((action, i) => (
                   <li key={`${i}-${action.task}`}>
                     <span className="action-task">{action.task}</span>
                     <span className="action-meta">

@@ -26,6 +26,27 @@ export type UiStrings = {
   reconnectButton: string;
   reconnectTitle: string;
   transcriptionErrorPrefix: string;
+  tracker: {
+    toggle: string;
+    toggleTitle: string;
+    agenda: string;
+    actions: string;
+    agendaEmpty: string;
+    actionsEmpty: string;
+    addQuestionPlaceholder: string;
+    addActionPlaceholder: string;
+    add: string;
+    refresh: string;
+    refreshTitle: string;
+    updating: string;
+    markTitle: string;
+    confirm: string;
+    dismiss: string;
+    proposed: string;
+    discussing: string;
+    noOwner: string;
+    newCount: string;
+  };
   quickActions: {
     summarize: string;
     risks: string;
@@ -173,6 +194,27 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
     reconnectButton: "Reconnect",
     reconnectTitle: "Try to re-acquire audio capture right now",
     transcriptionErrorPrefix: "Speech recognition is struggling:",
+    tracker: {
+      toggle: "Checklist",
+      toggleTitle: "Agenda and action points, updated live",
+      agenda: "Agenda",
+      actions: "Action points",
+      agendaEmpty: "No questions yet. Add one below as it comes up.",
+      actionsEmpty: "Nothing agreed yet. New tasks appear here on their own.",
+      addQuestionPlaceholder: "New question for the agenda…",
+      addActionPlaceholder: "Add an action point…",
+      add: "Add",
+      refresh: "Update now",
+      refreshTitle: "Re-read the latest part of the call",
+      updating: "updating…",
+      markTitle: "Click to mark closed or open",
+      confirm: "Confirm",
+      dismiss: "Remove",
+      proposed: "Found in the call: confirm or remove",
+      discussing: "being discussed",
+      noOwner: "no owner",
+      newCount: "new",
+    },
     quickActions: {
       summarize: "Summarize",
       risks: "Risks?",
@@ -339,6 +381,27 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
     reconnectButton: "Переподключить",
     reconnectTitle: "Попробовать восстановить захват звука прямо сейчас",
     transcriptionErrorPrefix: "Распознавание речи спотыкается:",
+    tracker: {
+      toggle: "Чек-лист",
+      toggleTitle: "Повестка и экшн-поинты, обновляются по ходу встречи",
+      agenda: "Повестка",
+      actions: "Экшн-поинты",
+      agendaEmpty: "Вопросов пока нет. Добавьте новый ниже, когда он появится.",
+      actionsEmpty: "Пока ни о чём не договорились. Новые задачи появятся здесь сами.",
+      addQuestionPlaceholder: "Новый вопрос в повестку…",
+      addActionPlaceholder: "Добавить экшн-поинт…",
+      add: "Добавить",
+      refresh: "Обновить сейчас",
+      refreshTitle: "Перечитать последнюю часть разговора",
+      updating: "обновляю…",
+      markTitle: "Клик: отметить закрытым или открытым",
+      confirm: "Подтвердить",
+      dismiss: "Убрать",
+      proposed: "Нашла модель: подтвердите или уберите",
+      discussing: "обсуждается",
+      noOwner: "без исполнителя",
+      newCount: "новых",
+    },
     quickActions: {
       summarize: "Итог",
       risks: "Риски?",

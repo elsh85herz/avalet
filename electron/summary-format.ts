@@ -6,8 +6,18 @@ import type { Meeting } from "./meetings-store.js";
 // transcript is only sent once.
 export const ANALYSIS_MARKER = "@@AVALET_JSON@@";
 
-export type AgendaStatusItem = { question: string; closed: boolean; note: string };
-export type ActionItem = { task: string; owner: string; due: string };
+export type AgendaStatusItem = {
+  question: string;
+  closed: boolean;
+  note: string;
+  /** Being discussed right now (live tracker only). */
+  active?: boolean;
+  /** Set by the analyst by hand: the tracker and the summary leave it alone. */
+  manual?: boolean;
+};
+/** proposed = found by the model, waiting for the analyst; a missing state means confirmed (older records). */
+export type ActionState = "proposed" | "confirmed" | "dismissed";
+export type ActionItem = { task: string; owner: string; due: string; id?: string; state?: ActionState };
 export type MeetingAnalysis = { agendaStatus: AgendaStatusItem[]; actions: ActionItem[] };
 
 /** One agenda question per line; list bullets and numbering are stripped. */
@@ -142,7 +152,7 @@ export function buildProtocolMarkdown(
     lines.push("");
   }
 
-  const actions = meeting.actions ?? [];
+  const actions = (meeting.actions ?? []).filter((a) => a.state !== "dismissed");
   if (actions.length > 0) {
     lines.push(`## ${labels.actions}`, "");
     lines.push(`| ${labels.actionTask} | ${labels.actionOwner} | ${labels.actionDue} |`, "|---|---|---|");

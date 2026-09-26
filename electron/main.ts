@@ -19,9 +19,11 @@ import { checkMicAccess, checkScreenAccess } from "./ipc/permissions.js";
 import { listScreenSources } from "./ipc/screen-sources.js";
 import { appendHistoryBlock, clearHistory, getHistory, type HistoryBlock } from "./history-store.js";
 import { LiveSession, type LiveBlock } from "./live-session.js";
+import { LiveTracker } from "./live-tracker.js";
 import { isMeetingMode, MODE_SUMMARY } from "./modes.js";
 import {
   appendSegment,
+  setLiveAnalysis,
   deleteMeeting,
   endCurrentMeeting,
   flushCurrentMeeting,
@@ -178,6 +180,11 @@ function broadcastState(state: "idle" | "listening" | "paused"): void {
   mainWindow?.webContents.send("avalet:event:session-state", state);
 }
 
+const liveTracker = new LiveTracker((state) => {
+  broadcastToOverlay("avalet:event:tracker-update", state);
+  mainWindow?.webContents.send("avalet:event:tracker-update", state);
+});
+
 const liveSession = new LiveSession(
   pythonRuntime,
   {
@@ -194,9 +201,10 @@ const liveSession = new LiveSession(
       broadcastToOverlay("avalet:event:transcription-recovered");
       mainWindow?.webContents.send("avalet:event:transcription-recovered");
     },
-    onTranscriptSegment: (segment) => {
+    onTranscriptSegment: (segment, meta) => {
       appendSegment(segment);
       mainWindow?.webContents.send("avalet:event:transcript-segment", segment);
+      liveTracker.note(meta.endsWithPause);
     },
   },
   async () => {
@@ -527,6 +535,31 @@ function registerIpc(): void {
   ipcMain.handle("avalet:session-stop", () => {
     liveSession.stop();
     flushCurrentMeeting();
+    // One last pass so the checklist matches what was said before the pause.
+    void liveTracker.refresh();
+  });
+
+  ipcMain.handle("avalet:tracker-get", () => liveTracker.getState());
+  ipcMain.handle("avalet:tracker-refresh", async () => {
+    await liveTracker.refresh();
+    return liveTracker.getState();
+  });
+  ipcMain.handle("avalet:tracker-toggle-agenda", (_event, index: unknown) => {
+    if (!Number.isInteger(index)) throw new Error("index must be an integer");
+    return liveTracker.toggleAgenda(index as number);
+  });
+  ipcMain.handle("avalet:tracker-add-agenda", (_event, text: unknown) => {
+    if (typeof text !== "string") throw new Error("text must be a string");
+    return liveTracker.addAgenda(text);
+  });
+  ipcMain.handle("avalet:tracker-set-action", (_event, id: unknown, state: unknown) => {
+    if (typeof id !== "string") throw new Error("id must be a string");
+    if (state !== "proposed" && state !== "confirmed" && state !== "dismissed") throw new Error("invalid state");
+    return liveTracker.setActionState(id, state);
+  });
+  ipcMain.handle("avalet:tracker-add-action", (_event, text: unknown) => {
+    if (typeof text !== "string") throw new Error("text must be a string");
+    return liveTracker.addAction(text);
   });
 
   // The overlay window's page can finish loading after `session-start`
@@ -539,6 +572,7 @@ function registerIpc(): void {
   // Ends the current meeting record as well: the next Start opens a new one.
   ipcMain.handle("avalet:session-reset", () => {
     liveSession.reset();
+    liveTracker.reset();
     clearHistory();
     const ended = endCurrentMeeting();
     broadcastToOverlay("avalet:event:history-cleared");
@@ -633,7 +667,22 @@ async function runScreenshotMode(dir: string): Promise<void> {
   const overlay = createOverlayWindow(preloadPath, entryUrl("overlay"));
   showOverlayWindow();
   await wait(1200);
-  const fake = startMeeting({ mode: "requirements", context: "" });
+  const fake = startMeeting({
+    mode: "requirements",
+    context: "",
+    agenda: ["Кто подтверждает изменение лимита", "Какой лимит: дневной или разовый", "Сроки и владелец интеграции"],
+  });
+  setLiveAnalysis(fake.id, {
+    agendaStatus: [
+      { question: "Кто подтверждает изменение лимита", closed: false, active: true, note: "выше 300 тыс. звонок из колл-центра" },
+      { question: "Какой лимит: дневной или разовый", closed: true, note: "дневной" },
+      { question: "Сроки и владелец интеграции", closed: false, note: "" },
+    ],
+    actions: [
+      { id: "demo-1", task: "Прислать описание процесса колл-центра", owner: "Собеседник", due: "до пятницы", state: "proposed" },
+      { id: "demo-2", task: "Завести задачу в Jira по лимитам", owner: "Я", due: "срок не назван", state: "confirmed" },
+    ],
+  });
   const base = Date.now() - 90_000;
   appendSegment({ at: base, speaker: "other", text: "Нам нужно, чтобы клиент мог менять лимит по карте прямо в приложении." });
   appendSegment({ at: base + 12_000, speaker: "me", text: "Лимит дневной или разовый? И кто подтверждает изменение выше порога?" });
@@ -646,8 +695,13 @@ async function runScreenshotMode(dir: string): Promise<void> {
     await wait(400);
     await shoot(main, `main-meeting-${theme}`);
     overlay.webContents.send("avalet:event:session-state", "listening");
+    overlay.webContents.send("avalet:event:tracker-update", liveTracker.getState());
     await wait(400);
     await shoot(overlay, `overlay-${theme}-expanded`);
+    await overlay.webContents.executeJavaScript('document.querySelector(".tracker-toggle")?.click()');
+    await wait(400);
+    await shoot(overlay, `overlay-${theme}-checklist`);
+    await overlay.webContents.executeJavaScript('document.querySelector(".tracker-toggle")?.click()');
     overlay.webContents.send("avalet:event:session-state", "paused");
     await wait(400);
     await shoot(overlay, `overlay-${theme}-collapsed`);

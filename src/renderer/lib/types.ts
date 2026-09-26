@@ -17,8 +17,10 @@ export const MEETING_MODES: MeetingMode[] = ["free", "requirements", "grooming",
 
 export type TranscriptSegment = { at: number; speaker: "me" | "other"; text: string };
 
-export type AgendaStatusItem = { question: string; closed: boolean; note: string };
-export type ActionItem = { task: string; owner: string; due: string };
+export type AgendaStatusItem = { question: string; closed: boolean; note: string; active?: boolean; manual?: boolean };
+export type ActionState = "proposed" | "confirmed" | "dismissed";
+export type ActionItem = { task: string; owner: string; due: string; id?: string; state?: ActionState };
+export type TrackerState = { meetingId: string | null; agendaStatus: AgendaStatusItem[]; actions: ActionItem[]; busy: boolean };
 
 export type Meeting = {
   id: string;

@@ -1,6 +1,8 @@
 import type {
   ActionItem,
   AgendaStatusItem,
+  ActionState,
+  TrackerState,
   ExportLabels,
   HistoryBlock,
   LiveBlockDeltaEvent,
@@ -92,6 +94,14 @@ type AvaletBridge = {
     toggleMainWindow: () => Promise<void>;
     quit: () => Promise<void>;
   };
+  tracker: {
+    get: () => Promise<TrackerState>;
+    refresh: () => Promise<TrackerState>;
+    toggleAgenda: (index: number) => Promise<TrackerState>;
+    addAgenda: (text: string) => Promise<TrackerState>;
+    setAction: (id: string, state: ActionState) => Promise<TrackerState>;
+    addAction: (text: string) => Promise<TrackerState>;
+  };
   history: {
     clear: () => Promise<void>;
     get: () => Promise<HistoryBlock[]>;
@@ -132,6 +142,7 @@ type AvaletBridge = {
     onSummaryDone: (
       cb: (e: { id: string; text: string; agendaStatus: AgendaStatusItem[] | null; actions: ActionItem[] | null }) => void,
     ) => () => void;
+    onTrackerUpdate: (cb: (state: TrackerState) => void) => () => void;
     onSummaryError: (cb: (e: { id: string; message: string }) => void) => () => void;
   };
 };
