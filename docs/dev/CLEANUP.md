@@ -18,14 +18,12 @@ README updates, `CHANGELOG.md`, `.github/workflows/`, tests (`electron/**/*.test
 
 - `docs/dev/MAC_VERIFY.md`: the manual Mac checklist; could move to `docs/`.
 - `docs/dev/billing-api.md`: the server contract; could move to `docs/`. If it moves, update the links in `README.md`, `README.ru.md`, `server-mock/README.md`, `server-mock/server.mjs` and `electron/billing/config.ts`.
-- `docs/dev/market-check.md`: internal comparison naming other products and prices; consider keeping it private (delete from the public repo, keep a copy elsewhere).
+- `docs/dev/market-check.md`: removed from the repo, the copy is kept privately outside it.
 
 ## (c) Commands
 
 ```bash
 git rm CLOUD_TASK.md docs/dev/PROGRESS.md docs/dev/DECISIONS.md docs/dev/REPORT.md docs/dev/CLEANUP.md
-# optional, if market-check stays private:
-# git rm docs/dev/market-check.md
 git commit -m "Remove autonomous-session scaffolding"
 
 # after the squash merge of release/v0.2-autopilot into main:
@@ -39,7 +37,7 @@ Scanned on 2026-09-26 (`git ls-files | xargs grep` for private keys, provider
 key patterns, emails, bank and employer names): no secrets, no emails, no
 employer names found. Remaining items for a human decision:
 
-- `docs/dev/market-check.md`: competitor names, prices, and "three things to improve next" (strategy).
+- `docs/dev/market-check.md`: removed from the repo, the copy is kept privately outside it.
 - `CLOUD_TASK.md`: market and pricing strategy ("Russian market first", tier budgets). Deleted by the commands above.
 - Pricing and budgets in code and docs: 990 RUB/month placeholder, 500,000 trial and 5,000,000 Pro weighted tokens (`electron/billing/config.ts`, `server-mock/server.mjs`, `docs/dev/billing-api.md`, READMEs, CHANGELOG). Public by design once the plan is announced; check they are final.
 - `electron/billing/config.ts` `PRODUCTION_PUBLIC_KEY`: a placeholder public key (its private key never existed on disk). Not a secret, but it must be replaced by the real server key before the built-in provider can work.
