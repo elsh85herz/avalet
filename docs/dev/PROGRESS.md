@@ -70,13 +70,15 @@ Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work con
 
 - Step 7 (docs): README.md and README.ru.md (new flow, two access modes, screenshots table, honest limitations: built-in provider not live, checklist unverified), `docs/dev/market-check.md` (8 products, 10 criteria, dated sources).
 
+- Final: sensitive scan (clean; decisions listed in CLEANUP.md), `docs/dev/REPORT.md` written.
+
 ## In progress
 
-- Final: CLEANUP scan, REPORT.
+(nothing: all steps of CLOUD_TASK.md done)
 
 ## Next
 
-- Final report.
+- Owner: run `docs/dev/MAC_VERIFY.md` on a Mac build from the Release (macOS) workflow; decisions in REPORT.md.
 
 ## Blockers
 
