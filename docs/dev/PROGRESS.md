@@ -1,6 +1,6 @@
 # Progress (task scaffolding, delete before going public)
 
-Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work continues from "Next".
+Resume rule: read `CLOUD_TASK_2.md` (current task, 0.2.0-rc.2) and `CLOUD_TASK.md` sections 0-3, then this file, then `DECISIONS.md`. Work continues from "rc.2: Next" at the bottom.
 
 ## Environment facts (cloud container, 2026-09-26)
 
@@ -81,5 +81,35 @@ Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work con
 - Owner: run `docs/dev/MAC_VERIFY.md` on a Mac build from the Release (macOS) workflow; decisions in REPORT.md.
 
 ## Blockers
+
+(none)
+
+# 0.2.0-rc.2 (CLOUD_TASK_2.md)
+
+## rc.2: Environment and baseline (2026-09-26)
+
+- Same container facts as above; `npm ci` ok; Electron under Xvfb works.
+- Baseline on aeba8a1: `npm run check` ok (i18n 313 strings, 129/129 tests); `npm run build` then `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 11/11.
+
+## rc.2: Done
+
+- Step 1 (working controls in Simple):
+  - Overlay has the same controls in both levels: Pause/Resume and End with text labels, Auto, language, opacity slider, screenshot, notes; all four quick actions visible ("More actions" fold removed, Simple highlights "Clarifying question"). Icon-only buttons have `aria-label` and `title`.
+  - New overlay "End" (stop + reset); main window releases the microphone on `meeting-ended`; overlay hides after End.
+  - Main window header: Pause/Resume chip while a meeting runs (Simple: History/Settings views; Advanced: always).
+  - E2E `simple overlay: auto, language, opacity, pause, end are there and work` (auto off gives no suggestion, Process now does; opacity saved; language switch; pause/resume from overlay and header; End hides overlay and closes the meeting); paywall E2E checks Pause/End stay visible.
+  - Screenshots: new `overlay-simple-controls-dark`, `overlay-simple-strip-paused-dark`, `overlay-simple-auto-off-dark`; `overlay-simple-more-actions-dark` removed; others regenerated.
+  - DECISIONS: the two lines saying Simple hides Auto/language/opacity were replaced.
+  - Verified: `npm run check` (129/129), `npm run build` + `xvfb-run ... npx playwright test` 12/12.
+
+## rc.2: In progress
+
+- Step 2 (Simple Settings complete for real work).
+
+## rc.2: Next
+
+- Steps 2 to 6 of CLOUD_TASK_2.md, then the REPORT section "0.2.0-rc.2".
+
+## rc.2: Blockers
 
 (none)

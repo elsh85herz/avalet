@@ -302,6 +302,8 @@ function createCore(): AppCore {
       showOverlayWindow();
       fakeCapture?.start();
     },
+    // Nothing to control once the meeting is closed; the next Start shows it again.
+    onSessionEnded: () => hideOverlayWindow(),
   });
 }
 

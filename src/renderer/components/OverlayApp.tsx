@@ -3,12 +3,12 @@ import { getBridge } from "../lib/bridge.js";
 import type { MeetingMode, SessionState, TrackerState } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { QUICK_ACTIONS } from "../live/quick-actions.js";
-import { IconCamera, IconChevron, IconCopy, IconNotes, IconPause, IconPlay } from "../icons.js";
+import { IconCamera, IconChevron, IconCopy, IconNotes, IconPause, IconPlay, IconStop } from "../icons.js";
 import { compactTokens, useUsage } from "./UsageCounter.js";
 import { formatPrice } from "./AccessCard.js";
 import type { AccessState } from "../../../electron/shared/ipc-contract.js";
 
-/** Simple level: the one quick action always visible; the rest sit behind "More actions". */
+/** Simple level highlights this quick action; every quick action stays one click away in both levels. */
 const PRIMARY_ACTION = "askQuestion";
 
 const EMPTY_TRACKER: TrackerState = { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled: false };
@@ -43,7 +43,6 @@ export function OverlayApp() {
   const [trackerDraftKind, setTrackerDraftKind] = useState<"question" | "action">("question");
   const [paywall, setPaywall] = useState<AccessState | null>(null);
   const [uiLevel, setUiLevel] = useState<"simple" | "advanced">("simple");
-  const [moreActions, setMoreActions] = useState(false);
   const followLive = useRef(true);
   // Mirrors `blocks` text keyed by id so the done/error handlers below can
   // read the just-finished text synchronously (functional setState updaters
@@ -187,6 +186,14 @@ export function OverlayApp() {
     else await bridge.session.start();
   }
 
+  // Same as "End meeting" in the main window: stop, close the record. The
+  // main window hears meeting-ended and releases the microphone.
+  async function endMeeting() {
+    setPeeking(false);
+    await bridge.session.stop();
+    await bridge.session.reset();
+  }
+
   async function processNow() {
     if (asking) return;
     followLive.current = true;
@@ -256,12 +263,16 @@ export function OverlayApp() {
     await bridge.settings.setUiLanguage(next);
   }
 
+  // Every control has a visible label or an accessible name plus a tooltip;
+  // the same buttons are shown in Simple and Advanced (only tuning differs).
   const uiLangButton = (
     <button
       type="button"
       className="lang-btn"
       onClick={() => void toggleUiLanguage()}
       title={t.uiLangTitle}
+      aria-label={t.overlay.languageName}
+      data-testid="overlay-language"
     >
       {uiLanguage === "ru" ? "RU" : "EN"}
     </button>
@@ -273,8 +284,11 @@ export function OverlayApp() {
       className={`auto-btn ${autoDetectEnabled ? "on" : "off"}`}
       onClick={() => void toggleAutoDetect()}
       title={autoDetectEnabled ? t.autoOnTitle : t.autoOffTitle}
+      aria-label={t.overlay.autoName}
+      aria-pressed={autoDetectEnabled}
+      data-testid="overlay-auto"
     >
-      Auto
+      {t.overlay.auto}
     </button>
   );
 
@@ -285,6 +299,8 @@ export function OverlayApp() {
       onClick={() => void askScreenOnly()}
       disabled={asking}
       title={t.screenshotTitle}
+      aria-label={t.overlay.screenshotName}
+      data-testid="overlay-screenshot"
     >
       <IconCamera />
     </button>
@@ -296,19 +312,31 @@ export function OverlayApp() {
       className="notes-btn"
       onClick={() => void bridge.app.toggleMainWindow()}
       title={t.notesTitle}
+      aria-label={t.overlay.notesName}
+      data-testid="overlay-notes"
     >
       <IconNotes />
     </button>
   );
 
+  const listening = sessionState === "listening";
   const sessionButton = (
     <button
       type="button"
-      className={`session-btn ${sessionState === "listening" ? "on" : "off"}`}
+      className={`session-btn ${listening ? "on" : "off"}`}
       onClick={() => void toggleStop()}
-      title={sessionState === "listening" ? t.sessionStopTitle : t.sessionResumeTitle}
+      title={listening ? t.overlay.pauseTitle : t.overlay.resumeTitle}
+      data-testid="overlay-pause"
     >
-      {sessionState === "listening" ? <IconPause /> : <IconPlay />}
+      {listening ? <IconPause /> : <IconPlay />}
+      <span>{listening ? t.overlay.pause : t.overlay.resume}</span>
+    </button>
+  );
+
+  const endButton = (
+    <button type="button" className="end-btn" onClick={() => void endMeeting()} title={t.overlay.endTitle} data-testid="overlay-end">
+      <IconStop />
+      <span>{t.overlay.end}</span>
     </button>
   );
 
@@ -331,16 +359,20 @@ export function OverlayApp() {
         type="button"
         className="nav-btn copy-btn"
         title={t.copyBlockTitle}
+        aria-label={t.copyBlockTitle}
         onClick={() => void copyCurrent()}
         disabled={!current?.text}
       >
         {copied ? "✓" : <IconCopy />}
       </button>
+      <span className="strip-spacer" />
       {meetingTokens > 0 ? (
         <span className="usage-chip" title={t.usage.overlayTitle}>
           {compactTokens(meetingTokens, uiLanguage)}
         </span>
       ) : null}
+      {autoButton}
+      {uiLangButton}
     </div>
   );
 
@@ -396,6 +428,7 @@ export function OverlayApp() {
                     type="button"
                     className="tracker-check"
                     title={t.tracker.markTitle}
+                    aria-label={t.tracker.markTitle}
                     onClick={() => void bridge.tracker.toggleAgenda(index).then(setTracker)}
                   >
                     {item.closed ? "✓" : item.active ? "●" : ""}
@@ -430,6 +463,7 @@ export function OverlayApp() {
                         <button
                           type="button"
                           title={t.tracker.confirm}
+                          aria-label={t.tracker.confirm}
                           onClick={() => void bridge.tracker.setAction(action.id!, "confirmed").then(setTracker)}
                         >
                           ✓
@@ -438,6 +472,7 @@ export function OverlayApp() {
                       <button
                         type="button"
                         title={t.tracker.dismiss}
+                        aria-label={t.tracker.dismiss}
                         onClick={() => void bridge.tracker.setAction(action.id!, "dismissed").then(setTracker)}
                       >
                         ✕
@@ -491,11 +526,11 @@ export function OverlayApp() {
       <div className="overlay overlay-collapsed">
         <div className="overlay-strip">
           <span className={`dot ${sessionState}${hasAudioIssue ? " warn" : ""}`} />
-          {advanced ? autoButton : null}
-          {advanced ? uiLangButton : null}
+          {sessionButton}
+          {endButton}
+          <span className="strip-spacer" />
           {screenshotButton}
           {notesButton}
-          {sessionButton}
         </div>
         {navRow}
       </div>
@@ -506,16 +541,30 @@ export function OverlayApp() {
     <div className="overlay">
       <div className="overlay-header">
         <span className={`dot ${sessionState}${hasAudioIssue ? " warn" : ""}`} />
-        <span className="overlay-title">Avalet</span>
-        {meetingMode !== "free" ? <span className="mode-chip">{t.modes[meetingMode]}</span> : null}
-        {advanced ? autoButton : null}
-        {advanced ? uiLangButton : null}
+        {sessionButton}
+        {endButton}
+        <span className="strip-spacer" />
         {screenshotButton}
         {notesButton}
-        {sessionButton}
       </div>
 
       {navRow}
+
+      <div className="overlay-controls">
+        {meetingMode !== "free" ? <span className="mode-chip">{t.modes[meetingMode]}</span> : null}
+        <label className="opacity-control" title={t.opacityTitle}>
+          <span>{t.opacityLabel}</span>
+          <input
+            type="range"
+            min={0.2}
+            max={1}
+            step={0.05}
+            value={opacity}
+            onChange={(e) => handleOpacityChange(Number(e.target.value))}
+            data-testid="overlay-opacity"
+          />
+        </label>
+      </div>
 
       {hasAudioIssue ? (
         <div className="audio-warning">
@@ -558,23 +607,6 @@ export function OverlayApp() {
         </div>
       ) : null}
 
-      {advanced ? (
-        // Advanced keeps the slider on the overlay, where it was relied on; Simple has it in Settings.
-        <div className="overlay-controls">
-          <label className="opacity-control" title={t.opacityTitle}>
-            <span>{t.opacityLabel}</span>
-            <input
-              type="range"
-              min={0.2}
-              max={1}
-              step={0.05}
-              value={opacity}
-              onChange={(e) => handleOpacityChange(Number(e.target.value))}
-            />
-          </label>
-        </div>
-      ) : null}
-
       {tracker.enabled || tracker.agendaStatus.length > 0 || visibleActions.length > 0 ? trackerPanel : null}
 
       <div className="overlay-body-content">
@@ -597,7 +629,7 @@ export function OverlayApp() {
             {t.processNowLabel}
           </button>
         ) : null}
-        {QUICK_ACTIONS.filter((qa) => advanced || moreActions || qa.key === PRIMARY_ACTION).map((qa) => (
+        {QUICK_ACTIONS.map((qa) => (
           <button
             key={qa.key}
             type="button"
@@ -608,11 +640,6 @@ export function OverlayApp() {
             {t.quickActions[qa.key]}
           </button>
         ))}
-        {advanced ? null : (
-          <button type="button" className="link-btn" aria-expanded={moreActions} onClick={() => setMoreActions((v) => !v)}>
-            {moreActions ? t.simple.fewerActions : t.simple.moreActions}
-          </button>
-        )}
       </div>
 
       <div className="ask-row">

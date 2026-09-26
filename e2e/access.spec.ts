@@ -18,6 +18,9 @@ test("paywall: budget used up, mock payment, Pro unlocked", async () => {
     await expect(overlay.getByTestId("paywall")).toBeVisible({ timeout: 25_000 });
     // Transcription is local and keeps going.
     await expect(page.locator(".segment").first()).toBeVisible();
+    // Stop stays one click away while the paywall is shown.
+    await expect(overlay.getByTestId("overlay-pause")).toBeVisible();
+    await expect(overlay.getByTestId("overlay-end")).toBeVisible();
     await shot(overlay, "overlay-paywall-dark");
     await expect(page.getByTestId("problem")).toBeVisible();
     await shot(page, "simple-paywall-dark");

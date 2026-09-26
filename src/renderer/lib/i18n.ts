@@ -10,8 +10,19 @@ export type UiStrings = {
   autoOffTitle: string;
   uiLangTitle: string;
   screenshotTitle: string;
-  sessionStopTitle: string;
-  sessionResumeTitle: string;
+  overlay: {
+    pause: string;
+    pauseTitle: string;
+    resume: string;
+    resumeTitle: string;
+    end: string;
+    endTitle: string;
+    auto: string;
+    autoName: string;
+    languageName: string;
+    screenshotName: string;
+    notesName: string;
+  };
   opacityLabel: string;
   opacityTitle: string;
   listeningEmpty: string;
@@ -192,8 +203,6 @@ export type UiStrings = {
     tryAgain: string;
     speechBroken: string;
     reconnect: string;
-    moreActions: string;
-    fewerActions: string;
   };
   access: {
     title: string;
@@ -325,8 +334,19 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
     uiLangTitle: "Interface language (this overlay's own labels/tooltips, not the AI's answers): click to switch",
     screenshotTitle:
       "Take a fresh screenshot right now and prioritize it in the next answer, alongside the audio transcript",
-    sessionStopTitle: "Stop",
-    sessionResumeTitle: "Resume",
+    overlay: {
+      pause: "Pause",
+      pauseTitle: "Pause listening. The meeting stays open; press Resume to continue.",
+      resume: "Resume",
+      resumeTitle: "Resume listening",
+      end: "End",
+      endTitle: "End the meeting: stop listening and keep it in History",
+      auto: "Auto",
+      autoName: "Automatic suggestions",
+      languageName: "Interface language",
+      screenshotName: "Screenshot for the next answer",
+      notesName: "Notes window",
+    },
     opacityLabel: "Opacity",
     opacityTitle: "Opacity of all Avalet windows",
     listeningEmpty: "Listening: the first suggestion will appear here.",
@@ -519,8 +539,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       tryAgain: "Try again",
       speechBroken: "Speech recognition is not keeping up right now.",
       reconnect: "Reconnect",
-      moreActions: "More actions",
-      fewerActions: "Fewer actions",
     },
     access: {
       title: "Access",
@@ -660,8 +678,19 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
     uiLangTitle: "Язык интерфейса (подписи и подсказки самого оверлея, не ответов ИИ): клик переключает",
     screenshotTitle:
       "Сделать свежий скриншот прямо сейчас и учесть его в следующем ответе вместе с аудио-транскриптом",
-    sessionStopTitle: "Стоп",
-    sessionResumeTitle: "Продолжить",
+    overlay: {
+      pause: "Пауза",
+      pauseTitle: "Пауза: перестать слушать. Встреча остаётся открытой, кнопка «Продолжить» снова включит запись.",
+      resume: "Продолжить",
+      resumeTitle: "Продолжить слушать",
+      end: "Завершить",
+      endTitle: "Завершить встречу: остановить запись, встреча сохранится в Истории",
+      auto: "Авто",
+      autoName: "Автоподсказки",
+      languageName: "Язык интерфейса",
+      screenshotName: "Снимок экрана для следующего ответа",
+      notesName: "Окно конспекта",
+    },
     opacityLabel: "Прозрачность",
     opacityTitle: "Прозрачность всех окон Avalet",
     listeningEmpty: "Слушаю: первая подсказка появится здесь.",
@@ -854,8 +883,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       tryAgain: "Попробовать снова",
       speechBroken: "Распознавание речи сейчас не успевает.",
       reconnect: "Переподключить",
-      moreActions: "Ещё действия",
-      fewerActions: "Меньше действий",
     },
     access: {
       title: "Доступ",

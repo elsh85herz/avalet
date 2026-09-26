@@ -123,6 +123,8 @@ export type AppCoreDeps = {
   chooseSavePath: (defaultName: string, filterName: string, extension: string) => Promise<string | null>;
   /** Called on Start, e.g. to open the overlay window. */
   onSessionStarted?: () => void;
+  /** Called when the meeting is ended (from either window), e.g. to hide the overlay. */
+  onSessionEnded?: () => void;
   /** Test mode: the renderer does not capture audio (see fake-capture.ts). */
   fakeCapture?: boolean;
 };
@@ -601,6 +603,7 @@ export class AppCore {
       // With the transcript cleared the state is "idle" again; windows must hear it.
       emit("avalet:event:session-state", this.liveSession.getState());
       emit("avalet:event:tracker-update", this.liveTracker.getState());
+      this.deps.onSessionEnded?.();
     };
 
     h["avalet:mic-get-preferred"] = () => getPreferredMicDeviceId();

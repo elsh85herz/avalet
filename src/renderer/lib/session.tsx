@@ -54,6 +54,8 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
       bridge.events.onReconnectAudioRequested((channel) => void handleRef.current?.reconnect(channel)),
       bridge.events.onTranscriptionError(setTranscriptionError),
       bridge.events.onTranscriptionRecovered(() => setTranscriptionError(null)),
+      // The meeting can also be ended from the overlay: release the microphone here too.
+      bridge.events.onMeetingEnded(() => releaseCapture()),
     ];
     return () => unsubscribers.forEach((u) => u());
   }, []);
@@ -97,12 +99,16 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
     await bridge.session.stop();
   }
 
-  async function end(): Promise<void> {
+  function releaseCapture(): void {
     handleRef.current?.stop();
     handleRef.current = null;
     setCapturing(false);
     setAudioDegraded({ me: false, other: false });
     setTranscriptionError(null);
+  }
+
+  async function end(): Promise<void> {
+    releaseCapture();
     await bridge.session.stop();
     await bridge.session.reset();
   }

@@ -3,14 +3,14 @@ import { getBridge } from "../lib/bridge.js";
 import type { Meeting } from "../lib/types.js";
 import { UI_STRINGS } from "../lib/i18n.js";
 import { SettingsProvider, useAppSettings } from "../lib/settings.js";
-import { SessionProvider } from "../lib/session.js";
+import { SessionProvider, useSession } from "../lib/session.js";
 import { SettingsPanel } from "./SettingsPanel.js";
 import { MeetingView } from "./MeetingView.js";
 import { MeetingsList } from "./MeetingsList.js";
 import { FirstRunWizard } from "./FirstRunWizard.js";
 import { SimpleHome } from "./SimpleHome.js";
 import { SimpleSettings } from "./SimpleSettings.js";
-import { IconGear, IconPin } from "../icons.js";
+import { IconGear, IconPause, IconPin, IconPlay } from "../icons.js";
 
 export function MainApp() {
   return (
@@ -42,6 +42,7 @@ function Shell() {
   const [advancedTab, setAdvancedTab] = useState<AdvancedTab>("settings");
   const [simpleView, setSimpleView] = useState<SimpleView>("home");
   const [settingsFocus, setSettingsFocus] = useState<"access" | "speech" | undefined>(undefined);
+  const session = useSession();
 
   useEffect(() => {
     void bridge.meetings.current().then(setCurrent);
@@ -92,6 +93,23 @@ function Shell() {
     </button>
   );
 
+  // While a meeting runs, Pause/Resume is one click away from every screen of the main window.
+  const listening = session.state === "listening";
+  const sessionChip =
+    session.state === "idle" ? null : (
+      <button
+        type="button"
+        className={`header-session ${session.state}`}
+        onClick={() => void (listening ? session.pause() : session.start())}
+        title={listening ? t.overlay.pauseTitle : t.overlay.resumeTitle}
+        data-testid="header-pause"
+      >
+        <span className={`dot ${session.state}`} aria-hidden="true" />
+        {listening ? <IconPause /> : <IconPlay />}
+        <span>{listening ? t.simple.pause : t.simple.resume}</span>
+      </button>
+    );
+
   if (settings.uiLevel === "simple") {
     const tabs: Array<[SimpleView, string]> = [
       ["home", t.tabs.meeting],
@@ -125,6 +143,7 @@ function Shell() {
             >
               <IconGear />
             </button>
+            {simpleView !== "home" ? sessionChip : null}
             {pinButton}
           </nav>
         </header>
@@ -169,6 +188,7 @@ function Shell() {
               {t.tabs[id]}
             </button>
           ))}
+          {sessionChip}
           {pinButton}
         </nav>
       </header>
