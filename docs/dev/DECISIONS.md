@@ -28,3 +28,16 @@ One line each: decision, reason.
 - Briefing in live calls is cut at 3,500 characters with a note to the model; summary keeps the full text. Reason: CLOUD_TASK step 2.
 - Overlay shows only this meeting's token count as small muted text; Settings shows this month and, in Advanced, a per-purpose breakdown. Reason: "never nag".
 - Anthropic adapter accepts an optional base URL. Reason: lets the mock server and tests stand in for it; not exposed in the UI.
+- Entitlement = Ed25519-signed token (`v1.<payload>.<sig>`) verified with `node:crypto`. Reason: no new dependency, small tokens, verification only needs a public key.
+- `PRODUCTION_PUBLIC_KEY` is a placeholder whose private key was generated and discarded in this session. Reason: nobody (including this repo) can sign for it; the built-in provider stays off until the owner puts the real server key in `electron/billing/config.ts`.
+- No private key is committed anywhere: MockBillingProvider and server-mock generate a key pair at startup; the app trusts a dev key only via `AVALET_BILLING_DEV_PUBKEY`. Reason: secrets hygiene; dev keys cannot leak.
+- Offline grace is the token lifetime: `exp = iat + 72 h`, refreshed every 30 min while the app runs. Reason: one rule for both server and client; the proxy refuses expired tokens anyway.
+- After the grace period the app shows a clear message and offers "Use my own key"; it does not switch to a paid own key silently. Reason: never spend the user's money without a click.
+- The trial has no time limit (one-off 500,000 weighted tokens). Reason: CLOUD_TASK says "one-off", nothing about days.
+- For a Pro user whose budget is used up, "Buy more tokens" opens the same checkout endpoint; the server decides whether that is a top-up. Reason: keeps the client gateway- and product-neutral.
+- The client refuses Avalet calls itself when the access state says no (`AccessBlockedError`), in addition to the server's 402/403. Reason: no pointless requests; paywall shows at once.
+- A paywall-refused live block is removed from the overlay and replaced by a banner (buy / own key / close). Reason: not an error the user caused.
+- Checkout: browser page, then polling `GET /v1/entitlement` every 5 s for 15 min plus an "I have paid" button. Reason: no deep links or local servers needed.
+- The in-process MockBillingProvider serves unit tests and UI work (`AVALET_BILLING=mock`, auto-pays after 1.5 s); E2E and contract tests use `server-mock/` over HTTP. Reason: both requested; only the HTTP path exercises the real contract.
+- The install secret is stored only encrypted by the OS keychain; billing refuses to create an identity without it. Reason: same rule as provider keys.
+- Key test ("test" button): one non-streaming call, 5 output tokens, metered as a suggestion; errors mapped to one human sentence in RU/EN in `electron/human-errors.ts`. Reason: CLOUD_TASK step 4.2.

@@ -41,6 +41,15 @@ const api: AvaletApi = {
   usage: {
     get: () => invoke("avalet:usage-get"),
   },
+  billing: {
+    access: () => invoke("avalet:access-get"),
+    activateTrial: () => invoke("avalet:billing-activate-trial"),
+    refresh: () => invoke("avalet:billing-refresh"),
+    checkout: (plan) => invoke("avalet:billing-checkout", plan),
+    cancelInfo: () => invoke("avalet:billing-cancel-info"),
+    openManage: () => invoke("avalet:billing-open-manage"),
+    testProvider: (providerId) => invoke("avalet:provider-test", providerId),
+  },
   speech: {
     models: () => invoke("avalet:speech-models"),
     download: (model) => invoke("avalet:speech-model-download", model),
@@ -85,6 +94,7 @@ const api: AvaletApi = {
   },
   app: {
     toggleMainWindow: () => invoke("avalet:main-toggle"),
+    showAccess: () => invoke("avalet:main-show-access"),
     quit: () => invoke("avalet:app-quit"),
   },
   tracker: {
@@ -138,6 +148,9 @@ const api: AvaletApi = {
     onTrackerUpdate: on("avalet:event:tracker-update"),
     onSummaryError: on("avalet:event:summary-error"),
     onUsageChanged: on("avalet:event:usage-changed"),
+    onAccessChanged: on("avalet:event:access-changed"),
+    onPaywall: on("avalet:event:paywall"),
+    onNavigate: on("avalet:event:navigate"),
   },
 };
 

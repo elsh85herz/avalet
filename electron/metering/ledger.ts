@@ -155,6 +155,7 @@ function isLedger(value: unknown): value is LedgerState {
 /** The ledger as stored in its own electron-store file ("avalet-usage"). */
 export class UsageLedger {
   private listeners: Array<() => void> = [];
+  private recordListeners: Array<(entry: LedgerEntry, weighted: number) => void> = [];
 
   constructor(private readonly kv: KeyValueStore) {}
 
@@ -165,7 +166,13 @@ export class UsageLedger {
 
   record(entry: LedgerEntry): void {
     this.kv.set("ledger", applyEntry(this.state(), entry));
+    const weighted = (entry.inputTokens + entry.outputTokens) * modelWeight(entry.model);
+    for (const listener of this.recordListeners) listener(entry, weighted);
     for (const listener of this.listeners) listener();
+  }
+
+  onRecord(listener: (entry: LedgerEntry, weighted: number) => void): void {
+    this.recordListeners.push(listener);
   }
 
   summary(now: number, meetingId: string | null): UsageSummary {

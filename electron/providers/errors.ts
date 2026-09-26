@@ -46,3 +46,21 @@ export function isEntitlementRejected(error: unknown): boolean {
     (error.code === "invalid_token" || error.code === "plan_expired" || error.code === "no_entitlement")
   );
 }
+
+/** The client itself held back a call to the built-in provider (no plan, budget used up, offline too long). */
+export class AccessBlockedError extends Error {
+  constructor() {
+    super("access_blocked");
+    this.name = "AccessBlockedError";
+  }
+}
+
+export type AccessProblem = "exhausted" | "rejected" | "blocked";
+
+/** Classifies a failed call: a budget or plan problem gets the paywall instead of an error text. */
+export function accessProblemOf(error: unknown): AccessProblem | null {
+  if (error instanceof AccessBlockedError) return "blocked";
+  if (isBudgetExhausted(error)) return "exhausted";
+  if (isEntitlementRejected(error)) return "rejected";
+  return null;
+}

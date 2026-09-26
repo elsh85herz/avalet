@@ -8,6 +8,7 @@ import { IconHelp, IconMoon, IconSun } from "../icons.js";
 import { parseAgendaText } from "../lib/agenda.js";
 import { SpeechModels } from "./SpeechModels.js";
 import { UsageCounter } from "./UsageCounter.js";
+import { AccessCard } from "./AccessCard.js";
 
 export function SettingsPanel() {
   const bridge = getBridge();
@@ -363,6 +364,18 @@ export function SettingsPanel() {
 
       {noKeysSavedYet ? <div className="onboarding-banner">{t.onboarding}</div> : null}
 
+      <section className="access" id="access">
+        <h3 className="section-title">{strings.access.title}</h3>
+        <AccessCard
+          uiLanguage={uiLanguage}
+          onUseAvalet={() => void handleSelectProvider("avalet")}
+          onUseOwnKey={() => {
+            const withKey = providers.find((p) => p.providerId !== "avalet" && p.hasApiKey);
+            void handleSelectProvider(withKey?.providerId ?? "anthropic");
+          }}
+        />
+      </section>
+
       <section className="providers">
         {PROVIDER_PRESETS_UI.map((p) => {
           const settings = providers.find((s) => s.providerId === p.id);
@@ -381,7 +394,7 @@ export function SettingsPanel() {
         })}
       </section>
 
-      {current && preset ? (
+      {current && preset && preset.id !== "avalet" ? (
         <section className="provider-config">
           <label>
             {t.model}

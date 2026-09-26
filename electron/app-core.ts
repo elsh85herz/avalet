@@ -6,7 +6,13 @@ import type { PythonRuntime } from "./python-runtime.js";
 import type { SpeechModelManager } from "./model-manager.js";
 import { isSpeechModel } from "./speech-models.js";
 import type { UsageLedger } from "./metering/ledger.js";
-import { configureMetering, type MeteringContext } from "./metering/metered.js";
+import { configureMetering, meteredGenerate } from "./metering/metered.js";
+import type { BillingService } from "./billing/service.js";
+import { configureAvaletProvider, resolveCredentials } from "./provider-credentials.js";
+import type { AccessProblem } from "./providers/errors.js";
+import { accessProblemOf } from "./providers/errors.js";
+import { humanProviderError, noKeyMessage } from "./human-errors.js";
+import { PROVIDER_PRESETS } from "./providers/types.js";
 import { appendHistoryBlock, clearHistory, getHistory } from "./history-store.js";
 import {
   appendSegment,
@@ -80,6 +86,7 @@ export type Emit = <C extends EventChannel>(channel: C, payload: EventMap[C], ta
 export const WINDOW_CHANNELS = [
   "avalet:main-set-pinned",
   "avalet:main-toggle",
+  "avalet:main-show-access",
   "avalet:app-quit",
   "avalet:overlay-set-opacity",
   "avalet:overlay-set-collapsed",
@@ -101,8 +108,10 @@ export type AppCoreDeps = {
   sidecar: PythonRuntime;
   models: SpeechModelManager;
   ledger: UsageLedger;
-  /** Which budget a provider's calls count against; everything is "own" until billing says otherwise. */
-  tierOf?: MeteringContext["tierOf"];
+  /** Built-in provider and plans; absent in tests that only use own keys. */
+  billing?: BillingService;
+  /** LLM proxy of the billing server, e.g. https://billing.example/v1/llm. */
+  avaletProxyUrl?: string;
   emit: Emit;
   /** Grabs a screenshot for the model; null when not possible. */
   captureScreen: () => Promise<{ image: string; ocrImage: string } | null>;
@@ -152,6 +161,7 @@ export class AppCore {
     this.liveTracker = new LiveTracker({
       onUpdate: (state) => emit("avalet:event:tracker-update", state),
       isEnabled: getLiveTrackerEnabled,
+      onAccessProblem: (problem) => this.handleAccessProblem(problem, false),
     });
     this.liveSession = new LiveSession(
       deps.sidecar,
@@ -159,7 +169,8 @@ export class AppCore {
         onBlockStart: (block: LiveBlock) => emit("avalet:event:block-start", { id: block.id }, "overlay"),
         onBlockDelta: (id, delta) => emit("avalet:event:block-delta", { id, delta }, "overlay"),
         onBlockDone: (id) => emit("avalet:event:block-done", { id }, "overlay"),
-        onBlockError: (id, message) => emit("avalet:event:block-error", { id, message }, "overlay"),
+        onBlockError: (id, message, code) => emit("avalet:event:block-error", { id, message, code }, "overlay"),
+        onAccessProblem: (problem) => this.handleAccessProblem(problem),
         onStateChange: (state) => emit("avalet:event:session-state", state),
         onTranscriptionError: (message) => emit("avalet:event:transcription-error", message),
         onTranscriptionRecovered: () => emit("avalet:event:transcription-recovered", undefined),
@@ -172,12 +183,21 @@ export class AppCore {
       deps.captureScreen,
       deps.recognizeText,
     );
+    const billing = deps.billing;
     configureMetering({
       ledger: deps.ledger,
-      tierOf: deps.tierOf ?? (() => ({ tier: "own", trial: false })),
+      tierOf: (providerId) => billing?.tierOf(providerId) ?? { tier: "own", trial: false },
       currentMeetingId: () => this.meetingForUsage(),
     });
+    configureAvaletProvider(
+      billing && deps.avaletProxyUrl
+        ? { proxyBaseUrl: () => deps.avaletProxyUrl!, token: () => billing.proxyToken() }
+        : null,
+    );
     deps.ledger.onChange(() => emit("avalet:event:usage-changed", this.usageSummary()));
+    deps.ledger.onRecord((entry, weighted) => {
+      if (entry.tier === "avalet") billing?.noteAvaletUsage(weighted);
+    });
     this.handlers = this.buildHandlers();
   }
 
@@ -187,6 +207,21 @@ export class AppCore {
     const current = getCurrentMeeting();
     if (current) this.lastMeetingId = current.id;
     return current?.id ?? this.lastMeetingId;
+  }
+
+  /** Budget or plan problem on a live call: tell the billing state and show the offer (not for background calls). */
+  private handleAccessProblem(problem: AccessProblem, showPaywall = true): void {
+    const billing = this.deps.billing;
+    if (!billing) return;
+    if (problem === "exhausted") billing.markExhausted();
+    else if (problem === "rejected") billing.markRejected();
+    if (showPaywall) this.deps.emit("avalet:event:paywall", billing.access());
+  }
+
+  /** The selected own-key provider can make calls: a saved key, or a local server that needs none. */
+  static ownKeyReady(providerId: string): boolean {
+    if (providerId === "avalet") return false;
+    return providerId === "custom" || hasApiKey(providerId);
   }
 
   usageSummary() {
@@ -260,10 +295,16 @@ export class AppCore {
     return target;
   }
 
-  /** Stop listening and save; used by Stop, by Quit and when the window closes. */
+  /** Work that runs without any window asking: billing refresh. */
+  startBackground(): void {
+    this.deps.billing?.start();
+  }
+
+  /** Stop listening and save; used by Quit. */
   async shutdown(): Promise<void> {
     this.liveSession.stop();
     flushCurrentMeeting();
+    this.deps.billing?.dispose();
     this.deps.models.dispose();
     await this.deps.sidecar.stop();
   }
@@ -274,6 +315,48 @@ export class AppCore {
 
     h["avalet:settings-get-all"] = () => this.settingsSnapshot();
     h["avalet:usage-get"] = () => this.usageSummary();
+
+    const billingOrThrow = () => {
+      if (!this.deps.billing) throw new Error("billing is not available");
+      return this.deps.billing;
+    };
+    h["avalet:access-get"] = () => billingOrThrow().access();
+    h["avalet:billing-activate-trial"] = () => billingOrThrow().activateTrial();
+    h["avalet:billing-refresh"] = () => billingOrThrow().refresh();
+    h["avalet:billing-checkout"] = (plan) => {
+      if (plan !== "pro") throw new Error("unknown plan");
+      return billingOrThrow().checkout(plan);
+    };
+    h["avalet:billing-cancel-info"] = () => billingOrThrow().cancelInfo();
+    h["avalet:billing-open-manage"] = () => billingOrThrow().openManage();
+
+    // One tiny real call, so a wrong key shows up in setup and not in the first meeting.
+    h["avalet:provider-test"] = async (rawId) => {
+      const providerId = requireString(rawId, "providerId");
+      if (!PROVIDER_PRESETS.some((p) => p.id === providerId)) throw new Error("unknown provider");
+      const language = getUiLanguage();
+      if (providerId !== "avalet" && providerId !== "custom" && !hasApiKey(providerId)) {
+        return { ok: false, message: noKeyMessage(language) };
+      }
+      try {
+        const { apiKey, baseUrl } = resolveCredentials(providerId);
+        await meteredGenerate("suggestion", {
+          providerId,
+          apiKey,
+          baseUrl,
+          model: getAllProviderSettings().find((p) => p.providerId === providerId)?.model ?? "",
+          systemPrompt: "Reply with the single word OK.",
+          transcript: "Test.",
+          maxTokens: 5,
+          stream: false,
+          signal: AbortSignal.timeout(20_000),
+          onDelta: () => {},
+        });
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: humanProviderError(error, language) };
+      }
+    };
 
     h["avalet:speech-set"] = (patch) => {
       const p = (patch ?? {}) as { language?: unknown; model?: unknown };
@@ -357,7 +440,9 @@ export class AppCore {
         return text;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        emit("avalet:event:summary-error", { id, message }, "main");
+        const problem = accessProblemOf(error);
+        if (problem) this.handleAccessProblem(problem);
+        emit("avalet:event:summary-error", { id, message, code: problem ? "paywall" : undefined }, "main");
         throw error;
       } finally {
         if (this.summaryAbort === controller) this.summaryAbort = null;
@@ -413,7 +498,10 @@ export class AppCore {
     h["avalet:session-ask-screen"] = async () => this.liveSession.askAboutScreen();
     h["avalet:session-process-now"] = async () => this.liveSession.processNow();
 
-    h["avalet:settings-select-provider"] = (providerId) => setSelectedProviderId(requireString(providerId, "providerId"));
+    h["avalet:settings-select-provider"] = (providerId) => {
+      setSelectedProviderId(requireString(providerId, "providerId"));
+      this.deps.billing?.emit();
+    };
     h["avalet:settings-update-provider"] = (providerId, patch) => {
       const p = (patch ?? {}) as { model?: unknown; baseUrl?: unknown; backgroundModel?: unknown };
       updateProviderSettings(requireString(providerId, "providerId"), {
@@ -422,8 +510,10 @@ export class AppCore {
         backgroundModel: typeof p.backgroundModel === "string" ? p.backgroundModel : undefined,
       });
     };
-    h["avalet:settings-set-api-key"] = (providerId, apiKey) =>
+    h["avalet:settings-set-api-key"] = (providerId, apiKey) => {
       setApiKey(requireString(providerId, "providerId"), requireString(apiKey, "apiKey"));
+      this.deps.billing?.emit();
+    };
 
     // Never downloads anything: a missing speech model is reported so the UI
     // can explain it and offer the Download button.

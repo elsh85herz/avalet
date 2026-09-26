@@ -5,6 +5,8 @@ import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { QUICK_ACTIONS } from "../live/quick-actions.js";
 import { IconCamera, IconCopy, IconNotes, IconPause, IconPlay } from "../icons.js";
 import { compactTokens, useUsage } from "./UsageCounter.js";
+import { formatPrice } from "./AccessCard.js";
+import type { AccessState } from "../../../electron/shared/ipc-contract.js";
 
 const EMPTY_TRACKER: TrackerState = { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled: false };
 
@@ -36,6 +38,7 @@ export function OverlayApp() {
   const [trackerOpen, setTrackerOpen] = useState(false);
   const [trackerDraft, setTrackerDraft] = useState("");
   const [trackerDraftKind, setTrackerDraftKind] = useState<"question" | "action">("question");
+  const [paywall, setPaywall] = useState<AccessState | null>(null);
   const followLive = useRef(true);
   // Mirrors `blocks` text keyed by id so the done/error handlers below can
   // read the just-finished text synchronously (functional setState updaters
@@ -81,7 +84,17 @@ export function OverlayApp() {
         setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, status: "done" } : b)));
         void bridge.history.append({ id, text: textById.current[id] ?? "", status: "done" });
       }),
-      bridge.events.onBlockError(({ id, message }) => {
+      bridge.events.onPaywall(setPaywall),
+      bridge.events.onAccessChanged((access) => {
+        if (access.canUseAvalet || access.mode === "own") setPaywall(null);
+      }),
+      bridge.events.onBlockError(({ id, message, code }) => {
+        if (code === "paywall") {
+          // Not an error the user caused: drop the empty block, the banner explains.
+          delete textById.current[id];
+          setBlocks((prev) => prev.filter((b) => b.id !== id));
+          return;
+        }
         const text = textById.current[id] || message;
         textById.current[id] = text;
         setBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, status: "error", text } : b)));
@@ -505,6 +518,24 @@ export function OverlayApp() {
           <button type="button" onClick={() => void reconnectAudio()} disabled={reconnecting} title={t.reconnectTitle}>
             {t.reconnectButton}
           </button>
+        </div>
+      ) : null}
+
+      {paywall ? (
+        <div className="paywall-banner" role="alert" data-testid="paywall">
+          <strong>{t.access.paywallTitle}</strong>
+          <span>{t.access.paywallTranscript}</span>
+          <div className="access-actions">
+            <button type="button" className="primary" onClick={() => void bridge.billing.checkout("pro")}>
+              {paywall.tier === "pro" ? t.access.buyMore : t.access.getPro.replace("{price}", formatPrice(paywall.price, uiLanguage))}
+            </button>
+            <button type="button" onClick={() => void bridge.app.showAccess()}>
+              {t.access.useOwnKey}
+            </button>
+            <button type="button" className="link-btn" onClick={() => setPaywall(null)}>
+              {t.access.dismiss}
+            </button>
+          </div>
         </div>
       ) : null}
 

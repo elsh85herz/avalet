@@ -1,5 +1,6 @@
 import { meteredGenerate } from "./metering/metered.js";
-import { getApiKey, getProviderSettings, getSelectedProviderId } from "./settings-store.js";
+import { getProviderSettings, getSelectedProviderId } from "./settings-store.js";
+import { resolveCredentials } from "./provider-credentials.js";
 import { readMeeting, setSummary, transcriptToText } from "./meetings-store.js";
 import { VisibleTextStream, splitSummary, type MeetingAnalysis } from "./summary-format.js";
 import { buildSummaryPrompt } from "./summary-prompt.js";
@@ -28,7 +29,7 @@ export async function summarizeMeeting(
 
   const providerId = getSelectedProviderId();
   const settings = getProviderSettings(providerId);
-  const apiKey = getApiKey(providerId);
+  const { apiKey, baseUrl } = resolveCredentials(providerId);
 
   let transcript = transcriptToText(meeting, { me: "[Я]", other: "[Собеседник]" });
   if (transcript.length > TRANSCRIPT_CHAR_CAP) transcript = transcript.slice(-TRANSCRIPT_CHAR_CAP);
@@ -40,7 +41,7 @@ export async function summarizeMeeting(
   await meteredGenerate("summary", {
     providerId,
     apiKey,
-    baseUrl: settings.baseUrl,
+    baseUrl,
     model: settings.model,
     systemPrompt: buildSummaryPrompt(spec.headings, spec.guidance, meeting.context, agenda, meeting.mode === "interview"),
     transcript,

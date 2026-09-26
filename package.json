@@ -29,7 +29,8 @@
     "predev": "npm run build:native",
     "ocr:selftest": "bash scripts/ocr-selftest.sh",
     "build:tests": "rimraf dist-electron dist-test && tsc -p tsconfig.node.json && tsc -p tsconfig.test.json",
-    "test:coverage": "npm run build:tests && node scripts/run-tests.mjs --experimental-test-coverage"
+    "test:coverage": "npm run build:tests && node scripts/run-tests.mjs --experimental-test-coverage",
+    "mock:server": "node server-mock/server.mjs --port 8787"
   },
   "dependencies": {
     "electron-audio-loopback": "^1.0.5",

@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { meteredGenerate } from "./metering/metered.js";
 import type { GenerateRequest, GenerateResult } from "./providers/types.js";
 import { logLine } from "./log.js";
-import { getApiKey, getBackgroundModel, getProviderSettings, getSelectedProviderId } from "./settings-store.js";
+import { getBackgroundModel, getSelectedProviderId } from "./settings-store.js";
+import { resolveCredentials } from "./provider-credentials.js";
+import { accessProblemOf, type AccessProblem } from "./providers/errors.js";
 import { getCurrentMeeting, setAgenda, setLiveAnalysis, transcriptToText, type Meeting } from "./meetings-store.js";
 import type { ActionState, TrackerState } from "./shared/ipc-contract.js";
 import { parseAgendaText } from "./summary-format.js";
@@ -24,6 +26,8 @@ export type LiveTrackerOptions = {
   isEnabled: () => boolean;
   generate?: (request: GenerateRequest) => Promise<GenerateResult>;
   now?: () => number;
+  /** Budget or plan problem on the built-in provider; the checklist just waits, no message. */
+  onAccessProblem?: (problem: AccessProblem) => void;
 };
 
 const OVERLAP_SEGMENTS = 3;
@@ -42,8 +46,10 @@ export class LiveTracker {
   private readonly isEnabled: () => boolean;
   private readonly generate: (request: GenerateRequest) => Promise<GenerateResult>;
   private readonly now: () => number;
+  private readonly onAccessProblem?: (problem: AccessProblem) => void;
 
   constructor(options: LiveTrackerOptions) {
+    this.onAccessProblem = options.onAccessProblem;
     this.onUpdate = options.onUpdate;
     this.isEnabled = options.isEnabled;
     this.generate = options.generate ?? ((request) => meteredGenerate("tracker", request));
@@ -116,14 +122,14 @@ export class LiveTracker {
     const actions = meeting.actions ?? [];
 
     const providerId = getSelectedProviderId();
-    const settings = getProviderSettings(providerId);
     const t0 = Date.now();
     let collected = "";
     try {
+      const { apiKey, baseUrl } = resolveCredentials(providerId);
       await this.generate({
         providerId,
-        apiKey: getApiKey(providerId),
-        baseUrl: settings.baseUrl,
+        apiKey,
+        baseUrl,
         // Background work: the cheaper model when one is set for this provider.
         model: getBackgroundModel(providerId),
         systemPrompt: buildTrackerSystemPrompt(),
@@ -156,7 +162,9 @@ export class LiveTracker {
         );
       }
     } catch (error) {
-      logLine(`[tracker] failed: ${error instanceof Error ? error.message : String(error)}`);
+      const problem = accessProblemOf(error);
+      if (problem) this.onAccessProblem?.(problem);
+      logLine(`[tracker] failed: ${problem ?? (error instanceof Error ? error.message : String(error))}`);
     } finally {
       this.running = false;
       this.onUpdate(this.getState());

@@ -120,6 +120,37 @@ export type UiStrings = {
     perm: Record<PermState, string>;
     sessionStates: Record<SessionKey, string>;
   };
+  access: {
+    title: string;
+    ownOk: string;
+    ownNoKey: string;
+    tryAvalet: string;
+    notActivated: string;
+    startTrial: string;
+    trialLeft: string;
+    proLeft: string;
+    renewsOn: string;
+    endsOn: string;
+    getPro: string;
+    buyMore: string;
+    renewPro: string;
+    manage: string;
+    checkAgain: string;
+    useOwnKey: string;
+    useAvalet: string;
+    offlineGrace: string;
+    offlineExpired: string;
+    exhausted: string;
+    expired: string;
+    invalid: string;
+    checkoutPending: string;
+    paid: string;
+    perMonth: string;
+    paywallTitle: string;
+    paywallTranscript: string;
+    dismiss: string;
+    serverNote: string;
+  };
   usage: {
     title: string;
     thisMonth: string;
@@ -338,6 +369,37 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         unknown: "Unknown",
       },
       sessionStates: { idle: "Idle", listening: "Listening", paused: "Paused" },
+    },
+    access: {
+      title: "Access",
+      ownOk: "Your own key: free, no limits. Calls go straight from this Mac to the provider.",
+      ownNoKey: "Your own key: add the provider's key below to start.",
+      tryAvalet: "No key? Try Avalet: {n} tokens free, no card.",
+      notActivated: "Avalet without keys: start with {n} free tokens, no card needed.",
+      startTrial: "Start free trial",
+      trialLeft: "Trial: {left} of {total} tokens left.",
+      proLeft: "Pro: {left} of {total} tokens left this period.",
+      renewsOn: "Renews on {date}.",
+      endsOn: "Ends on {date}, not renewed.",
+      getPro: "Get Pro, {price}",
+      buyMore: "Buy more tokens",
+      renewPro: "Renew Pro",
+      manage: "Manage or cancel",
+      checkAgain: "Check again",
+      useOwnKey: "Use my own key",
+      useAvalet: "Use Avalet",
+      offlineGrace: "Cannot reach Avalet right now. It keeps working on the last check until {date}.",
+      offlineExpired: "No connection to Avalet for 3 days, so the built-in provider is paused. Use your own key, or check again when online.",
+      exhausted: "The Avalet tokens are used up. The transcript keeps recording.",
+      expired: "Your Pro period has ended. The transcript and your meetings stay on this Mac.",
+      invalid: "The answer from the Avalet server could not be verified, so it was not accepted.",
+      checkoutPending: "Waiting for the payment to finish in your browser.",
+      paid: "I have paid",
+      perMonth: "per month",
+      paywallTitle: "Avalet tokens are used up",
+      paywallTranscript: "Nothing is lost: the transcript keeps recording.",
+      dismiss: "Close",
+      serverNote: "The Avalet server counts tokens; it does not keep transcripts.",
     },
     usage: {
       title: "Usage",
@@ -565,6 +627,37 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         unknown: "Неизвестно",
       },
       sessionStates: { idle: "Ожидание", listening: "Слушаю", paused: "Пауза" },
+    },
+    access: {
+      title: "Доступ",
+      ownOk: "Свой ключ: бесплатно и без лимитов. Запросы идут с этого Mac прямо к провайдеру.",
+      ownNoKey: "Свой ключ: добавьте ключ провайдера ниже, чтобы начать.",
+      tryAvalet: "Нет ключа? Попробуйте Avalet: {n} токенов бесплатно, без карты.",
+      notActivated: "Avalet без ключей: {n} бесплатных токенов для начала, карта не нужна.",
+      startTrial: "Начать бесплатно",
+      trialLeft: "Пробный период: осталось {left} из {total} токенов.",
+      proLeft: "Pro: осталось {left} из {total} токенов в этом периоде.",
+      renewsOn: "Продлится {date}.",
+      endsOn: "Закончится {date}, без продления.",
+      getPro: "Подключить Pro, {price}",
+      buyMore: "Купить ещё токенов",
+      renewPro: "Продлить Pro",
+      manage: "Управлять или отменить",
+      checkAgain: "Проверить снова",
+      useOwnKey: "Использовать свой ключ",
+      useAvalet: "Использовать Avalet",
+      offlineGrace: "Нет связи с Avalet. Приложение работает по последней проверке до {date}.",
+      offlineExpired: "Связи с Avalet нет уже 3 дня, встроенный провайдер приостановлен. Подключите свой ключ или проверьте снова, когда появится интернет.",
+      exhausted: "Токены Avalet закончились. Расшифровка продолжает записываться.",
+      expired: "Период Pro закончился. Расшифровки и встречи остаются на этом Mac.",
+      invalid: "Ответ сервера Avalet не прошёл проверку подписи, поэтому не принят.",
+      checkoutPending: "Ждём, когда оплата завершится в браузере.",
+      paid: "Я оплатил",
+      perMonth: "в месяц",
+      paywallTitle: "Токены Avalet закончились",
+      paywallTranscript: "Ничего не потеряно: расшифровка продолжает записываться.",
+      dismiss: "Закрыть",
+      serverNote: "Сервер Avalet считает токены и не хранит расшифровки.",
     },
     usage: {
       title: "Расход",

@@ -55,7 +55,8 @@ export type SettingsSnapshot = {
 
 export type LiveBlockEvent = { id: string };
 export type LiveBlockDeltaEvent = { id: string; delta: string };
-export type LiveBlockErrorEvent = { id: string; message: string };
+/** code "paywall": the call was refused for budget or plan reasons; the overlay shows the offer instead of text. */
+export type LiveBlockErrorEvent = { id: string; message: string; code?: "paywall" };
 export type HistoryBlock = { id: string; text: string; status: "done" | "error"; createdAt: number };
 
 export type TranscriptSegment = { at: number; speaker: AudioChannel; text: string };
@@ -189,11 +190,68 @@ export type UsageSummary = {
   }>;
 };
 
+// --- access and billing ---
+
+/**
+ * Derived, never stored. own: the user's provider key, free and unlimited.
+ * trial / pro: the built-in Avalet provider with a budget. none: the Avalet
+ * provider is selected but there is no usable plan.
+ */
+export type AccessTier = "own" | "trial" | "pro" | "none";
+export type AccessStatus =
+  | "ok"
+  /** Own-key mode, but the selected provider has no key yet. */
+  | "no-key"
+  /** Avalet selected, never activated on this install. */
+  | "not-activated"
+  /** Budget used up: offer buying more or switching to an own key. */
+  | "exhausted"
+  /** Paid period over and not renewed. */
+  | "expired"
+  /** Server unreachable, last token still valid: works until graceEndsAt. */
+  | "offline-grace"
+  /** Server unreachable for longer than the grace period: back to own key. */
+  | "offline-expired"
+  /** The server's answer did not verify (tampered or foreign token). */
+  | "invalid";
+
+export type AccessState = {
+  mode: "own" | "avalet";
+  tier: AccessTier;
+  status: AccessStatus;
+  /** Live calls through the Avalet provider are allowed right now. */
+  canUseAvalet: boolean;
+  /** Whether this install has ever held an Avalet token (trial started). */
+  activated: boolean;
+  plan: "trial" | "pro" | "none" | null;
+  budget: number;
+  used: number;
+  remaining: number;
+  periodEnd: number | null;
+  renews: boolean;
+  lastSyncAt: number | null;
+  graceEndsAt: number | null;
+  price: { amount: number; currency: string; period: "month" };
+  proBudget: number;
+  trialBudget: number;
+  /** A checkout was opened in the browser and is being waited for. */
+  checkoutPending: boolean;
+};
+
+export type CancelInfoPublic = { active: boolean; renews: boolean; periodEnd: number | null; manageUrl: string | null };
+
 // --- invoke channels: channel -> [arguments, result] ---
 
 export type InvokeMap = {
   "avalet:settings-get-all": [[], SettingsSnapshot];
   "avalet:usage-get": [[], UsageSummary];
+  "avalet:access-get": [[], AccessState];
+  "avalet:billing-activate-trial": [[], AccessState];
+  "avalet:billing-refresh": [[], AccessState];
+  "avalet:billing-checkout": [[plan: "pro"], AccessState];
+  "avalet:billing-cancel-info": [[], CancelInfoPublic];
+  "avalet:billing-open-manage": [[], void];
+  "avalet:provider-test": [[providerId: string], { ok: true } | { ok: false; message: string }];
   "avalet:speech-set": [[patch: { language?: SpeechLanguage; model?: SpeechModelName }], void];
   "avalet:speech-models": [[], SpeechModelRow[]];
   "avalet:speech-model-download": [[model: SpeechModelName], void];
@@ -205,6 +263,8 @@ export type InvokeMap = {
   "avalet:onboarding-set": [[done: boolean], void];
   "avalet:main-set-pinned": [[pinned: boolean], void];
   "avalet:main-toggle": [[], void];
+  /** Shows the main window on the access settings (from the overlay's paywall). */
+  "avalet:main-show-access": [[], void];
   "avalet:app-quit": [[], void];
   "avalet:history-clear": [[], void];
   "avalet:history-get": [[], HistoryBlock[]];
@@ -293,9 +353,14 @@ export type EventMap = {
   "avalet:event:meeting-ended": Meeting | null;
   "avalet:event:summary-delta": { id: string; delta: string };
   "avalet:event:summary-done": SummaryDoneEvent;
-  "avalet:event:summary-error": { id: string; message: string };
+  "avalet:event:summary-error": { id: string; message: string; code?: "paywall" };
   "avalet:event:tracker-update": TrackerState;
   "avalet:event:usage-changed": UsageSummary;
+  "avalet:event:access-changed": AccessState;
+  /** A live call was refused for budget or plan reasons: show the paywall. */
+  "avalet:event:paywall": AccessState;
+  /** Main window: open this place (the overlay asked for it). */
+  "avalet:event:navigate": "access";
 };
 
 export type EventChannel = keyof EventMap;
@@ -324,6 +389,17 @@ export type AvaletApi = {
   };
   usage: {
     get: () => Promise<UsageSummary>;
+  };
+  billing: {
+    access: () => Promise<AccessState>;
+    activateTrial: () => Promise<AccessState>;
+    refresh: () => Promise<AccessState>;
+    /** Opens the payment page in the system browser and waits for the result in the background. */
+    checkout: (plan: "pro") => Promise<AccessState>;
+    cancelInfo: () => Promise<CancelInfoPublic>;
+    openManage: () => Promise<void>;
+    /** One tiny real call with the saved key; a human-readable reason when it fails. */
+    testProvider: (providerId: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   };
   speech: {
     models: () => Promise<SpeechModelRow[]>;
@@ -375,6 +451,7 @@ export type AvaletApi = {
   };
   app: {
     toggleMainWindow: () => Promise<void>;
+    showAccess: () => Promise<void>;
     quit: () => Promise<void>;
   };
   tracker: {
@@ -428,6 +505,9 @@ export type AvaletApi = {
     onTrackerUpdate: Listener<"avalet:event:tracker-update">;
     onSummaryError: Listener<"avalet:event:summary-error">;
     onUsageChanged: Listener<"avalet:event:usage-changed">;
+    onAccessChanged: Listener<"avalet:event:access-changed">;
+    onPaywall: Listener<"avalet:event:paywall">;
+    onNavigate: Listener<"avalet:event:navigate">;
   };
 };
 
@@ -439,6 +519,13 @@ export type AvaletApi = {
 const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:settings-get-all": true,
   "avalet:usage-get": true,
+  "avalet:access-get": true,
+  "avalet:billing-activate-trial": true,
+  "avalet:billing-refresh": true,
+  "avalet:billing-checkout": true,
+  "avalet:billing-cancel-info": true,
+  "avalet:billing-open-manage": true,
+  "avalet:provider-test": true,
   "avalet:speech-set": true,
   "avalet:speech-models": true,
   "avalet:speech-model-download": true,
@@ -450,6 +537,7 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:onboarding-set": true,
   "avalet:main-set-pinned": true,
   "avalet:main-toggle": true,
+  "avalet:main-show-access": true,
   "avalet:app-quit": true,
   "avalet:history-clear": true,
   "avalet:history-get": true,

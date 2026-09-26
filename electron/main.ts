@@ -6,6 +6,7 @@ import {
   nativeImage,
   nativeTheme,
   safeStorage,
+  shell,
   type DesktopCapturerSource,
 } from "electron";
 import { spawn } from "node:child_process";
@@ -18,6 +19,10 @@ import { AppCore, type Emit, type Handler, type WindowChannel } from "./app-core
 import { PythonRuntime, defaultSidecarCommand, type SidecarCommand } from "./python-runtime.js";
 import { SpeechModelManager } from "./model-manager.js";
 import { UsageLedger } from "./metering/ledger.js";
+import { BillingService } from "./billing/service.js";
+import { billingConfigFromEnv } from "./billing/config.js";
+import { HttpBillingProvider } from "./billing/http-provider.js";
+import { MockBillingProvider } from "./billing/mock-provider.js";
 import { hfHubCacheDir } from "./speech-models.js";
 import { captureScreenshot } from "./ipc/screenshot.js";
 import { isOcrAvailable, recognizeScreenText, warmUpOcr } from "./ocr/index.js";
@@ -32,6 +37,7 @@ import {
   getMainPinned,
   getOverlayOpacity,
   getPreferredScreenSourceId,
+  getSelectedProviderId,
   getTheme,
   initSettingsStore,
   setMainPinned,
@@ -122,10 +128,15 @@ function createMainWindow(): void {
   });
 }
 
+/** Only web pages go to the system browser; never file: or custom schemes. */
+function openExternal(url: string): void {
+  if (/^https?:\/\//.test(url)) void shell.openExternal(url);
+}
+
 /** The app's pages never navigate or open windows; links go to the system browser only if they are http(s). */
 function lockDownNavigation(win: BrowserWindow): void {
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//.test(url)) void import("electron").then(({ shell }) => shell.openExternal(url));
+    openExternal(url);
     return { action: "deny" };
   });
   win.webContents.on("will-navigate", (event, url) => {
@@ -222,7 +233,26 @@ async function chooseSavePath(defaultName: string, filterName: string, extension
   return result.filePath;
 }
 
+function createBilling(): { billing: BillingService; proxyUrl: string } {
+  const config = billingConfigFromEnv();
+  const billing = new BillingService({
+    kv: electronStore("avalet-billing"),
+    secrets: safeStorage,
+    publicKeys: config.publicKeys,
+    makeProvider: (identity) =>
+      config.mode === "mock"
+        ? new MockBillingProvider(() => identity().installId, Date.now, { autoPay: "succeed" })
+        : new HttpBillingProvider(config.baseUrl, identity),
+    selectedProviderId: getSelectedProviderId,
+    ownKeyReady: () => AppCore.ownKeyReady(getSelectedProviderId()),
+    onChange: (state) => emit("avalet:event:access-changed", state),
+    openExternal,
+  });
+  return { billing, proxyUrl: `${config.baseUrl}/v1/llm` };
+}
+
 function createCore(): AppCore {
+  const { billing, proxyUrl } = createBilling();
   const sidecar = new PythonRuntime(sidecarCommand);
   const models = new SpeechModelManager({
     cacheDir: () => hfHubCacheDir(),
@@ -233,6 +263,8 @@ function createCore(): AppCore {
     sidecar,
     models,
     ledger: new UsageLedger(electronStore("avalet-usage")),
+    billing,
+    avaletProxyUrl: proxyUrl,
     emit,
     captureScreen: async () => {
       if (e2e) return null;
@@ -282,6 +314,12 @@ function registerIpc(appCore: AppCore): void {
       if (mainWindow) applyMainPinned(mainWindow, next);
     },
     "avalet:main-toggle": () => toggleMainWindow(),
+    "avalet:main-show-access": () => {
+      if (!mainWindow || mainWindow.isDestroyed()) createMainWindow();
+      mainWindow?.show();
+      mainWindow?.focus();
+      emit("avalet:event:navigate", "access", "main");
+    },
     "avalet:app-quit": () => app.quit(),
     "avalet:overlay-set-opacity": (opacity) => {
       if (typeof opacity !== "number" || Number.isNaN(opacity)) throw new Error("opacity must be a number");
@@ -391,6 +429,7 @@ app.whenReady().then(() => {
   setOverlayOpacity(1);
   core = createCore();
   registerIpc(core);
+  core.startBackground();
   if (process.platform === "darwin" && app.dock) {
     const dockIcon = nativeImage.createFromPath(iconPath);
     if (!dockIcon.isEmpty()) app.dock.setIcon(dockIcon);

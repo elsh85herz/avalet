@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { meteredGenerate } from "./metering/metered.js";
 import { PROVIDER_PRESETS } from "./providers/types.js";
-import { isImageRejection } from "./providers/errors.js";
+import { accessProblemOf, isImageRejection, type AccessProblem } from "./providers/errors.js";
+import { resolveCredentials } from "./provider-credentials.js";
 import { logLine } from "./log.js";
 import { EchoFilter } from "./echo-filter.js";
 import {
-  getApiKey,
   getAutoDetectEnabled,
   getMeetingMode,
   getScreenshotTextEnabled,
@@ -108,7 +108,9 @@ export type LiveSessionEvents = {
   onBlockStart: (block: LiveBlock) => void;
   onBlockDelta: (id: string, delta: string) => void;
   onBlockDone: (id: string) => void;
-  onBlockError: (id: string, message: string) => void;
+  onBlockError: (id: string, message: string, code?: "paywall") => void;
+  /** A call failed for budget or plan reasons (built-in provider). */
+  onAccessProblem?: (problem: AccessProblem) => void;
   onStateChange: (state: "idle" | "listening" | "paused") => void;
   /** A transcription chunk failed twice in a row — surfaced so the UI can
    * show something instead of the failure only ever reaching the console. */
@@ -360,7 +362,6 @@ export class LiveSession {
     const providerId = getSelectedProviderId();
     const preset = PROVIDER_PRESETS.find((p) => p.id === providerId);
     const settings = getProviderSettings(providerId);
-    const apiKey = getApiKey(providerId);
 
     const block: LiveBlock = { id: randomUUID(), text: "", status: "streaming" };
     this.events.onBlockStart(block);
@@ -402,10 +403,11 @@ export class LiveSession {
     let collected = "";
     const run = async (image: string | undefined, text: string | undefined) => {
       collected = "";
+      const { apiKey, baseUrl } = resolveCredentials(providerId);
       await meteredGenerate(image ? "screenshot" : "suggestion", {
         providerId,
         apiKey,
-        baseUrl: settings.baseUrl,
+        baseUrl,
         model: settings.model,
         // Base the screen instructions on what actually went into the request,
         // not on what was asked: telling the model an image is attached when
@@ -439,8 +441,14 @@ export class LiveSession {
       this.lastAnswer = collected.slice(0, LAST_ANSWER_CHAR_BUDGET);
       this.events.onBlockDone(block.id);
     } catch (error) {
+      const problem = accessProblemOf(error);
       if ((error as Error).name === "AbortError") {
         this.events.onBlockDone(block.id);
+      } else if (problem) {
+        // Budget or plan: the paywall explains it; the transcript keeps going.
+        logLine(`[live-session] access problem: ${problem}`);
+        this.events.onBlockError(block.id, "", "paywall");
+        this.events.onAccessProblem?.(problem);
       } else {
         const message = error instanceof Error ? error.message : String(error);
         console.error("[live-session] generation failed:", message);

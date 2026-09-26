@@ -31,3 +31,37 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 export function fixturePath(name: string): string {
   return path.resolve(here, "../../test/fixtures", name);
 }
+
+/** Absolute path inside the repository. */
+export function repoPath(...parts: string[]): string {
+  return path.resolve(here, "../..", ...parts);
+}
+
+export type MockServer = {
+  publicKeyPem: string;
+  url: string;
+  now: () => number;
+  installs: Map<string, { installId: string; plan: string; used: number; budget: number; renews: boolean }>;
+  llmCalls: Array<{ model: string; system: string; usage: { prompt_tokens: number; completion_tokens: number }; metered: boolean }>;
+  listen(port?: number): Promise<string>;
+  close(): Promise<void>;
+};
+
+/** Starts server-mock/server.mjs in this process on a free port. */
+export async function startMockServer(options: { llmDelayMs?: number } = {}): Promise<MockServer> {
+  const mod = (await import(repoPath("server-mock", "server.mjs"))) as {
+    createMockBillingServer: (options: { llmDelayMs?: number }) => MockServer;
+  };
+  const server = mod.createMockBillingServer(options);
+  await server.listen(0);
+  return server;
+}
+
+export async function mockPost(server: MockServer, path: string, body: unknown): Promise<unknown> {
+  const response = await fetch(`${server.url}${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return response.json();
+}

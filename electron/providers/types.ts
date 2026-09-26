@@ -62,6 +62,17 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     requestExtras: { thinking: { type: "disabled" } },
   },
   {
+    // Built-in provider: calls go to the Avalet server's LLM proxy with the
+    // entitlement token instead of a key (docs/dev/billing-api.md). Its base
+    // URL comes from the billing config, not from settings.
+    id: "avalet",
+    label: "Avalet",
+    kind: "openai-compatible",
+    defaultModel: "avalet-fast",
+    defaultBackgroundModel: "avalet-fast",
+    supportsVision: true,
+  },
+  {
     id: "custom",
     label: "Local / custom (OpenAI-compatible)",
     kind: "openai-compatible",

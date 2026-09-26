@@ -35,13 +35,22 @@ Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work con
   - Budget exhaustion: typed `ProviderHttpError` with server code (`budget_exhausted`); the UI reaction (buy more / own key) is wired in Step 3 with the access state.
   - Verified: typecheck ok, `npm test` 97/97.
 
+- Step 3 (billing, payment-provider neutral):
+  - `electron/billing/`: token (Ed25519), config (placeholder key and URL), `BillingProvider` interface, `HttpBillingProvider`, `MockBillingProvider`, pure `deriveAccess()`, `BillingService` (identity, refresh, checkout polling, offline grace).
+  - "Avalet" provider in the provider list: OpenAI-compatible proxy at `<billing>/v1/llm` with the entitlement token; `provider-credentials.ts` blocks calls when access says no.
+  - Paywall: overlay banner (buy / own key / close), access card in Settings; transcript unaffected.
+  - `server-mock/` (dependency-free, test-only): contract endpoints, fake LLM, simulated payment/cancel/expiry/usage/outage/clock.
+  - `docs/dev/billing-api.md`: endpoints, token format, webhook flow, error codes, "no transcripts on the server".
+  - Key test IPC (`provider-test`) with human error text.
+  - Verified: typecheck ok, `npm test` 106/106 (billing state machine against server-mock included), app starts under Xvfb.
+
 ## In progress
 
-- Step 3: billing.
+- Step 4: first-run wizard and Simple level.
 
 ## Next
 
-- Steps 4..7 in order.
+- Steps 5..7 in order.
 
 ## Blockers
 

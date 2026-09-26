@@ -1491,3 +1491,44 @@ a {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* --- access and paywall --- */
+
+.access-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.access-card.problem,
+.paywall-banner {
+  border-color: var(--warn);
+}
+
+.access-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.access-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.paywall-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 10px;
+  padding: 10px;
+  border: 1px solid var(--warn);
+  border-radius: 10px;
+  background: var(--card-bg);
+  font-size: 12px;
+}
