@@ -11,7 +11,7 @@ One line each: decision, reason.
 - Downloads set `HF_HUB_DISABLE_XET=1`. Reason: plain HTTP writes a growing `.incomplete` file, which is what progress measures.
 - "Old and new HF cache layouts" = current (blobs + snapshot symlinks, `blobs/*.incomplete`) and legacy/no-symlink (real files in `snapshots/<rev>/`, `*.incomplete` next to them). Progress counts each regular file once, never following links.
 - Failed download: 2 automatic retries (3 s, 10 s), partial file kept so retries and "Continue" resume. Reason: covers short network drops without user action.
-- Delete model is shown only in the full settings (Advanced). Reason: fewer controls in Simple.
+- Delete model is shown in both levels (rc.2; was Advanced only). Reason: CLOUD_TASK_2 step 2 asks for the full model list with download, cancel, resume and delete in Simple Settings.
 - Live checklist setting: stored `null` = level default (Advanced on, Simple off); an explicit choice wins. Toggle only in Advanced settings. Reason: CLOUD_TASK step 1.
 - Checklist pacing now counts from the meeting start (no call in the first 30 s; 90 s ceiling applies to the first call). Reason: before, the first 80 characters triggered a call immediately because `lastRunAt` started at 0.
 - API keys are refused when OS encryption is unavailable (was: stored base64 in the clear as a "dev fallback"). Reason: key handling; E2E on Linux uses `--password-store=basic`.
@@ -71,3 +71,5 @@ One line each: decision, reason.
 - Overlay "End" = stop + reset, the same calls as "End meeting" in the main window; the main window releases the microphone on the `meeting-ended` event, and the overlay window hides after End (the next Start shows it again). Reason: no new IPC channel; before, Resume on an overlay left after End would start a meeting with no audio capture.
 - Main window header shows a Pause/Resume chip while a meeting runs (Simple: on History and Settings, where the big button is not visible; Advanced: always). Reason: Stop must be one click away from the main window in every state.
 - End has no confirmation dialog, in either window. Reason: it loses nothing (the meeting is kept in History) and the main window never asked either.
+- Simple Settings (rc.2) sections: Access (card, provider and key with test, model in use as one read-only line, usage), Meeting (type, role/context, agenda: the same ContextFields as the home screen), Speech (language, all models, guide text), Files (export folder), Appearance (interface language, theme, opacity), Advanced. Reason: CLOUD_TASK_2 step 2 list; LLM model choice stays in Advanced.
+- "Where files are saved" = a stored export folder (`exportDir`, "" = Documents) that the save dialog opens in; picked with a folder dialog in Simple and Advanced Settings; a folder that no longer exists falls back to Documents. The save dialog is kept. Reason: the user still names each file; one setting, no silent writes.

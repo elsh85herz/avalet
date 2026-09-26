@@ -74,6 +74,18 @@ test("advanced level: switch from Simple settings and back", async () => {
     await page.setViewportSize({ width: 480, height: 1600 });
     await skipWizardWithTrial(page);
     await page.getByTestId("open-settings").click();
+    // Everything real work needs is here without Advanced.
+    const settings = page.getByTestId("simple-settings");
+    await expect(settings.getByTestId("access-card")).toBeVisible();
+    await expect(settings.getByTestId("model-in-use")).toContainText(/avalet-fast/);
+    await expect(settings.locator("#meeting-mode")).toBeVisible();
+    await expect(settings.locator("#meeting-context")).toBeVisible();
+    await expect(settings.getByTestId("speech-models").locator("[data-model]")).toHaveCount(3);
+    await expect(settings.getByTestId("speech-models-guide")).toContainText(/VPN/);
+    await expect(settings.locator("#settings-opacity")).toBeVisible();
+    await expect(settings.locator("#simple-ui-language")).toBeVisible();
+    await settings.getByTestId("choose-export-dir").click();
+    await expect(settings.getByTestId("export-dir")).toHaveText(run.dirs.exports);
     await shot(page, "simple-settings-dark");
     await page.getByTestId("to-advanced").click();
     await expect(page.getByTestId("advanced-settings")).toBeVisible();

@@ -158,6 +158,7 @@ export type UiStrings = {
     testOk: string;
     modelTitle: string;
     modelDesc: string;
+    otherModelsLater: string;
     continueInBackground: string;
     contextTitle: string;
     roleLabel: string;
@@ -203,6 +204,11 @@ export type UiStrings = {
     tryAgain: string;
     speechBroken: string;
     reconnect: string;
+    meetingSection: string;
+    filesSection: string;
+    saveTo: string;
+    chooseFolder: string;
+    modelInUse: string;
   };
   access: {
     title: string;
@@ -267,6 +273,7 @@ export type UiStrings = {
     use: string;
     inUse: string;
     recommended: string;
+    guide: string;
     vpnHint: string;
     vpnLink: string;
     missingForStart: string;
@@ -494,6 +501,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       testOk: "The key works.",
       modelTitle: "Download the speech model",
       modelDesc: "Speech is recognized on this Mac, nothing is uploaded. The recommended model is {size}; on a normal connection that takes 2 to 5 minutes, once.",
+      otherModelsLater: "Other models can be chosen later in Settings.",
       continueInBackground: "Continue, it finishes in the background",
       contextTitle: "What is your next meeting about?",
       roleLabel: "What is this project or your role?",
@@ -539,6 +547,11 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       tryAgain: "Try again",
       speechBroken: "Speech recognition is not keeping up right now.",
       reconnect: "Reconnect",
+      meetingSection: "Meeting",
+      filesSection: "Files",
+      saveTo: "Protocols and transcripts are saved to this folder:",
+      chooseFolder: "Choose folder",
+      modelInUse: "Answers come from {provider}, model {model}. The model is changed in Advanced mode.",
     },
     access: {
       title: "Access",
@@ -603,6 +616,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       use: "Use",
       inUse: "In use",
       recommended: "recommended",
+      guide:
+        "The speech model turns the call into text on this Mac. Fast (small) is lighter and quicker; Most accurate (turbo) recognizes better but is heavier and needs more memory; medium is in between. The first download needs internet, from Russia often with a VPN; after that the model works offline.",
       vpnHint: "Slow or not downloading: turn on a VPN for the first download.",
       vpnLink: "the VPN we use",
       missingForStart: "The speech model is not downloaded yet, so nothing can be transcribed.",
@@ -838,6 +853,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       testOk: "Ключ работает.",
       modelTitle: "Скачайте модель распознавания речи",
       modelDesc: "Речь распознаётся на этом Mac, ничего не отправляется наружу. Рекомендуемая модель весит {size}; при обычном интернете это 2-5 минут, один раз.",
+      otherModelsLater: "Другие модели можно выбрать позже в Настройках.",
       continueInBackground: "Дальше, докачается в фоне",
       contextTitle: "О чём ваша следующая встреча?",
       roleLabel: "Что это за проект или какая у вас роль?",
@@ -883,6 +899,11 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       tryAgain: "Попробовать снова",
       speechBroken: "Распознавание речи сейчас не успевает.",
       reconnect: "Переподключить",
+      meetingSection: "Встреча",
+      filesSection: "Файлы",
+      saveTo: "Протоколы и расшифровки сохраняются в эту папку:",
+      chooseFolder: "Выбрать папку",
+      modelInUse: "Отвечает {provider}, модель {model}. Сменить модель можно в расширенном режиме.",
     },
     access: {
       title: "Доступ",
@@ -947,6 +968,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       use: "Выбрать",
       inUse: "Используется",
       recommended: "рекомендуем",
+      guide:
+        "Модель речи превращает разговор в текст прямо на этом Mac. «Быстро» (small) легче и быстрее; «Максимум» (turbo) распознаёт точнее, но тяжелее и требует больше памяти; medium посередине. Для первой загрузки нужен интернет, из России часто через VPN; потом модель работает без интернета.",
       vpnHint: "Медленно или не скачивается: включите VPN на время первой загрузки.",
       vpnLink: "VPN, которым пользуемся мы",
       missingForStart: "Модель распознавания речи ещё не скачана, поэтому расшифровки не будет.",

@@ -60,6 +60,8 @@ export type SettingsShape = {
   speechModel: SpeechModel;
   /** Live checklist on/off as chosen by the user; null = the default for the UI level. */
   liveTrackerEnabled: boolean | null;
+  /** Folder exports are offered in; "" = the system Documents folder. */
+  exportDir: string;
 };
 
 export const SETTINGS_SCHEMA_VERSION = 1;
@@ -99,6 +101,7 @@ export function defaultSettings(): SettingsShape {
     speechLanguage: "ru",
     speechModel: "small",
     liveTrackerEnabled: null,
+    exportDir: "",
   };
 }
 
@@ -369,6 +372,14 @@ export function setApiKey(providerId: string, apiKey: string): void {
 /** Whether a key has been saved, without decrypting/returning it. */
 export function hasApiKey(providerId: string): boolean {
   return Boolean(getProviderSettings(providerId).apiKeyEncrypted);
+}
+
+export function getExportDir(): string {
+  return read("exportDir") ?? "";
+}
+
+export function setExportDir(dir: string): void {
+  write("exportDir", dir);
 }
 
 export function getMainPinned(): boolean {

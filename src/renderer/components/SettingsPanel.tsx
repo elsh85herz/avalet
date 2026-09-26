@@ -436,6 +436,24 @@ export function SettingsPanel({ onRunSetup }: { onRunSetup: () => void }) {
         <p className="hint">{t.startHint}</p>
       </section>
 
+      <section className="context">
+        <h3 className="section-title">{strings.simple.filesSection}</h3>
+        <p className="hint">{strings.simple.saveTo}</p>
+        <div className="folder-row">
+          <code className="folder-path">{settings.exportDir}</code>
+          <button
+            type="button"
+            onClick={() =>
+              void bridge.settings.chooseExportDir().then((dir) => {
+                if (dir) patch({ exportDir: dir });
+              })
+            }
+          >
+            {strings.simple.chooseFolder}
+          </button>
+        </div>
+      </section>
+
       <section className="quit-row">
         <button type="button" onClick={() => void bridge.app.openLogs()}>
           {t.openLogs}

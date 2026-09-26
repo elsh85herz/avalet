@@ -1962,3 +1962,18 @@ a {
   padding: 3px 8px;
   font-size: 11px;
 }
+
+/* Export folder in Simple settings: the path wraps instead of widening the window. */
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folder-path {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  color: var(--text);
+}

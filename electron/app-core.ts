@@ -35,6 +35,7 @@ import {
   getAgendaText,
   getAllProviderSettings,
   getAutoDetectEnabled,
+  getExportDir,
   getLiveTrackerEnabled,
   getMainPinned,
   getMeetingMode,
@@ -85,6 +86,7 @@ export type Emit = <C extends EventChannel>(channel: C, payload: EventMap[C], ta
 /** Channels main.ts handles itself because they need a window, a dialog or an Electron-only API. */
 export const WINDOW_CHANNELS = [
   "avalet:main-set-pinned",
+  "avalet:export-dir-choose",
   "avalet:main-toggle",
   "avalet:main-show-access",
   "avalet:app-quit",
@@ -119,6 +121,8 @@ export type AppCoreDeps = {
   captureScreen: () => Promise<{ image: string; ocrImage: string } | null>;
   recognizeText: (imageBase64: string) => Promise<string | null>;
   isOcrAvailable: () => Promise<boolean>;
+  /** The system Documents folder: exports go there until the user picks another one. */
+  documentsDir?: () => string;
   /** Asks where to save an export; null when the user cancelled. */
   chooseSavePath: (defaultName: string, filterName: string, extension: string) => Promise<string | null>;
   /** Called on Start, e.g. to open the overlay window. */
@@ -269,7 +273,15 @@ export class AppCore {
       liveTrackerEnabled: getLiveTrackerEnabled(),
       platform: process.platform,
       fakeCapture: Boolean(this.deps.fakeCapture),
+      exportDir: this.exportDir(),
     };
+  }
+
+  /** The chosen export folder if it still exists, else Documents. */
+  exportDir(): string {
+    const chosen = getExportDir();
+    if (chosen && fs.existsSync(chosen)) return chosen;
+    return this.deps.documentsDir?.() ?? "";
   }
 
   renderProtocol(id: string, labels: unknown, modeLabel: unknown): string {

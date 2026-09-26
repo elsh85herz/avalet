@@ -40,7 +40,7 @@ Avalet is currently distributed as an unsigned build (no Apple Developer certifi
 3. Open Avalet. macOS says it "cannot be opened" or is "damaged". Close that dialog.
 4. Go to **System Settings, Privacy & Security**, scroll to the bottom, click **Open Anyway** next to Avalet, confirm. (On macOS 14 and older you can instead right-click the app and choose Open.)
 5. If the "damaged" message persists, run once in Terminal: `xattr -cr /Applications/Avalet.app`
-6. Launch Avalet and follow the setup: allow **Microphone** and **Screen Recording** (Screen Recording is how macOS lets an app capture the other side's audio), choose your own key or Avalet, and download the speech model (about 0.5 GB, one time, from Hugging Face).
+6. Launch Avalet and follow the setup: allow **Microphone** and **Screen Recording** (Screen Recording is how macOS lets an app capture the other side's audio), choose your own key or Avalet, and download the recommended speech model (about 0.5 GB, one time, from Hugging Face). The other models (medium, turbo) can be downloaded, switched and deleted later in Settings, in Simple and Advanced alike.
 7. If the download is slow or does not start, turn on a VPN for that first download only; we use our own, [ast-net.ru](https://ast-net.ru). The model is cached afterwards and works offline. Nothing is ever downloaded without you pressing the button.
 8. Click **Start** when the call begins.
 

@@ -154,6 +154,11 @@ export function SpeechModels({ uiLanguage, selected, onSelect, only, allowDelete
           </div>
         );
       })}
+      {only ? null : (
+        <p className="hint" data-testid="speech-models-guide">
+          {t.models.guide}
+        </p>
+      )}
       <p className={`hint ${anyTrouble ? "warn" : ""}`}>
         {t.models.vpnHint}{" "}
         <a href={VPN_URL} target="_blank" rel="noreferrer">

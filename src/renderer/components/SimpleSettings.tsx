@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { PROVIDER_PRESETS_UI } from "../providers/presets.js";
+import { ContextFields } from "./ContextFields.js";
 import { getBridge } from "../lib/bridge.js";
 import { SPEECH_LANGUAGES, type SpeechLanguage } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
@@ -16,7 +18,11 @@ type Props = {
   onRunSetup: () => void;
 };
 
-/** Settings for the Simple level: access, speech, appearance, and the way to Advanced. */
+/**
+ * Settings for the Simple level: short, but everything real work needs
+ * (access and key test, meeting type and context, speech models, where files
+ * go, appearance) without switching to Advanced. Tuning stays in Advanced.
+ */
 export function SimpleSettings({ uiLanguage, focus, onBack, onRunSetup }: Props) {
   const bridge = getBridge();
   const { settings, patch, reload } = useAppSettings();
@@ -37,6 +43,16 @@ export function SimpleSettings({ uiLanguage, focus, onBack, onRunSetup }: Props)
   }
 
   const ownMode = settings.selectedProviderId !== "avalet";
+  const provider = settings.providers.find((p) => p.providerId === settings.selectedProviderId);
+  const preset = PROVIDER_PRESETS_UI.find((p) => p.id === settings.selectedProviderId);
+  const modelInUse = preset
+    ? s.modelInUse.replace("{provider}", preset.label).replace("{model}", provider?.model || preset.modelPlaceholder)
+    : null;
+
+  async function chooseExportDir() {
+    const dir = await bridge.settings.chooseExportDir();
+    if (dir) patch({ exportDir: dir });
+  }
 
   return (
     <main className="settings simple-settings" data-testid="simple-settings">
@@ -60,7 +76,19 @@ export function SimpleSettings({ uiLanguage, focus, onBack, onRunSetup }: Props)
           }}
         />
         {ownMode ? <OwnKeySetup uiLanguage={uiLanguage} /> : null}
+        {modelInUse ? (
+          <p className="hint" data-testid="model-in-use">
+            {modelInUse}
+          </p>
+        ) : null}
         <UsageCounter uiLanguage={uiLanguage} detailed={false} />
+      </section>
+
+      <section aria-labelledby="simple-meeting-title">
+        <h3 className="section-title" id="simple-meeting-title">
+          {s.meetingSection}
+        </h3>
+        <ContextFields uiLanguage={uiLanguage} roleWording />
       </section>
 
       <section ref={speechRef} aria-labelledby="simple-speech-title">
@@ -92,7 +120,23 @@ export function SimpleSettings({ uiLanguage, focus, onBack, onRunSetup }: Props)
             patch({ speechModel: model });
             void bridge.settings.setSpeech({ model });
           }}
+          allowDelete
         />
+      </section>
+
+      <section aria-labelledby="simple-files-title">
+        <h3 className="section-title" id="simple-files-title">
+          {s.filesSection}
+        </h3>
+        <p className="hint">{s.saveTo}</p>
+        <div className="folder-row">
+          <code className="folder-path" data-testid="export-dir">
+            {settings.exportDir}
+          </code>
+          <button type="button" onClick={() => void chooseExportDir()} data-testid="choose-export-dir">
+            {s.chooseFolder}
+          </button>
+        </div>
       </section>
 
       <section aria-labelledby="simple-appearance-title">

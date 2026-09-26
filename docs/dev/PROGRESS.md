@@ -102,9 +102,16 @@ Resume rule: read `CLOUD_TASK_2.md` (current task, 0.2.0-rc.2) and `CLOUD_TASK.m
   - DECISIONS: the two lines saying Simple hides Auto/language/opacity were replaced.
   - Verified: `npm run check` (129/129), `npm run build` + `xvfb-run ... npx playwright test` 12/12.
 
+- Step 2 (Simple Settings complete for real work):
+  - Simple Settings: Access (card, provider + key + test, one read-only line with the model in use, usage), Meeting (type, role/context, agenda), Speech (language, all three models with download/cancel/continue/delete, plain guide text incl. internet/VPN, small vs turbo), Files (export folder with a folder picker; new setting `exportDir`, IPC `avalet:export-dir-choose`), Appearance (interface language, theme, opacity), Advanced.
+  - Advanced Settings got the same export folder row. Wizard step 3: "Other models can be chosen later in Settings".
+  - README (EN/RU) install step and MAC_VERIFY step 5 say the same as the app about where models are chosen.
+  - Tests: `electron/app-core-settings.test.ts` (export folder default, chosen, fallback); E2E Simple settings checks every item. `simple-settings-dark.png` regenerated.
+  - Verified: `npm run check` (130/130), `xvfb-run ... npx playwright test` 12/12.
+
 ## rc.2: In progress
 
-- Step 2 (Simple Settings complete for real work).
+- Step 3 (built-in provider not a dead end).
 
 ## rc.2: Next
 

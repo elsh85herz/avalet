@@ -55,6 +55,8 @@ export type SettingsSnapshot = {
   platform: string;
   /** Test mode: audio comes from a fake feeder in the main process, not from the mic. */
   fakeCapture: boolean;
+  /** Folder the save dialog opens in for exports (chosen in Settings, default Documents). */
+  exportDir: string;
 };
 
 export type LiveBlockEvent = { id: string };
@@ -271,6 +273,7 @@ export type InvokeMap = {
   "avalet:ui-level-set": [[level: UiLevel], void];
   "avalet:onboarding-set": [[done: boolean], void];
   "avalet:main-set-pinned": [[pinned: boolean], void];
+  "avalet:export-dir-choose": [[], string | null];
   "avalet:main-toggle": [[], void];
   /** Shows the main window on the access settings (from the overlay's paywall). */
   "avalet:main-show-access": [[], void];
@@ -387,6 +390,8 @@ export type AvaletApi = {
     setUiLevel: (level: UiLevel) => Promise<void>;
     setOnboardingDone: (done: boolean) => Promise<void>;
     setMainPinned: (pinned: boolean) => Promise<void>;
+    /** Folder picker; returns the new export folder, or null when cancelled. */
+    chooseExportDir: () => Promise<string | null>;
     setMeetingMode: (mode: MeetingMode) => Promise<void>;
     selectProvider: (providerId: string) => Promise<void>;
     updateProvider: (providerId: string, patch: { model?: string; baseUrl?: string; backgroundModel?: string }) => Promise<void>;
@@ -553,6 +558,7 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:ui-level-set": true,
   "avalet:onboarding-set": true,
   "avalet:main-set-pinned": true,
+  "avalet:export-dir-choose": true,
   "avalet:main-toggle": true,
   "avalet:main-show-access": true,
   "avalet:app-quit": true,

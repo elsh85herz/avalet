@@ -138,6 +138,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
       <>
         <h1 tabIndex={-1}>{w.modelTitle}</h1>
         <p className="hint">{w.modelDesc.replace("{size}", size)}</p>
+        <p className="hint">{w.otherModelsLater}</p>
         <SpeechModels
           uiLanguage={uiLanguage}
           selected={settings.speechModel}

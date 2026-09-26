@@ -28,6 +28,7 @@ const api: AvaletApi = {
     setUiLevel: (level) => invoke("avalet:ui-level-set", level),
     setOnboardingDone: (done) => invoke("avalet:onboarding-set", done),
     setMainPinned: (pinned) => invoke("avalet:main-set-pinned", pinned),
+    chooseExportDir: () => invoke("avalet:export-dir-choose"),
     setMeetingMode: (mode) => invoke("avalet:meeting-mode-set", mode),
     selectProvider: (providerId) => invoke("avalet:settings-select-provider", providerId),
     updateProvider: (providerId, patch) => invoke("avalet:settings-update-provider", providerId, patch),

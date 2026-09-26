@@ -41,6 +41,7 @@ import {
   getSelectedProviderId,
   getTheme,
   initSettingsStore,
+  setExportDir,
   setMainPinned,
   setOverlayOpacity,
   setTheme,
@@ -230,7 +231,7 @@ function initStores(): void {
 
 async function chooseSavePath(defaultName: string, filterName: string, extension: string): Promise<string | null> {
   const options = {
-    defaultPath: path.join(app.getPath("documents"), `${defaultName}.${extension}`),
+    defaultPath: path.join(core?.exportDir() || app.getPath("documents"), `${defaultName}.${extension}`),
     filters: [{ name: filterName, extensions: [extension] }],
   };
   // E2E cannot click a native dialog: exports go to a folder the test chose.
@@ -295,6 +296,7 @@ function createCore(): AppCore {
     },
     isOcrAvailable,
     chooseSavePath,
+    documentsDir: () => app.getPath("documents"),
     fakeCapture: e2e,
     onSessionStarted: () => {
       void warmUpOcr().catch(() => {});
@@ -328,6 +330,20 @@ function registerIpc(appCore: AppCore): void {
       const next = Boolean(pinned);
       setMainPinned(next);
       if (mainWindow) applyMainPinned(mainWindow, next);
+    },
+    "avalet:export-dir-choose": async () => {
+      // E2E cannot click a native dialog: the test's export folder stands in for the choice.
+      const picked =
+        e2e && process.env.AVALET_E2E_EXPORT_DIR
+          ? process.env.AVALET_E2E_EXPORT_DIR
+          : await (async () => {
+              const options = { defaultPath: appCore.exportDir(), properties: ["openDirectory", "createDirectory"] as Array<"openDirectory" | "createDirectory"> };
+              const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
+              return result.canceled ? null : (result.filePaths[0] ?? null);
+            })();
+      if (!picked) return null;
+      setExportDir(picked);
+      return picked;
     },
     "avalet:main-toggle": () => toggleMainWindow(),
     "avalet:main-show-access": () => {
