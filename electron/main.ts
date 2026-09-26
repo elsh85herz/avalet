@@ -257,7 +257,9 @@ function createBilling(): { billing: BillingService; proxyUrl: string } {
     ownKeyReady: () => AppCore.ownKeyReady(getSelectedProviderId()),
     onChange: (state) => emit("avalet:event:access-changed", state),
     openExternal,
+    available: config.builtInProviderAvailable,
   });
+  if (!config.builtInProviderAvailable) logLine("[billing] no billing server in this build: the built-in provider is shown as coming soon");
   return { billing, proxyUrl: `${config.baseUrl}/v1/llm` };
 }
 

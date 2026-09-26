@@ -70,7 +70,8 @@ export function AccessCard({ uiLanguage, onUseOwnKey, onUseAvalet }: Props) {
 
   if (access.mode === "own") {
     text = access.status === "no-key" ? t.ownNoKey : t.ownOk;
-    if (!access.activated) secondary = { label: t.startTrial, onClick: () => void run(async () => { await bridge.billing.activateTrial(); onUseAvalet(); }) };
+    if (!access.builtInAvailable) secondary = null;
+    else if (!access.activated) secondary = { label: t.startTrial, onClick: () => void run(async () => { await bridge.billing.activateTrial(); onUseAvalet(); }) };
     else secondary = { label: t.useAvalet, onClick: onUseAvalet };
   } else if (access.checkoutPending) {
     text = t.checkoutPending;
@@ -149,6 +150,11 @@ export function AccessCard({ uiLanguage, onUseOwnKey, onUseAvalet }: Props) {
         </div>
       ) : null}
       {access.mode === "avalet" ? <p className="hint">{t.serverNote}</p> : null}
+      {access.builtInAvailable ? null : (
+        <p className="hint" data-testid="avalet-coming-soon">
+          {t.avaletComingSoon}
+        </p>
+      )}
     </div>
   );
 }

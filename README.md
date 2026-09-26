@@ -5,7 +5,7 @@
 Local-first: audio never leaves your Mac and transcription runs on-device. For the suggestions there are two ways to reach a language model:
 
 - **Your own key** (free, no limits): calls go straight from the app to the provider you chose (Claude, OpenAI, DeepSeek, or a local OpenAI-compatible server). No Avalet server in between.
-- **Avalet without keys**: a free trial (500,000 tokens, no card), then a monthly Pro plan. Calls go through the Avalet server, which counts tokens and does not store transcripts. *Not live yet: the server is still being built (see Known limitations).*
+- **Avalet without keys** (coming soon): a free trial (500,000 tokens, no card), then a monthly Pro plan. Calls will go through the Avalet server, which counts tokens and does not store transcripts. *Not available yet: the server is still being built, so the app shows this option as "Coming soon" and uses your own key (see Known limitations).*
 
 [Русская версия](README.ru.md)
 
@@ -13,7 +13,7 @@ Local-first: audio never leaves your Mac and transcription runs on-device. For t
 
 ## What it does
 
-- **Guided first run.** Four short screens: permissions (with a live status and a "how to fix" button), access (Avalet or your own key, with a real test call), the speech model download (progress, cancel, resume), and the meeting context with a 20-second self-test that shows a real suggestion before your first call.
+- **Guided first run.** Four short screens: permissions (with a live status and a "how to fix" button), access (your own key, with a real test call; "Avalet without keys" is shown as coming soon), the speech model download (progress, cancel, resume), and the meeting context with a 20-second self-test that shows a real suggestion before your first call.
 - **Simple by default, everything in Advanced.** The Simple level is Start/Pause, meeting type, context, transcript, summary and export. Advanced (Settings, "Advanced mode") has every provider setting, models, the live checklist, screenshot text and logs.
 
 - **Live suggestions** as the conversation goes: clarifying questions, gaps and risks in what's being discussed, a crisp restatement of what was just said. Triggered by question/change cues in speech and by the other side pausing, not on a timer.
@@ -40,7 +40,7 @@ Avalet is currently distributed as an unsigned build (no Apple Developer certifi
 3. Open Avalet. macOS says it "cannot be opened" or is "damaged". Close that dialog.
 4. Go to **System Settings, Privacy & Security**, scroll to the bottom, click **Open Anyway** next to Avalet, confirm. (On macOS 14 and older you can instead right-click the app and choose Open.)
 5. If the "damaged" message persists, run once in Terminal: `xattr -cr /Applications/Avalet.app`
-6. Launch Avalet and follow the setup: allow **Microphone** and **Screen Recording** (Screen Recording is how macOS lets an app capture the other side's audio), choose your own key or Avalet, and download the recommended speech model (about 0.5 GB, one time, from Hugging Face). The other models (medium, turbo) can be downloaded, switched and deleted later in Settings, in Simple and Advanced alike.
+6. Launch Avalet and follow the setup: allow **Microphone** and **Screen Recording** (Screen Recording is how macOS lets an app capture the other side's audio), enter your own key and test it, and download the recommended speech model (about 0.5 GB, one time, from Hugging Face). The other models (medium, turbo) can be downloaded, switched and deleted later in Settings, in Simple and Advanced alike.
 7. If the download is slow or does not start, turn on a VPN for that first download only; we use our own, [ast-net.ru](https://ast-net.ru). The model is cached afterwards and works offline. Nothing is ever downloaded without you pressing the button.
 8. Click **Start** when the call begins.
 
@@ -93,13 +93,13 @@ system audio (loopback)               5s WAV chunks, tagged "other"
 
 | First run | Simple meeting | Overlay |
 |---|---|---|
-| ![Access step](docs/screens/wizard-2-access-trial-dark.png) | ![Meeting with summary](docs/screens/simple-meeting-summary-dark.png) | ![Suggestion](docs/screens/overlay-simple-suggestion-dark.png) |
+| ![Access step](docs/screens/wizard-2-access-coming-soon-dark.png) | ![Meeting with summary](docs/screens/simple-meeting-summary-dark.png) | ![Suggestion](docs/screens/overlay-simple-suggestion-dark.png) |
 
 All screens, both themes: [`docs/screens/`](docs/screens/README.md). They are rendered by the end-to-end tests on Linux, so the macOS translucency is missing there.
 
 ## Known limitations
 
-- **The "Avalet without keys" option is not live yet.** The client side is done and tested against a mock server; the billing server, its signing key and the payment gateway are not deployed. Until then use your own key.
+- **The "Avalet without keys" option is not live yet.** The client side is done and tested against a mock server; the billing server, its signing key and the payment gateway are not deployed. Until then the app shows the option as "Coming soon", never contacts a billing server, and works with your own key.
 - **The live checklist is not yet verified on real meetings.** It is off in the Simple level and on in Advanced.
 - **System audio capture can be fragile.** Uses [`electron-audio-loopback`](https://github.com/alectrocute/electron-audio-loopback) (MIT); needs macOS 13.2+. If the other side's audio doesn't come through, a banner shows up with a **Reconnect** button. Mic-only always works as a fallback.
 - **Unsigned build.** See the install steps above. Code signing and auto-update are planned.

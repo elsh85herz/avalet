@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
 import { launch, mockPost, openedUrls, overlayPage, shot, skipWizardWithTrial, startMock, setTheme } from "./harness";
 
 // Paywall: trial used up during a meeting, the transcript keeps going, the
@@ -118,3 +120,51 @@ test("AVALET_ADVANCED=1 opens the Advanced level for this launch", async () => {
     await mock.close();
   }
 });
+
+// A build without a billing server (the placeholder URL and key, as shipped
+// today): the Avalet options say "Coming soon", own key is the way, and the
+// billing host is never contacted.
+test("no billing server: Avalet is 'coming soon', own key works, nothing about the server in the log", async () => {
+  const mock = await startMock();
+  const run = await launch(mock, { readyModel: true, env: { AVALET_BILLING_URL: "", AVALET_BILLING_DEV_PUBKEY: "" } });
+  const page = run.main;
+  try {
+    await page.setViewportSize({ width: 480, height: 900 });
+    await page.getByTestId("wizard-next").click();
+    const avalet = page.getByTestId("choice-avalet");
+    await expect(avalet).toBeDisabled();
+    await expect(avalet).toContainText(/Скоро|Coming soon/);
+    await expect(page.getByTestId("choice-own")).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("own-key")).toBeVisible();
+    await shot(page, "wizard-2-access-coming-soon-dark");
+
+    await page.evaluate(() => window.avalet!.settings.setOnboardingDone(true));
+    await page.reload();
+    await page.getByTestId("simple-home").waitFor();
+    await page.getByTestId("open-settings").click();
+    await expect(page.getByTestId("avalet-coming-soon")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Начать бесплатно|Start free trial|Использовать Avalet|Use Avalet/ })).toHaveCount(0);
+    await expect(page.evaluate(() => window.avalet!.settings.selectProvider("avalet"))).rejects.toThrow(/not available/);
+    await shot(page, "simple-settings-own-key-dark");
+    await page.getByTestId("to-advanced").click();
+    await page.getByTestId("advanced-settings").waitFor();
+    await expect(page.locator(".provider-row", { hasText: /^Avalet$/ })).toHaveCount(0);
+  } finally {
+    await run.close();
+    await mock.close();
+  }
+  const logs = findFiles(run.dirs.userData, "avalet.log");
+  expect(logs.length, "the app log lives in the test profile").toBeGreaterThan(0);
+  const log = logs.map((file) => fs.readFileSync(file, "utf8")).join("\n");
+  expect(log).toContain("no billing server in this build");
+  expect(log).not.toMatch(/\[billing\] (network|unreachable)|billing server unreachable/);
+});
+
+function findFiles(dir: string, name: string): string[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return findFiles(full, name);
+    return entry.name === name ? [full] : [];
+  });
+}

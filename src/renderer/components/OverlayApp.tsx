@@ -581,7 +581,7 @@ export function OverlayApp() {
         </div>
       ) : null}
 
-      {paywall ? (
+      {paywall && paywall.builtInAvailable && paywall.mode === "avalet" ? (
         <div className="paywall-banner" role="alert" data-testid="paywall">
           <strong>{t.access.paywallTitle}</strong>
           <span>{t.access.paywallTranscript}</span>

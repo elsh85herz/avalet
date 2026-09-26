@@ -57,6 +57,8 @@ export type SettingsSnapshot = {
   fakeCapture: boolean;
   /** Folder the save dialog opens in for exports (chosen in Settings, default Documents). */
   exportDir: string;
+  /** The built-in "Avalet" provider exists in this build (a billing server is configured). */
+  builtInProviderAvailable: boolean;
 };
 
 export type LiveBlockEvent = { id: string };
@@ -244,6 +246,8 @@ export type AccessState = {
   checkoutPending: boolean;
   /** Code of the last failed server contact ("network", "no_keychain", a server error code), or null. */
   syncError: string | null;
+  /** This build has a billing server: the Avalet options can be offered (otherwise "Coming soon"). */
+  builtInAvailable: boolean;
 };
 
 export type CancelInfoPublic = { active: boolean; renews: boolean; periodEnd: number | null; manageUrl: string | null };

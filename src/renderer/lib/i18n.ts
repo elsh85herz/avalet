@@ -152,6 +152,7 @@ export type UiStrings = {
     avaletChoiceDesc: string;
     ownChoice: string;
     ownChoiceDesc: string;
+    avaletComingSoonDesc: string;
     provider: string;
     saveAndTest: string;
     testing: string;
@@ -242,6 +243,8 @@ export type UiStrings = {
     paywallTranscript: string;
     dismiss: string;
     serverNote: string;
+    comingSoon: string;
+    avaletComingSoon: string;
   };
   usage: {
     title: string;
@@ -495,6 +498,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       avaletChoiceDesc: "{n} tokens free to start, no card. Later Pro for {price}.",
       ownChoice: "My own key",
       ownChoiceDesc: "Claude, ChatGPT, DeepSeek or a local model. Free in Avalet; you pay the provider directly.",
+      avaletComingSoonDesc: "A built-in model with no keys. For now choose your own key.",
       provider: "Provider",
       saveAndTest: "Save and test",
       testing: "Testing",
@@ -585,6 +589,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       paywallTranscript: "Nothing is lost: the transcript keeps recording.",
       dismiss: "Close",
       serverNote: "The Avalet server counts tokens; it does not keep transcripts.",
+      comingSoon: "Coming soon",
+      avaletComingSoon: "Avalet without keys is coming soon. Until then Avalet works with your own key.",
     },
     usage: {
       title: "Usage",
@@ -847,6 +853,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       avaletChoiceDesc: "{n} токенов бесплатно для начала, без карты. Потом Pro за {price}.",
       ownChoice: "Мой ключ",
       ownChoiceDesc: "Claude, ChatGPT, DeepSeek или локальная модель. В Avalet бесплатно, платите провайдеру напрямую.",
+      avaletComingSoonDesc: "Встроенная модель без ключей. Пока выберите свой ключ.",
       provider: "Провайдер",
       saveAndTest: "Сохранить и проверить",
       testing: "Проверяем",
@@ -937,6 +944,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       paywallTranscript: "Ничего не потеряно: расшифровка продолжает записываться.",
       dismiss: "Закрыть",
       serverNote: "Сервер Avalet считает токены и не хранит расшифровки.",
+      comingSoon: "Скоро",
+      avaletComingSoon: "Avalet без ключей скоро появится. А пока Avalet работает с вашим ключом.",
     },
     usage: {
       title: "Расход",

@@ -15,6 +15,9 @@ MCowBQYDK2VwAyEAyk84FmHjI22+Vpp66beLR3m947RNoXxvacxxrw2QMFE=
 /** Placeholder host (".invalid" never resolves). Override with AVALET_BILLING_URL. */
 export const DEFAULT_BILLING_URL = "https://billing.avalet.invalid";
 
+/** Body of the placeholder key above: a build that still carries it has no billing server. */
+const PLACEHOLDER_KEY_BODY = "MCowBQYDK2VwAyEAyk84FmHjI22+Vpp66beLR3m947RNoXxvacxxrw2QMFE=";
+
 /** Shown until the server's /v1/plans answers. */
 export const DEFAULT_PRICING = { amount: 990, currency: "RUB", period: "month" as const };
 export const TRIAL_BUDGET = 500_000;
@@ -28,7 +31,25 @@ export type BillingConfig = {
   publicKeys: string[];
   /** "http": the real server contract; "mock": in-process MockBillingProvider (dev only). */
   mode: "http" | "mock";
+  /**
+   * The built-in "Avalet" provider can be offered at all. False while this
+   * build carries the placeholder URL or key: then the app never contacts a
+   * billing server and shows the Avalet options as "Coming soon".
+   */
+  builtInProviderAvailable: boolean;
 };
+
+/** A real server: not the placeholder host, not an ".invalid" host, and a real signing key. */
+export function isConfiguredServer(baseUrl: string, productionKey: string): boolean {
+  let host: string;
+  try {
+    host = new URL(baseUrl).hostname;
+  } catch {
+    return false;
+  }
+  if (!host || host.endsWith(".invalid") || host === "invalid") return false;
+  return !productionKey.includes(PLACEHOLDER_KEY_BODY);
+}
 
 /**
  * AVALET_BILLING_URL points the client at another server (a staging server,
@@ -39,9 +60,14 @@ export type BillingConfig = {
 export function billingConfigFromEnv(env: NodeJS.ProcessEnv = process.env): BillingConfig {
   const publicKeys = [PRODUCTION_PUBLIC_KEY];
   if (env.AVALET_BILLING_DEV_PUBKEY) publicKeys.push(env.AVALET_BILLING_DEV_PUBKEY.replace(/\\n/g, "\n"));
+  const baseUrl = (env.AVALET_BILLING_URL || DEFAULT_BILLING_URL).replace(/\/+$/, "");
+  const mode = env.AVALET_BILLING === "mock" ? "mock" : "http";
   return {
-    baseUrl: (env.AVALET_BILLING_URL || DEFAULT_BILLING_URL).replace(/\/+$/, ""),
+    baseUrl,
     publicKeys,
-    mode: env.AVALET_BILLING === "mock" ? "mock" : "http",
+    mode,
+    // Dev and tests point at a mock or staging server explicitly; a normal build needs both real values.
+    builtInProviderAvailable:
+      mode === "mock" || Boolean(env.AVALET_BILLING_URL) || isConfiguredServer(DEFAULT_BILLING_URL, PRODUCTION_PUBLIC_KEY),
   };
 }

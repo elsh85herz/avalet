@@ -196,7 +196,7 @@ export function SettingsPanel({ onRunSetup }: { onRunSetup: () => void }) {
       </section>
 
       <section className="providers" role="radiogroup" aria-label={strings.wizard.provider}>
-        {PROVIDER_PRESETS_UI.map((p) => {
+        {PROVIDER_PRESETS_UI.filter((p) => p.id !== "avalet" || settings.builtInProviderAvailable).map((p) => {
           const saved = settings.providers.find((s) => s.providerId === p.id);
           return (
             <label key={p.id} className={`provider-row ${selectedProviderId === p.id ? "active" : ""}`}>

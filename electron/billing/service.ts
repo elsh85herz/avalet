@@ -31,6 +31,11 @@ export type BillingServiceDeps = {
   /** Opens a URL in the system browser. */
   openExternal: (url: string) => void;
   now?: () => number;
+  /**
+   * False when this build has no billing server (placeholder URL or key):
+   * nothing is ever sent, the Avalet options show as "Coming soon". Default true.
+   */
+  available?: boolean;
   /** Background refresh while a plan exists. */
   refreshEveryMs?: number;
   /** Polling while a checkout is open in the browser. */
@@ -50,6 +55,8 @@ export class BillingService {
   private checkoutTimer: ReturnType<typeof setInterval> | null = null;
   private checkoutUntil = 0;
   private last = "";
+  /** Failure codes already written to the log this session: an outage is logged once, not every refresh. */
+  private readonly loggedFailures = new Set<string>();
 
   private readonly publicKeys: string[];
 
@@ -57,6 +64,24 @@ export class BillingService {
     this.now = deps.now ?? Date.now;
     this.provider = deps.makeProvider(() => this.identity());
     this.publicKeys = this.provider.mockPublicKeyPem ? [...deps.publicKeys, this.provider.mockPublicKeyPem] : deps.publicKeys;
+  }
+
+  /** This build has a billing server at all. */
+  get builtInAvailable(): boolean {
+    return this.available;
+  }
+
+  private get available(): boolean {
+    return this.deps.available ?? true;
+  }
+
+  /**
+   * The server is contacted by itself (startup, timer, after a refusal) only
+   * while the built-in provider is selected. In own-key mode it is never
+   * needed, so it is never called and never logged about.
+   */
+  private get inAvaletMode(): boolean {
+    return this.available && this.deps.selectedProviderId() === AVALET_PROVIDER_ID;
   }
 
   private read(): Stored {
@@ -114,6 +139,7 @@ export class BillingService {
       price: stored.price,
       checkoutPending: this.checkoutTimer !== null,
       syncError: stored.lastErrorCode ?? null,
+      builtInAvailable: this.available,
     });
   }
 
@@ -166,11 +192,15 @@ export class BillingService {
 
   private failed(error: unknown): void {
     const code = error instanceof BillingError ? error.code : "error";
-    logLine(`[billing] ${code}: ${error instanceof Error ? error.message : String(error)}`);
+    if (!this.loggedFailures.has(code)) {
+      this.loggedFailures.add(code);
+      logLine(`[billing] ${code}: ${error instanceof Error ? error.message : String(error)} (logged once per session)`);
+    }
     this.write({ syncFailing: true, lastErrorCode: code });
   }
 
   async activateTrial(): Promise<AccessState> {
+    if (!this.available) return this.emit();
     // Nothing leaves the machine before a secret can be stored safely.
     if (!this.deps.secrets.isEncryptionAvailable() && !this.read().installId) {
       this.write({ syncFailing: true, lastErrorCode: "no_keychain" });
@@ -187,7 +217,7 @@ export class BillingService {
   }
 
   async refresh(): Promise<AccessState> {
-    if (!this.read().installId) return this.emit();
+    if (!this.inAvaletMode || !this.read().installId) return this.emit();
     try {
       this.accept(await this.provider.refresh());
     } catch (error) {
@@ -197,6 +227,7 @@ export class BillingService {
   }
 
   private async loadPrice(): Promise<void> {
+    if (!this.available) return;
     try {
       const info: PlansInfo = await this.provider.plans();
       const pro = info.plans.find((p) => p.id === "pro");
@@ -208,6 +239,7 @@ export class BillingService {
 
   /** Opens the payment page and watches for the plan to change. */
   async checkout(plan: "pro"): Promise<AccessState> {
+    if (!this.available) return this.emit();
     if (!this.read().installId) await this.activateTrial();
     const url = await this.provider.startCheckout(plan);
     this.deps.openExternal(url);
@@ -237,20 +269,28 @@ export class BillingService {
   }
 
   async cancelInfo(): Promise<CancelInfoPublic> {
+    if (!this.available) return { active: false, renews: false, periodEnd: null, manageUrl: null };
     return this.provider.cancelInfo();
   }
 
   async openManage(): Promise<void> {
+    if (!this.available) return;
     const info = await this.provider.cancelInfo();
     if (info.manageUrl) this.deps.openExternal(info.manageUrl);
   }
 
-  /** On startup: refresh a known install in the background, keep it fresh while the app runs. */
+  /** On startup: refresh a known install in the background, keep it fresh while the app runs (Avalet mode only). */
   start(): void {
-    if (!this.read().installId) return;
+    if (!this.inAvaletMode || !this.read().installId) return;
     void this.refresh();
     void this.loadPrice();
     this.ensureBackgroundRefresh();
+  }
+
+  /** The user switched provider: switching to Avalet brings the entitlement up to date. */
+  providerChanged(): AccessState {
+    this.start();
+    return this.emit();
   }
 
   private ensureBackgroundRefresh(): void {

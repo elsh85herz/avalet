@@ -109,9 +109,18 @@ Resume rule: read `CLOUD_TASK_2.md` (current task, 0.2.0-rc.2) and `CLOUD_TASK.m
   - Tests: `electron/app-core-settings.test.ts` (export folder default, chosen, fallback); E2E Simple settings checks every item. `simple-settings-dark.png` regenerated.
   - Verified: `npm run check` (130/130), `xvfb-run ... npx playwright test` 12/12.
 
+- Step 3 (built-in provider not a dead end):
+  - `builtInProviderAvailable` in `electron/billing/config.ts` (false with the placeholder URL or key unless `AVALET_BILLING_URL` or `AVALET_BILLING=mock`); `AccessState.builtInAvailable`, `SettingsSnapshot.builtInProviderAvailable`.
+  - BillingService: no call at all when unavailable; in own-key mode no call at startup, on the timer or after refusals; `providerChanged()` refreshes when switching to Avalet; failures logged once per code per session.
+  - AppCore: an install with "avalet" selected switches to an own key; selecting "avalet" is refused when unavailable.
+  - UI: wizard shows "Avalet, no keys" disabled with "Coming soon" and preselects own key; Settings shows a "coming soon" line instead of trial buttons; Advanced hides Avalet in the provider list; the paywall banner only for Avalet mode.
+  - READMEs (EN/RU): "coming soon" wording, the access screenshot is `wizard-2-access-coming-soon-dark.png`.
+  - Tests: `electron/billing/availability.test.ts` (config rule, zero calls when unavailable, zero calls in own-key mode incl. timer, log once, AppCore switch/refusal); E2E "no billing server" (wizard, Settings, Advanced list, IPC refusal, app log has no billing failure). Mock-server trial/paywall/Pro E2E still green.
+  - Verified: `npm run check` (135/135), `xvfb-run ... npx playwright test` 13/13.
+
 ## rc.2: In progress
 
-- Step 3 (built-in provider not a dead end).
+- Step 4 (one clear problem message).
 
 ## rc.2: Next
 

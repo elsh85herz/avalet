@@ -23,6 +23,8 @@ export type AccessInput = {
   price?: { amount: number; currency: string; period: "month" };
   checkoutPending?: boolean;
   syncError?: string | null;
+  /** A billing server is configured in this build; default true. */
+  builtInAvailable?: boolean;
 };
 
 /**
@@ -55,10 +57,12 @@ export function deriveAccess(input: AccessInput): AccessState {
     trialBudget: TRIAL_BUDGET,
     checkoutPending: Boolean(input.checkoutPending),
     syncError: input.syncFailing ? (input.syncError ?? "error") : null,
+    builtInAvailable: input.builtInAvailable ?? true,
   };
 
   if (mode === "own") return { ...base, status: input.ownKeyReady ? "ok" : "no-key" };
 
+  if (!base.builtInAvailable) return { ...base, tier: "none", status: "not-activated" };
   if (!token) return { ...base, tier: "none", status: input.tokenRejected ? "invalid" : "not-activated" };
   const tier = token.plan;
   if (input.now >= token.exp) return { ...base, tier, status: "offline-expired" };

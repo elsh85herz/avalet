@@ -201,13 +201,19 @@ export class AppCore {
       deps.recognizeText,
     );
     const billing = deps.billing;
+    // A build without a billing server cannot use the built-in provider; an
+    // install that had it selected (rc.1) goes back to an own key instead of a dead end.
+    if (billing && !billing.builtInAvailable && getSelectedProviderId() === "avalet") {
+      const withKey = getAllProviderSettings().find((p) => p.providerId !== "avalet" && hasApiKey(p.providerId));
+      setSelectedProviderId(withKey?.providerId ?? "anthropic");
+    }
     configureMetering({
       ledger: deps.ledger,
       tierOf: (providerId) => billing?.tierOf(providerId) ?? { tier: "own", trial: false },
       currentMeetingId: () => this.meetingForUsage(),
     });
     configureAvaletProvider(
-      billing && deps.avaletProxyUrl
+      billing && billing.builtInAvailable && deps.avaletProxyUrl
         ? { proxyBaseUrl: () => deps.avaletProxyUrl!, token: () => billing.proxyToken() }
         : null,
     );
@@ -274,6 +280,7 @@ export class AppCore {
       platform: process.platform,
       fakeCapture: Boolean(this.deps.fakeCapture),
       exportDir: this.exportDir(),
+      builtInProviderAvailable: Boolean(this.deps.billing?.builtInAvailable),
     };
   }
 
@@ -536,9 +543,11 @@ export class AppCore {
     h["avalet:session-ask-screen"] = async () => this.liveSession.askAboutScreen();
     h["avalet:session-process-now"] = async () => this.liveSession.processNow();
 
-    h["avalet:settings-select-provider"] = (providerId) => {
-      setSelectedProviderId(requireString(providerId, "providerId"));
-      this.deps.billing?.emit();
+    h["avalet:settings-select-provider"] = (rawId) => {
+      const providerId = requireString(rawId, "providerId");
+      if (providerId === "avalet" && !this.deps.billing?.builtInAvailable) throw new Error("the built-in provider is not available in this build");
+      setSelectedProviderId(providerId);
+      this.deps.billing?.providerChanged();
     };
     h["avalet:settings-update-provider"] = (providerId, patch) => {
       const p = (patch ?? {}) as { model?: unknown; baseUrl?: unknown; backgroundModel?: unknown };

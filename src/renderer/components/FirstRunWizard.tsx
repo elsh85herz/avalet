@@ -44,6 +44,12 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
     heading?.focus();
   }, [step]);
 
+  // No billing server in this build: "own key" is the only working choice, so it is preselected.
+  const builtIn = access?.builtInAvailable ?? false;
+  useEffect(() => {
+    if (access && !access.builtInAvailable && choice === null) setChoice("own");
+  }, [access?.builtInAvailable]);
+
   async function toggleLanguage() {
     const next = uiLanguage === "ru" ? "en" : "ru";
     patch({ uiLanguage: next });
@@ -51,6 +57,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   }
 
   async function chooseAvalet() {
+    if (!builtIn) return;
     setChoice("avalet");
     await bridge.settings.selectProvider("avalet");
     if (!access?.activated) await bridge.billing.activateTrial();
@@ -109,10 +116,19 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
             aria-checked={choice === "avalet"}
             className={`choice ${choice === "avalet" ? "active" : ""}`}
             data-testid="choice-avalet"
+            disabled={!builtIn}
+            aria-disabled={!builtIn}
             onClick={() => void chooseAvalet()}
           >
-            <strong>{w.avaletChoice}</strong>
-            <span>{w.avaletChoiceDesc.replace("{n}", compactTokens(access?.trialBudget ?? 500_000, uiLanguage)).replace("{price}", price)}</span>
+            <strong>
+              {w.avaletChoice}
+              {builtIn ? null : <span className="badge">{t.access.comingSoon}</span>}
+            </strong>
+            <span>
+              {builtIn
+                ? w.avaletChoiceDesc.replace("{n}", compactTokens(access?.trialBudget ?? 500_000, uiLanguage)).replace("{price}", price)
+                : w.avaletComingSoonDesc}
+            </span>
           </button>
           <button
             type="button"
