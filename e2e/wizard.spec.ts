@@ -39,9 +39,11 @@ test("first-run wizard: permissions, trial, model download, context and try it",
 
     await page.getByTestId("wizard-next").click();
     await expect(page.getByTestId("wizard")).toHaveAttribute("data-step", "4");
-    await page.locator("#meeting-context").fill("Аналитик проекта лимитов по картам");
+    await page.locator("#meeting-context").fill("Аналитик проекта отчётности в CRM");
     await page.getByTestId("try-it").click();
-    await expect(page.getByTestId("sample")).toContainText("лимит", { timeout: 20_000 });
+    // The made-up conversation is shown, so the suggestion reads as an example about it.
+    await expect(page.getByTestId("sample")).toContainText("выгружать отчёт");
+    await expect(page.getByTestId("sample")).toContainText("Excel", { timeout: 20_000 });
     await expect(page.getByTestId("mic-level")).toBeVisible();
     await shot(page, "wizard-4-context-try-it-dark");
     await setTheme(page, "light");

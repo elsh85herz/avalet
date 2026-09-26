@@ -171,6 +171,7 @@ export type UiStrings = {
     micLevelNone: string;
     micUnavailable: string;
     sampleTitle: string;
+    sampleConversation: string;
     sampleLoading: string;
     sampleFallback: string;
     secondsLeft: string;
@@ -181,6 +182,8 @@ export type UiStrings = {
     resume: string;
     end: string;
     statusIdle: string;
+    statusNotReady: string;
+    statusWaiting: string;
     statusListening: string;
     statusPaused: string;
     contextToggle: string;
@@ -205,6 +208,27 @@ export type UiStrings = {
     tryAgain: string;
     speechBroken: string;
     reconnect: string;
+    modelPartial: string;
+    modelError: string;
+    modelDownloading: string;
+    modelDownloadingWait: string;
+    dontWait: string;
+    screenBlocked: string;
+    needKey: string;
+    keyUnchecked: string;
+    keyFailed: string;
+    check: string;
+    readiness: {
+      label: string;
+      model: string;
+      key: string;
+      avalet: string;
+      mic: string;
+      screen: string;
+      ok: string;
+      missing: string;
+      pending: string;
+    };
     meetingSection: string;
     filesSection: string;
     saveTo: string;
@@ -510,13 +534,14 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       contextTitle: "What is your next meeting about?",
       roleLabel: "What is this project or your role?",
       optional: "(optional)",
-      rolePlaceholder: "For example: analyst on a card limits project in a bank's mobile app",
+      rolePlaceholder: "For example: analyst on a reporting project in a bank's CRM",
       tryIt: "Try it",
       tryTitle: "A 20-second check",
       micLevel: "Microphone level: say a few words",
       micLevelNone: "No sound yet. Check that the right microphone is selected.",
       micUnavailable: "The microphone is not available. You can allow it in System Settings and try again.",
       sampleTitle: "What a suggestion looks like for a sample conversation",
+      sampleConversation: "A made-up conversation (in Russian, like the answers)",
       sampleLoading: "Asking the model",
       sampleFallback: "Here is an example of what it would say:",
       secondsLeft: "{n} s",
@@ -527,6 +552,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       resume: "Resume",
       end: "End meeting",
       statusIdle: "Ready. Press Start when the call begins.",
+      statusNotReady: "Not everything is ready yet, see below.",
+      statusWaiting: "Waiting for the speech model to finish downloading.",
       statusListening: "Listening",
       statusPaused: "Paused. The meeting stays open until you end it.",
       contextToggle: "Context and agenda",
@@ -551,6 +578,27 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       tryAgain: "Try again",
       speechBroken: "Speech recognition is not keeping up right now.",
       reconnect: "Reconnect",
+      modelPartial: "The speech model is only partly downloaded, so nothing can be transcribed yet.",
+      modelError: "The speech model could not be downloaded, so nothing can be transcribed yet.",
+      modelDownloading: "The speech model is downloading: {percent}%. Start works when it is ready.",
+      modelDownloadingWait: "The speech model is downloading: {percent}%. The meeting starts by itself when it is ready.",
+      dontWait: "Do not start",
+      screenBlocked: "Avalet cannot hear the other side: Screen Recording is not allowed.",
+      needKey: "Suggestions need a language model: add your provider key.",
+      keyUnchecked: "Key is not checked yet.",
+      keyFailed: "The key did not pass the check, so there will be no suggestions.",
+      check: "Check",
+      readiness: {
+        label: "Ready for a meeting",
+        model: "Speech model",
+        key: "Key",
+        avalet: "Avalet access",
+        mic: "Microphone",
+        screen: "Screen recording",
+        ok: "ready",
+        missing: "missing",
+        pending: "not yet",
+      },
       meetingSection: "Meeting",
       filesSection: "Files",
       saveTo: "Protocols and transcripts are saved to this folder:",
@@ -865,13 +913,14 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       contextTitle: "О чём ваша следующая встреча?",
       roleLabel: "Что это за проект или какая у вас роль?",
       optional: "(необязательно)",
-      rolePlaceholder: "Например: аналитик проекта лимитов по картам в мобильном приложении банка",
+      rolePlaceholder: "Например: аналитик проекта отчётности в CRM банка",
       tryIt: "Попробовать",
       tryTitle: "Проверка за 20 секунд",
       micLevel: "Уровень микрофона: скажите пару слов",
       micLevelNone: "Звука пока нет. Проверьте, что выбран нужный микрофон.",
       micUnavailable: "Микрофон недоступен. Разрешите его в Системных настройках и попробуйте снова.",
       sampleTitle: "Как выглядит подсказка на примере разговора",
+      sampleConversation: "Придуманный разговор для примера",
       sampleLoading: "Спрашиваем модель",
       sampleFallback: "Вот пример того, что она подскажет:",
       secondsLeft: "{n} с",
@@ -882,6 +931,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       resume: "Продолжить",
       end: "Завершить встречу",
       statusIdle: "Всё готово. Нажмите Старт, когда начнётся звонок.",
+      statusNotReady: "Пока не всё готово, см. ниже.",
+      statusWaiting: "Жду, пока скачается модель распознавания речи.",
       statusListening: "Слушаю",
       statusPaused: "Пауза. Встреча остаётся открытой, пока вы её не завершите.",
       contextToggle: "Контекст и повестка",
@@ -906,6 +957,27 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       tryAgain: "Попробовать снова",
       speechBroken: "Распознавание речи сейчас не успевает.",
       reconnect: "Переподключить",
+      modelPartial: "Модель распознавания речи скачана не до конца, поэтому расшифровки пока не будет.",
+      modelError: "Модель распознавания речи не скачалась, поэтому расшифровки пока не будет.",
+      modelDownloading: "Модель распознавания речи скачивается: {percent}%. Старт заработает, когда она будет готова.",
+      modelDownloadingWait: "Модель распознавания речи скачивается: {percent}%. Встреча начнётся сама, когда модель будет готова.",
+      dontWait: "Не начинать",
+      screenBlocked: "Avalet не слышит собеседника: не разрешена запись экрана.",
+      needKey: "Для подсказок нужна языковая модель: добавьте ключ провайдера.",
+      keyUnchecked: "Ключ ещё не проверен.",
+      keyFailed: "Ключ не прошёл проверку, поэтому подсказок не будет.",
+      check: "Проверить",
+      readiness: {
+        label: "Готовность к встрече",
+        model: "Модель речи",
+        key: "Ключ",
+        avalet: "Доступ Avalet",
+        mic: "Микрофон",
+        screen: "Запись экрана",
+        ok: "готово",
+        missing: "нет",
+        pending: "ещё нет",
+      },
       meetingSection: "Встреча",
       filesSection: "Файлы",
       saveTo: "Протоколы и расшифровки сохраняются в эту папку:",

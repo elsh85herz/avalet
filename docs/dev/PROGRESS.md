@@ -118,9 +118,18 @@ Resume rule: read `CLOUD_TASK_2.md` (current task, 0.2.0-rc.2) and `CLOUD_TASK.m
   - Tests: `electron/billing/availability.test.ts` (config rule, zero calls when unavailable, zero calls in own-key mode incl. timer, log once, AppCore switch/refusal); E2E "no billing server" (wizard, Settings, Advanced list, IPC refusal, app log has no billing failure). Mock-server trial/paywall/Pro E2E still green.
   - Verified: `npm run check` (135/135), `xvfb-run ... npx playwright test` 13/13.
 
+- Step 4 (one clear problem message):
+  - `src/renderer/lib/problems.ts`: ordered problems, texts, readiness; `test/problems.test.ts` (order, model states, unchecked key, own key can never produce limit/budget text in RU/EN, Avalet used-up only when exhausted).
+  - Key check state per provider (`keyCheck`), in `AccessState.keyCheck`; set by the key test and any successful call, reset on a new key.
+  - Simple home: readiness line, one problem with one button (Download / Continue / Retry / Open System Settings / Check / Set up access / Reconnect / Do not start), status "Not everything is ready yet" while a problem is shown.
+  - Start never opens the mic without a ready model; during a download it waits and starts by itself (also Step 5 item).
+  - Wizard sample conversation (report export) shown above the sample; shared in `electron/shared/selftest.ts`; mock model answers it.
+  - E2E: model missing (before and after Start, Download in place, Start waits then listens), unchecked key with Check. Screenshots: `simple-key-unchecked-dark`, `simple-home-ready-dark`, `simple-start-waits-for-model-dark`; `simple-settings-model-downloading-dark` removed.
+  - Verified: `npm run check` (142/142), `xvfb-run ... npx playwright test` 14/14.
+
 ## rc.2: In progress
 
-- Step 4 (one clear problem message).
+- Step 5 (robustness: download resume, log hygiene).
 
 ## rc.2: Next
 

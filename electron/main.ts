@@ -255,6 +255,7 @@ function createBilling(): { billing: BillingService; proxyUrl: string } {
         : new HttpBillingProvider(config.baseUrl, identity),
     selectedProviderId: getSelectedProviderId,
     ownKeyReady: () => AppCore.ownKeyReady(getSelectedProviderId()),
+    ownKeyCheck: () => AppCore.ownKeyCheck(getSelectedProviderId()),
     onChange: (state) => emit("avalet:event:access-changed", state),
     openExternal,
     available: config.builtInProviderAvailable,

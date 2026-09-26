@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
 import type { Meeting } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
@@ -9,6 +9,9 @@ import { ContextFields } from "./ContextFields.js";
 import { MeetingView } from "./MeetingView.js";
 import { MEETING_MODES, type MeetingMode } from "../lib/types.js";
 import { IconChevron } from "../icons.js";
+import { useSpeechModels } from "./SpeechModels.js";
+import { problemText, readinessOf, topProblem, type Problem, type ProblemInput, type Readiness } from "../lib/problems.js";
+import type { PermissionStatus } from "../lib/types.js";
 
 type Props = {
   uiLanguage: UiLanguage;
@@ -30,42 +33,105 @@ export function SimpleHome({ uiLanguage, meeting, openSettings }: Props) {
   const { settings, patch } = useAppSettings();
   const access = useAccess();
   const [contextOpen, setContextOpen] = useState(!meeting);
+  const models = useSpeechModels();
+  const [permissions, setPermissions] = useState<{ mic: PermissionStatus; screen: PermissionStatus } | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [keyMessage, setKeyMessage] = useState<string | null>(null);
+
+  // Permissions can change in System Settings at any time: look again on focus and every few seconds.
+  useEffect(() => {
+    const look = () => void bridge.permissions.check().then(setPermissions);
+    look();
+    const timer = setInterval(look, 5_000);
+    window.addEventListener("focus", look);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", look);
+    };
+  }, []);
 
   const listening = session.state === "listening";
-  const status = listening ? s.statusListening : session.state === "paused" ? s.statusPaused : s.statusIdle;
 
   async function changeMode(mode: MeetingMode) {
     patch({ meetingMode: mode });
     await bridge.settings.setMeetingMode(mode);
   }
 
-  // One problem at a time, most blocking first.
-  let problem: { text: string; action: string; run: () => void } | null = null;
+  // One problem at a time, most blocking first (lib/problems.ts), and a
+  // one-line summary of what is ready.
   const p = session.problem;
-  if (p?.kind === "model-missing") {
-    problem = {
-      text: t.models.missingForStart,
-      action: t.models.missingAction,
-      run: () => {
-        void bridge.speech.download(p.model);
-        openSettings("speech");
-      },
-    };
-  } else if (p?.kind === "mic-blocked") {
-    problem = { text: s.micBlocked, action: s.openSystemSettings, run: () => void bridge.permissions.openSettings("mic") };
-  } else if (p?.kind === "other") {
-    problem = { text: p.message, action: s.tryAgain, run: () => void session.start() };
-  } else if (session.transcriptionError) {
-    problem = { text: s.speechBroken, action: s.reconnect, run: () => void session.reconnect("both") };
-  } else if (access && ((access.mode === "own" && access.status === "no-key") || (access.mode === "avalet" && !access.canUseAvalet))) {
-    const byStatus: Partial<Record<typeof access.status, string>> = {
-      exhausted: t.access.exhausted,
-      expired: t.access.expired,
-      "offline-expired": t.access.offlineExpired,
-      invalid: t.access.invalid,
-    };
-    problem = { text: byStatus[access.status] ?? s.needAccess, action: s.setUpAccess, run: () => openSettings("access") };
+  const problemInput: ProblemInput = {
+    model: models?.find((r) => r.name === settings.speechModel) ?? null,
+    waitingForModel: session.waitingForModel,
+    permissions,
+    micBlockedOnStart: p?.kind === "mic-blocked",
+    access,
+    startError: p?.kind === "other" ? p.message : null,
+    transcriptionError: Boolean(session.transcriptionError),
+    audioDegraded: session.audioDegraded,
+    capturing: session.capturing,
+  };
+  const top = topProblem(problemInput);
+  const status = listening
+    ? s.statusListening
+    : session.state === "paused"
+      ? s.statusPaused
+      : session.waitingForModel
+        ? s.statusWaiting
+        : top
+          ? s.statusNotReady
+          : s.statusIdle;
+  const shown = top ? problemText(top, t) : null;
+  const problemMessage = top?.kind === "key-failed" && keyMessage ? `${shown!.text} ${keyMessage}` : shown?.text;
+
+  async function checkKey() {
+    setChecking(true);
+    try {
+      const result = await bridge.billing.testProvider(settings.selectedProviderId);
+      setKeyMessage(result.ok ? null : result.message);
+    } finally {
+      setChecking(false);
+    }
   }
+
+  function runProblem(problem: Problem) {
+    switch (problem.kind) {
+      case "model-missing":
+      case "model-partial":
+      case "model-error":
+        void bridge.speech.download(problem.model);
+        return;
+      case "model-downloading":
+        session.cancelWaiting();
+        return;
+      case "mic-blocked":
+        void bridge.permissions.openSettings("mic");
+        return;
+      case "screen-blocked":
+        void bridge.permissions.openSettings("screen");
+        return;
+      case "key-unchecked":
+        void checkKey();
+        return;
+      case "start-failed":
+        void session.start();
+        return;
+      case "transcription":
+        void session.reconnect("both");
+        return;
+      case "audio-degraded":
+        void session.reconnect(problem.channel);
+        return;
+      default:
+        openSettings("access");
+    }
+  }
+
+  const readiness = readinessOf(problemInput);
+  const r = s.readiness;
+  const itemName = (item: Readiness["item"]) =>
+    item === "model" ? r.model : item === "access" ? (access?.mode === "avalet" ? r.avalet : r.key) : item === "mic" ? r.mic : r.screen;
+  const mark = { ok: "✓", missing: "!", pending: "…" } as const;
 
   return (
     <div className="simple-home" data-testid="simple-home">
@@ -92,12 +158,28 @@ export function SimpleHome({ uiLanguage, meeting, openSettings }: Props) {
             </button>
           ) : null}
         </div>
-        {problem ? (
-          <div className="problem" role="alert" data-testid="problem">
-            <span>{problem.text}</span>
-            <button type="button" onClick={problem.run}>
-              {problem.action}
-            </button>
+        <ul className="readiness" aria-label={r.label} data-testid="readiness">
+          {readiness.map((item) => (
+            <li
+              key={item.item}
+              className={`ready-pill ${item.state}`}
+              data-item={item.item}
+              data-state={item.state}
+              title={`${itemName(item.item)}: ${r[item.state]}`}
+              aria-label={`${itemName(item.item)}: ${r[item.state]}`}
+            >
+              <span aria-hidden="true">{mark[item.state]}</span> {itemName(item.item)}
+            </li>
+          ))}
+        </ul>
+        {top && shown ? (
+          <div className="problem" role="alert" data-testid="problem" data-kind={top.kind}>
+            <span>{problemMessage}</span>
+            {shown.action ? (
+              <button type="button" onClick={() => runProblem(top)} disabled={checking} data-testid="problem-action">
+                {top.kind === "key-unchecked" && checking ? `${t.wizard.testing}…` : shown.action}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </section>

@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["test", "src/renderer/capture/segmenter.ts", "src/renderer/capture/resample.ts"]
+  "include": ["test", "src/renderer/capture/segmenter.ts", "src/renderer/capture/resample.ts", "src/renderer/lib/problems.ts", "src/renderer/lib/i18n.ts"]
 }

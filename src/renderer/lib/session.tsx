@@ -21,6 +21,10 @@ type SessionApi = {
   transcriptionError: string | null;
   /** Capture is running (mic streams held by this window). */
   capturing: boolean;
+  /** Start was pressed while the speech model is still downloading: the meeting starts when it is ready. */
+  waitingForModel: boolean;
+  /** Forget a Start that waits for the model. */
+  cancelWaiting: () => void;
   start: () => Promise<boolean>;
   pause: () => Promise<void>;
   /** Stops capture and closes the meeting record. */
@@ -42,6 +46,8 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
   const [audioDegraded, setAudioDegraded] = useState({ me: false, other: false });
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
+  const [waitingForModel, setWaitingForModel] = useState(false);
+  const waitingRef = useRef(false);
   // Mirrored in a ref for the reconnect listener, which subscribes once.
   const handleRef = useRef<AudioCaptureHandle | null>(null);
   // A second click while the first Start is still asking for permissions must not open a second capture.
@@ -56,6 +62,17 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
       bridge.events.onTranscriptionRecovered(() => setTranscriptionError(null)),
       // The meeting can also be ended from the overlay: release the microphone here too.
       bridge.events.onMeetingEnded(() => releaseCapture()),
+      // A Start that waits for the first download goes ahead once the model is ready.
+      bridge.events.onModelsChanged((rows) => {
+        if (!waitingRef.current) return;
+        void bridge.settings.getAll().then((settings) => {
+          const row = rows.find((r) => r.name === settings.speechModel);
+          if (!row || row.state === "downloading" || !waitingRef.current) return;
+          setWaiting(false);
+          if (row.state === "ready") void start();
+          else setProblem({ kind: "model-missing", model: row.name });
+        });
+      }),
     ];
     return () => unsubscribers.forEach((u) => u());
   }, []);
@@ -69,9 +86,24 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
     return startingRef.current;
   }
 
+  function setWaiting(next: boolean): void {
+    waitingRef.current = next;
+    setWaitingForModel(next);
+  }
+
   async function startOnce(): Promise<boolean> {
     setProblem(null);
     try {
+      // Never open the microphone for a meeting that cannot be transcribed:
+      // a missing model is explained, a downloading one is waited for.
+      const [settings, rows] = await Promise.all([bridge.settings.getAll(), bridge.speech.models()]);
+      const row = rows.find((r) => r.name === settings.speechModel);
+      if (row && row.state !== "ready" && !handleRef.current) {
+        if (row.state === "downloading") setWaiting(true);
+        else setProblem({ kind: "model-missing", model: row.name });
+        return false;
+      }
+      setWaiting(false);
       if (!handleRef.current && !fakeCapture) {
         handleRef.current = await startAudioCapture({
           onDegradedChange: (next) => {
@@ -124,6 +156,8 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
     audioDegraded,
     transcriptionError,
     capturing,
+    waitingForModel,
+    cancelWaiting: () => setWaiting(false),
     start,
     pause,
     end,

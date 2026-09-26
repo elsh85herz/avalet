@@ -68,20 +68,65 @@ test("simple meeting: start, transcript, suggestion, pause, summary, export", as
   }
 });
 
-test("start without a speech model explains it and offers the download", async () => {
+test("start without a speech model explains it, never listens silently, waits for the download", async () => {
   const mock = await startMock();
   const run = await launch(mock);
   const page = run.main;
   try {
     await page.setViewportSize({ width: 480, height: 820 });
     await skipWizardWithTrial(page);
+    // Said before Start: the one problem and the readiness line.
+    await expect(page.getByTestId("problem")).toHaveAttribute("data-kind", "model-missing");
+    await expect(page.getByTestId("readiness").locator('[data-item="model"]')).toHaveAttribute("data-state", "missing");
     await page.getByTestId("start").click();
-    await expect(page.getByTestId("problem")).toContainText(/модель|model/i);
+    await expect(page.getByTestId("problem")).toHaveAttribute("data-kind", "model-missing");
+    expect(await page.evaluate(() => window.avalet!.session.getState())).toBe("idle");
+    await expect(page.getByTestId("session-status")).toContainText(/Пока не всё готово|Not everything is ready/);
     await shot(page, "simple-error-model-missing-dark");
-    await page.getByTestId("problem").getByRole("button").click();
-    await expect(page.getByTestId("simple-settings")).toBeVisible();
-    await expect(page.locator('[data-model="small"]')).toHaveClass(/downloading|ready/);
-    await shot(page, "simple-settings-model-downloading-dark");
+
+    // One button: Download, right here.
+    await page.getByTestId("problem-action").click();
+    await expect(page.getByTestId("problem")).toHaveAttribute("data-kind", "model-downloading");
+    await expect(page.getByTestId("problem")).toContainText("%");
+    // Start during the first download: explained, and the meeting starts by itself when the model is ready.
+    await page.getByTestId("start").click();
+    await expect(page.getByTestId("problem")).toContainText(/начнётся сама|starts by itself/);
+    await shot(page, "simple-start-waits-for-model-dark");
+    await expect(page.getByTestId("session-status")).toContainText(/Слушаю|Listening/, { timeout: 40_000 });
+    await expect(page.getByTestId("problem")).toHaveCount(0);
+    await expect(page.getByTestId("readiness").locator('[data-item="model"]')).toHaveAttribute("data-state", "ok");
+  } finally {
+    await run.close();
+    await mock.close();
+  }
+});
+
+test("own key saved but not checked: says so with a Check button, never a limit message", async () => {
+  const mock = await startMock();
+  const run = await launch(mock, { readyModel: true });
+  const page = run.main;
+  try {
+    await page.setViewportSize({ width: 480, height: 820 });
+    await page.getByTestId("wizard").waitFor();
+    await page.evaluate(async (base) => {
+      const api = window.avalet!;
+      await api.settings.selectProvider("openai");
+      await api.settings.updateProvider("openai", { baseUrl: base });
+      await api.settings.setApiKey("openai", "sk-test-not-a-real-key");
+      await api.settings.setOnboardingDone(true);
+    }, `${mock.url}/openai/v1`);
+    await page.reload();
+    await page.getByTestId("simple-home").waitFor();
+    const problem = page.getByTestId("problem");
+    await expect(problem).toHaveAttribute("data-kind", "key-unchecked");
+    await expect(problem).toContainText(/Ключ ещё не проверен|Key is not checked yet/);
+    await expect(problem).not.toContainText(/лимит|limit|закончил|used up|токен/i);
+    await expect(page.getByTestId("readiness").locator('[data-item="access"]')).toHaveAttribute("data-state", "pending");
+    await shot(page, "simple-key-unchecked-dark");
+    await page.getByTestId("problem-action").click();
+    await expect(problem).toHaveCount(0, { timeout: 20_000 });
+    await expect(page.getByTestId("readiness").locator('[data-item="access"]')).toHaveAttribute("data-state", "ok");
+    await shot(page, "simple-home-ready-dark");
   } finally {
     await run.close();
     await mock.close();

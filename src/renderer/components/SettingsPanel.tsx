@@ -145,8 +145,13 @@ export function SettingsPanel({ onRunSetup }: { onRunSetup: () => void }) {
   const degradedChannel = degraded.me && degraded.other ? "both" : degraded.other ? "other" : "me";
   const degradedMessage = degradedChannel === "both" ? t.audioLostBoth : degradedChannel === "other" ? t.audioLostOther : t.audioLostMe;
   const problem = session.problem;
-  const errorText =
-    problem?.kind === "model-missing" ? strings.models.missingForStart : problem ? problem.message : localError;
+  const errorText = session.waitingForModel
+    ? strings.simple.statusWaiting
+    : problem?.kind === "model-missing"
+      ? strings.models.missingForStart
+      : problem
+        ? problem.message
+        : localError;
 
   return (
     <main className="settings" data-testid="advanced-settings">

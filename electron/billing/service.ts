@@ -27,6 +27,8 @@ export type BillingServiceDeps = {
   makeProvider: (identity: () => InstallIdentity) => BillingProvider;
   selectedProviderId: () => string;
   ownKeyReady: () => boolean;
+  /** Result of the last check of the selected own key; absent in tests that do not care. */
+  ownKeyCheck?: () => "unchecked" | "ok" | "failed" | null;
   onChange: (state: AccessState) => void;
   /** Opens a URL in the system browser. */
   openExternal: (url: string) => void;
@@ -130,6 +132,7 @@ export class BillingService {
       now: this.now(),
       selectedProviderId: this.deps.selectedProviderId(),
       ownKeyReady: this.deps.ownKeyReady(),
+      ownKeyCheck: this.deps.ownKeyCheck?.() ?? null,
       token: this.payload(),
       tokenRejected: Boolean(stored.tokenRejected),
       lastSyncAt: stored.lastSyncAt ?? null,

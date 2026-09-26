@@ -70,6 +70,10 @@ export function fakeCompletion(system, user) {
     ].join("\n");
   }
   const hasScreen = Array.isArray(user);
+  // The wizard's "Try it" sample (electron/shared/selftest.ts).
+  if (userText(user).includes("выгружать отчёт")) {
+    return "Уточните: регион берётся из профиля менеджера или выбирается при выгрузке? И в каком формате нужен отчёт: Excel или PDF?";
+  }
   return hasScreen
     ? "На экране форма лимитов: не хватает поля для порога подтверждения."
     : "Уточните: лимит дневной или разовый, и кто подтверждает изменение выше порога?";

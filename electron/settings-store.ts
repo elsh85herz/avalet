@@ -24,6 +24,8 @@ export type ProviderSettings = {
   baseUrl?: string;
   /** API key, encrypted at rest via OS keychain (safeStorage), base64-wrapped for JSON storage. */
   apiKeyEncrypted?: string;
+  /** Result of the last key test or real call with this key; absent = not checked since it was saved. */
+  keyCheck?: "ok" | "failed";
 };
 
 export type SettingsShape = {
@@ -361,12 +363,22 @@ export function setApiKey(providerId: string, apiKey: string): void {
   const current = getProviderSettings(providerId);
   const trimmed = apiKey.trim();
   if (!trimmed) {
-    writeProvider(providerId, { ...current, apiKeyEncrypted: undefined });
+    writeProvider(providerId, { ...current, apiKeyEncrypted: undefined, keyCheck: undefined });
     return;
   }
   if (!box().isEncryptionAvailable()) throw new Error("secure storage is not available on this system");
   const encrypted = box().encryptString(trimmed).toString("base64");
-  writeProvider(providerId, { ...current, apiKeyEncrypted: encrypted });
+  // A new key has not been checked yet, whatever the old one's result was.
+  writeProvider(providerId, { ...current, apiKeyEncrypted: encrypted, keyCheck: undefined });
+}
+
+/** "unchecked" until a key test or a real call with the saved key succeeded or failed. */
+export function getKeyCheck(providerId: string): "unchecked" | "ok" | "failed" {
+  return getProviderSettings(providerId).keyCheck ?? "unchecked";
+}
+
+export function setKeyCheck(providerId: string, result: "ok" | "failed"): void {
+  writeProvider(providerId, { ...getProviderSettings(providerId), keyCheck: result });
 }
 
 /** Whether a key has been saved, without decrypting/returning it. */

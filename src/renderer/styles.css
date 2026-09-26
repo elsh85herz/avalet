@@ -1981,3 +1981,38 @@ a {
 .choice strong .badge {
   margin-left: 8px;
 }
+
+/* Simple home: one line of what is ready for a meeting. */
+.readiness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ready-pill {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.ready-pill.ok {
+  color: var(--ok-text);
+}
+
+.ready-pill.missing {
+  color: var(--danger-text);
+  border-color: var(--danger-text);
+}
+
+.sample-conversation {
+  margin: 0 0 8px;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.45;
+}

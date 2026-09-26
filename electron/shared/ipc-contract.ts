@@ -248,6 +248,11 @@ export type AccessState = {
   syncError: string | null;
   /** This build has a billing server: the Avalet options can be offered (otherwise "Coming soon"). */
   builtInAvailable: boolean;
+  /**
+   * Own-key mode with a saved key: whether it was checked (key test or a real
+   * call). null in Avalet mode, without a key, or for a local server without one.
+   */
+  keyCheck: "unchecked" | "ok" | "failed" | null;
 };
 
 export type CancelInfoPublic = { active: boolean; renews: boolean; periodEnd: number | null; manageUrl: string | null };

@@ -12,6 +12,7 @@ import { configureAvaletProvider, resolveCredentials } from "./provider-credenti
 import type { AccessProblem } from "./providers/errors.js";
 import { accessProblemOf } from "./providers/errors.js";
 import { humanProviderError, noKeyMessage } from "./human-errors.js";
+import { SELFTEST_TRANSCRIPT } from "./shared/selftest.js";
 import { PROVIDER_PRESETS } from "./providers/types.js";
 import { appendHistoryBlock, clearHistory, getHistory } from "./history-store.js";
 import {
@@ -36,6 +37,7 @@ import {
   getAllProviderSettings,
   getAutoDetectEnabled,
   getExportDir,
+  getKeyCheck,
   getLiveTrackerEnabled,
   getMainPinned,
   getMeetingMode,
@@ -56,6 +58,7 @@ import {
   setAgendaText,
   setApiKey,
   setAutoDetectEnabled,
+  setKeyCheck,
   setLiveTrackerEnabled,
   setMeetingMode,
   setOnboardingDone,
@@ -133,12 +136,7 @@ export type AppCoreDeps = {
   fakeCapture?: boolean;
 };
 
-/** A short made-up exchange for the wizard's "Try it", in the transcript's own format. */
-export const SELFTEST_TRANSCRIPT = [
-  "[Собеседник]: Нам нужно, чтобы клиент мог сам менять лимит по карте прямо в приложении.",
-  "[Я]: Какой лимит: дневной или на одну операцию?",
-  "[Собеседник]: Дневной. И если больше трёхсот тысяч, наверное, нужно какое-то подтверждение.",
-].join("\n");
+export { SELFTEST_TRANSCRIPT } from "./shared/selftest.js";
 
 function requireString(value: unknown, name: string): string {
   if (typeof value !== "string") throw new Error(`${name} must be a string`);
@@ -220,6 +218,11 @@ export class AppCore {
     deps.ledger.onChange(() => emit("avalet:event:usage-changed", this.usageSummary()));
     deps.ledger.onRecord((entry, weighted) => {
       if (entry.tier === "avalet") billing?.noteAvaletUsage(weighted);
+      // A real answer with an own key proves the key works: no "not checked yet" after that.
+      else if (entry.providerId !== "avalet" && hasApiKey(entry.providerId) && getKeyCheck(entry.providerId) !== "ok") {
+        setKeyCheck(entry.providerId, "ok");
+        billing?.emit();
+      }
     });
     this.handlers = this.buildHandlers();
   }
@@ -245,6 +248,12 @@ export class AppCore {
   static ownKeyReady(providerId: string): boolean {
     if (providerId === "avalet") return false;
     return providerId === "custom" || hasApiKey(providerId);
+  }
+
+  /** The selected own key's check state; null when there is no key to check (Avalet, a local server without one). */
+  static ownKeyCheck(providerId: string): "unchecked" | "ok" | "failed" | null {
+    if (providerId === "avalet" || !hasApiKey(providerId)) return null;
+    return getKeyCheck(providerId);
   }
 
   usageSummary() {
@@ -383,6 +392,11 @@ export class AppCore {
       if (providerId !== "avalet" && providerId !== "custom" && !hasApiKey(providerId)) {
         return { ok: false, message: noKeyMessage(language) };
       }
+      const remember = (result: "ok" | "failed") => {
+        if (providerId === "avalet" || !hasApiKey(providerId)) return;
+        setKeyCheck(providerId, result);
+        this.deps.billing?.emit();
+      };
       try {
         const { apiKey, baseUrl } = resolveCredentials(providerId);
         await meteredGenerate("suggestion", {
@@ -397,8 +411,10 @@ export class AppCore {
           signal: AbortSignal.timeout(20_000),
           onDelta: () => {},
         });
+        remember("ok");
         return { ok: true };
       } catch (error) {
+        remember("failed");
         return { ok: false, message: humanProviderError(error, language) };
       }
     };

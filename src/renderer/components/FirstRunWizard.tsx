@@ -10,13 +10,10 @@ import { RECOMMENDED_MODEL, SpeechModels, useSpeechModels } from "./SpeechModels
 import { ContextFields } from "./ContextFields.js";
 import { MicLevel } from "./MicLevel.js";
 import { compactTokens } from "./UsageCounter.js";
+import { SELFTEST_EXAMPLE_SUGGESTION, SELFTEST_LINES } from "../../../electron/shared/selftest.js";
 
 const STEPS = 4;
 const SELFTEST_SECONDS = 20;
-// Shown when the sample call cannot run (no access yet, offline). It is an
-// example of model output, which is always Russian like real answers.
-const EXAMPLE_SUGGESTION = // i18n-ignore
-  "Уточните порог: подтверждение нужно от 300 тысяч включительно или свыше? И кто подтверждает: клиент в приложении или звонок из колл-центра?"; // i18n-ignore
 
 type Access = "avalet" | "own" | null;
 
@@ -196,6 +193,14 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
           {trying ? <MicLevel uiLanguage={uiLanguage} seconds={SELFTEST_SECONDS} onDone={() => setMicDone(true)} /> : null}
           {sample ? (
             <div className="sample" data-testid="sample">
+              <h3>{w.sampleConversation}</h3>
+              <ul className="sample-conversation">
+                {SELFTEST_LINES.map((line) => (
+                  <li key={line.text}>
+                    <strong>{line.speaker === "me" ? t.meeting.me : t.meeting.other}:</strong> {line.text}
+                  </li>
+                ))}
+              </ul>
               <h3>{w.sampleTitle}</h3>
               {sample.state === "loading" ? <p className="hint">{w.sampleLoading}…</p> : null}
               {sample.state === "ok" ? <p className="block-text">{sample.text}</p> : null}
@@ -203,7 +208,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                 <>
                   <p className="hint">{sample.message}</p>
                   <p className="hint">{w.sampleFallback}</p>
-                  <p className="block-text">{EXAMPLE_SUGGESTION}</p>
+                  <p className="block-text">{SELFTEST_EXAMPLE_SUGGESTION}</p>
                 </>
               ) : null}
             </div>

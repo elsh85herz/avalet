@@ -25,6 +25,8 @@ export type AccessInput = {
   syncError?: string | null;
   /** A billing server is configured in this build; default true. */
   builtInAvailable?: boolean;
+  /** Own-key mode: result of the last check of the saved key (null when there is no key to check). */
+  ownKeyCheck?: "unchecked" | "ok" | "failed" | null;
 };
 
 /**
@@ -58,9 +60,12 @@ export function deriveAccess(input: AccessInput): AccessState {
     checkoutPending: Boolean(input.checkoutPending),
     syncError: input.syncFailing ? (input.syncError ?? "error") : null,
     builtInAvailable: input.builtInAvailable ?? true,
+    keyCheck: null,
   };
 
-  if (mode === "own") return { ...base, status: input.ownKeyReady ? "ok" : "no-key" };
+  if (mode === "own") {
+    return { ...base, status: input.ownKeyReady ? "ok" : "no-key", keyCheck: input.ownKeyReady ? (input.ownKeyCheck ?? null) : null };
+  }
 
   if (!base.builtInAvailable) return { ...base, tier: "none", status: "not-activated" };
   if (!token) return { ...base, tier: "none", status: input.tokenRejected ? "invalid" : "not-activated" };
