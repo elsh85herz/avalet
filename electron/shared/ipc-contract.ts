@@ -155,10 +155,45 @@ export type SpeechModelRow = {
 
 export type StartResult = { ok: true } | { ok: false; reason: "model-missing"; model: SpeechModelName };
 
+// --- token metering ---
+
+export type UsagePurpose = "suggestion" | "tracker" | "summary" | "screenshot";
+export type UsageTotals = {
+  inputTokens: number;
+  outputTokens: number;
+  /** Tokens times the model weight (flash x1, premium x4): what an Avalet budget counts. */
+  weighted: number;
+  calls: number;
+  /** Calls whose provider sent no usage: their numbers are a local estimate. */
+  estimatedCalls: number;
+};
+export type UsageSummary = {
+  /** "2026-09" */
+  month: string;
+  own: UsageTotals;
+  avalet: UsageTotals;
+  byPurpose: Record<UsagePurpose, UsageTotals>;
+  /** Weighted tokens spent on the trial so far (local count). */
+  trialWeighted: number;
+  /** The running (or last) meeting, when there is one. */
+  meeting: UsageTotals | null;
+  recent: Array<{
+    at: number;
+    model: string;
+    purpose: UsagePurpose;
+    inputTokens: number;
+    outputTokens: number;
+    weighted: number;
+    estimated: boolean;
+    tier: "own" | "avalet";
+  }>;
+};
+
 // --- invoke channels: channel -> [arguments, result] ---
 
 export type InvokeMap = {
   "avalet:settings-get-all": [[], SettingsSnapshot];
+  "avalet:usage-get": [[], UsageSummary];
   "avalet:speech-set": [[patch: { language?: SpeechLanguage; model?: SpeechModelName }], void];
   "avalet:speech-models": [[], SpeechModelRow[]];
   "avalet:speech-model-download": [[model: SpeechModelName], void];
@@ -260,6 +295,7 @@ export type EventMap = {
   "avalet:event:summary-done": SummaryDoneEvent;
   "avalet:event:summary-error": { id: string; message: string };
   "avalet:event:tracker-update": TrackerState;
+  "avalet:event:usage-changed": UsageSummary;
 };
 
 export type EventChannel = keyof EventMap;
@@ -285,6 +321,9 @@ export type AvaletApi = {
     setAutoDetect: (enabled: boolean) => Promise<void>;
     setTheme: (theme: Theme) => Promise<void>;
     setUiLanguage: (language: UiLanguage) => Promise<void>;
+  };
+  usage: {
+    get: () => Promise<UsageSummary>;
   };
   speech: {
     models: () => Promise<SpeechModelRow[]>;
@@ -388,6 +427,7 @@ export type AvaletApi = {
     onSummaryDone: Listener<"avalet:event:summary-done">;
     onTrackerUpdate: Listener<"avalet:event:tracker-update">;
     onSummaryError: Listener<"avalet:event:summary-error">;
+    onUsageChanged: Listener<"avalet:event:usage-changed">;
   };
 };
 
@@ -398,6 +438,7 @@ export type AvaletApi = {
  */
 const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:settings-get-all": true,
+  "avalet:usage-get": true,
   "avalet:speech-set": true,
   "avalet:speech-models": true,
   "avalet:speech-model-download": true,

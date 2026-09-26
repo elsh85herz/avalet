@@ -77,6 +77,11 @@ export const RETIRED_MODELS: Record<string, string> = {
   "deepseek-chat": "deepseek-flash",
 };
 
+/** Token counts of one call. `estimated` = the provider sent no usage and the numbers are a local guess. */
+export type TokenUsage = { inputTokens: number; outputTokens: number; estimated: boolean };
+
+export type GenerateResult = { text: string; usage: TokenUsage };
+
 export type GenerateRequest = {
   providerId: string;
   apiKey: string;
@@ -90,8 +95,10 @@ export type GenerateRequest = {
   extraBody?: Record<string, unknown>;
   /** Output cap; defaults to a short live block. Summaries pass more. */
   maxTokens?: number;
+  /** false = one JSON response instead of a stream (background calls, key test). Default true. */
+  stream?: boolean;
   signal: AbortSignal;
   onDelta: (delta: string) => void;
 };
 
-export type ProviderAdapter = (request: GenerateRequest) => Promise<string>;
+export type ProviderAdapter = (request: GenerateRequest) => Promise<GenerateResult>;

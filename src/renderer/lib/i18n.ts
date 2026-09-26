@@ -61,6 +61,8 @@ export type UiStrings = {
     keySaved: string;
     model: string;
     baseUrl: string;
+    backgroundModel: string;
+    backgroundModelHint: string;
     apiKey: string;
     apiKeySavedPlaceholder: string;
     save: string;
@@ -117,6 +119,18 @@ export type UiStrings = {
     liveTrackerOff: string;
     perm: Record<PermState, string>;
     sessionStates: Record<SessionKey, string>;
+  };
+  usage: {
+    title: string;
+    thisMonth: string;
+    tokens: string;
+    inOut: string;
+    thisMeeting: string;
+    estimatedNote: string;
+    byPurpose: string;
+    purposes: Record<"suggestion" | "tracker" | "summary" | "screenshot", string>;
+    overlayTitle: string;
+    none: string;
   };
   models: {
     title: string;
@@ -255,6 +269,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       keySaved: "key saved",
       model: "Model",
       baseUrl: "Base URL",
+      backgroundModel: "Model for background work",
+      backgroundModelHint: "Used by the live checklist, which runs often and needs no top model. Empty: the main model.",
       apiKey: "API key",
       apiKeySavedPlaceholder: "•••• saved, enter to replace",
       save: "Save",
@@ -322,6 +338,18 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         unknown: "Unknown",
       },
       sessionStates: { idle: "Idle", listening: "Listening", paused: "Paused" },
+    },
+    usage: {
+      title: "Usage",
+      thisMonth: "This month",
+      tokens: "tokens",
+      inOut: "in {in}, out {out}",
+      thisMeeting: "This meeting",
+      estimatedNote: "{n} calls had no count from the provider and are estimated.",
+      byPurpose: "By purpose",
+      purposes: { suggestion: "Suggestions", tracker: "Checklist", summary: "Summaries", screenshot: "Screenshots" },
+      overlayTitle: "Tokens used in this meeting",
+      none: "No model calls yet this month.",
     },
     models: {
       title: "Speech model",
@@ -468,6 +496,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       keySaved: "ключ сохранён",
       model: "Модель",
       baseUrl: "Base URL",
+      backgroundModel: "Модель для фоновой работы",
+      backgroundModelHint: "Её использует живой чек-лист: он запускается часто, и топовая модель ему не нужна. Пусто: основная модель.",
       apiKey: "API-ключ",
       apiKeySavedPlaceholder: "•••• сохранён, введите новый для замены",
       save: "Сохранить",
@@ -535,6 +565,18 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         unknown: "Неизвестно",
       },
       sessionStates: { idle: "Ожидание", listening: "Слушаю", paused: "Пауза" },
+    },
+    usage: {
+      title: "Расход",
+      thisMonth: "В этом месяце",
+      tokens: "токенов",
+      inOut: "вход {in}, выход {out}",
+      thisMeeting: "Эта встреча",
+      estimatedNote: "По {n} запросам провайдер не прислал счётчик, их расход оценён.",
+      byPurpose: "По назначению",
+      purposes: { suggestion: "Подсказки", tracker: "Чек-лист", summary: "Итоги", screenshot: "Скриншоты" },
+      overlayTitle: "Токенов потрачено на этой встрече",
+      none: "В этом месяце запросов к модели ещё не было.",
     },
     models: {
       title: "Модель распознавания речи",

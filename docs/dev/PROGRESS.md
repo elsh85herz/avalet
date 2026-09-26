@@ -27,13 +27,21 @@ Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work con
   - Fixtures: `test/fixtures/fake-sidecar.mjs`, `test/fixtures/fake-model-download.mjs` (sparse files).
   - Verified: `npm run typecheck` ok, `npm test` 81/81, `npm run build` ok, app runs under Xvfb (screenshot mode).
 
+- Step 2 (token metering):
+  - Real `usage` from Anthropic and OpenAI-compatible, streaming and non-streaming, image requests; labeled estimate only as fallback.
+  - `electron/metering/`: weight table, ledger (month / trial / meeting / recent), `meteredGenerate` wraps every call with its purpose.
+  - Background (checklist) model per provider, Advanced setting; briefing capped at 3,500 chars in live calls.
+  - Counters: Settings (month, Advanced breakdown), overlay (this meeting, muted).
+  - Budget exhaustion: typed `ProviderHttpError` with server code (`budget_exhausted`); the UI reaction (buy more / own key) is wired in Step 3 with the access state.
+  - Verified: typecheck ok, `npm test` 97/97.
+
 ## In progress
 
-- Step 2: token metering.
+- Step 3: billing.
 
 ## Next
 
-- Steps 3..7 in order.
+- Steps 4..7 in order.
 
 ## Blockers
 

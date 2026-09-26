@@ -18,3 +18,13 @@ One line each: decision, reason.
 - Main window now `sandbox: true`, navigation and `window.open` locked (http(s) links go to the system browser). Reason: IPC/renderer hardening; preload only needs `electron`.
 - Tests are collected by `scripts/run-tests.mjs` instead of a hand-written list in package.json. Reason: new test files cannot be forgotten.
 - Background (checklist) model defaults: Claude `claude-haiku-4-5`, OpenAI `gpt-4.1-mini`, DeepSeek `deepseek-flash`, custom = main model. Reason: cheaper class for background work (Step 2 requirement, needed by the tracker now).
+- `generate()` now returns `{text, usage}`; OpenAI-compatible streams send `stream_options.include_usage`; a server that rejects it (400 mentioning stream_options) is retried once without it. Reason: real counts from every provider that supports them, no breakage on old local servers.
+- Local token estimate (3 chars per token, 1000 per image) is used only when a response has no usage, and every such call is flagged `estimated`. Reason: CLOUD_TASK "no local estimation except as a labeled fallback".
+- A stream aborted after some output is recorded as an estimate; a call that failed before any output is not recorded. Reason: aborted streams are still billed by providers.
+- Weight table in `electron/metering/model-weights.ts`: flash-class x1 (haiku, mini, nano, flash, lite, avalet-fast), premium x4 (opus, sonnet, gpt-4.1, gpt-5, pro, large, avalet-premium); unknown models x4. Reason: never under-count a budget.
+- Ledger keeps running totals (per month and tier, trial, last 50 meetings) plus the last 100 calls, in its own store file `avalet-usage.json`. Reason: bounded size, no transcript text stored.
+- Purposes are exactly suggestion / tracker / summary / screenshot; the key test and the wizard self-test count as suggestion. Reason: keep the four from the task.
+- The checklist uses a non-streaming call. Reason: nothing is shown while it runs; exercises the non-streaming usage path.
+- Briefing in live calls is cut at 3,500 characters with a note to the model; summary keeps the full text. Reason: CLOUD_TASK step 2.
+- Overlay shows only this meeting's token count as small muted text; Settings shows this month and, in Advanced, a per-purpose breakdown. Reason: "never nag".
+- Anthropic adapter accepts an optional base URL. Reason: lets the mock server and tests stand in for it; not exposed in the UI.

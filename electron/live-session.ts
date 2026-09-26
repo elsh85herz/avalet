@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { generate } from "./providers/index.js";
+import { meteredGenerate } from "./metering/metered.js";
 import { PROVIDER_PRESETS } from "./providers/types.js";
 import { isImageRejection } from "./providers/errors.js";
 import { logLine } from "./log.js";
@@ -128,7 +128,20 @@ export type LiveSessionEvents = {
 // not self-healing.
 const TRANSCRIPTION_ERROR_THRESHOLD = 2;
 
-function buildSystemPrompt(options: { includeScreenshot?: boolean; includeScreenText?: boolean } = {}): string {
+/**
+ * Live calls carry at most this much of the briefing: it is sent with every
+ * suggestion, so a pasted 30-page spec would multiply the cost of the whole
+ * call. The summary still gets the full text (meeting-summary.ts).
+ */
+export const LIVE_BRIEFING_CHAR_CAP = 3_500;
+
+export function capBriefing(text: string, cap = LIVE_BRIEFING_CHAR_CAP): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= cap) return trimmed;
+  return `${trimmed.slice(0, cap).trimEnd()}\n[Briefing shortened for the live call; the full text is used for the meeting summary.]`;
+}
+
+export function buildSystemPrompt(options: { includeScreenshot?: boolean; includeScreenText?: boolean } = {}): string {
   let prompt = BASE_SYSTEM_PROMPT;
   const modeInstruction = MODE_INSTRUCTIONS[getMeetingMode()];
   if (modeInstruction) prompt = `${prompt} ${modeInstruction}`;
@@ -138,7 +151,7 @@ function buildSystemPrompt(options: { includeScreenshot?: boolean; includeScreen
   } else if (options.includeScreenText) {
     prompt = `${prompt} ${SCREEN_TEXT_ONLY_INSTRUCTION}`;
   }
-  const context = getSessionContext().trim();
+  const context = capBriefing(getSessionContext());
   if (!context) return prompt;
   return `${prompt}\n\nBriefing the analyst prepared before this call (ticket/spec/agenda) — use it to ground your suggestions:\n${context}`;
 }
@@ -389,7 +402,7 @@ export class LiveSession {
     let collected = "";
     const run = async (image: string | undefined, text: string | undefined) => {
       collected = "";
-      await generate({
+      await meteredGenerate(image ? "screenshot" : "suggestion", {
         providerId,
         apiKey,
         baseUrl: settings.baseUrl,

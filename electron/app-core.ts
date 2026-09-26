@@ -5,6 +5,8 @@ import { isMeetingMode, MODE_SUMMARY } from "./modes.js";
 import type { PythonRuntime } from "./python-runtime.js";
 import type { SpeechModelManager } from "./model-manager.js";
 import { isSpeechModel } from "./speech-models.js";
+import type { UsageLedger } from "./metering/ledger.js";
+import { configureMetering, type MeteringContext } from "./metering/metered.js";
 import { appendHistoryBlock, clearHistory, getHistory } from "./history-store.js";
 import {
   appendSegment,
@@ -98,6 +100,9 @@ export type HandlerTable = { [C in InvokeChannel]?: Handler<C> };
 export type AppCoreDeps = {
   sidecar: PythonRuntime;
   models: SpeechModelManager;
+  ledger: UsageLedger;
+  /** Which budget a provider's calls count against; everything is "own" until billing says otherwise. */
+  tierOf?: MeteringContext["tierOf"];
   emit: Emit;
   /** Grabs a screenshot for the model; null when not possible. */
   captureScreen: () => Promise<{ image: string; ocrImage: string } | null>;
@@ -167,7 +172,25 @@ export class AppCore {
       deps.captureScreen,
       deps.recognizeText,
     );
+    configureMetering({
+      ledger: deps.ledger,
+      tierOf: deps.tierOf ?? (() => ({ tier: "own", trial: false })),
+      currentMeetingId: () => this.meetingForUsage(),
+    });
+    deps.ledger.onChange(() => emit("avalet:event:usage-changed", this.usageSummary()));
     this.handlers = this.buildHandlers();
+  }
+
+  /** The running meeting, or the last one it ran for (a summary after End still belongs to it). */
+  private lastMeetingId: string | null = null;
+  private meetingForUsage(): string | null {
+    const current = getCurrentMeeting();
+    if (current) this.lastMeetingId = current.id;
+    return current?.id ?? this.lastMeetingId;
+  }
+
+  usageSummary() {
+    return this.deps.ledger.summary(Date.now(), this.meetingForUsage());
   }
 
   async settingsSnapshot(): Promise<SettingsSnapshot> {
@@ -250,6 +273,7 @@ export class AppCore {
     const h: HandlerTable = {};
 
     h["avalet:settings-get-all"] = () => this.settingsSnapshot();
+    h["avalet:usage-get"] = () => this.usageSummary();
 
     h["avalet:speech-set"] = (patch) => {
       const p = (patch ?? {}) as { language?: unknown; model?: unknown };

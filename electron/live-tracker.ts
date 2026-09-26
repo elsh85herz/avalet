@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { generate as realGenerate } from "./providers/index.js";
+import { meteredGenerate } from "./metering/metered.js";
+import type { GenerateRequest, GenerateResult } from "./providers/types.js";
 import { logLine } from "./log.js";
 import { getApiKey, getBackgroundModel, getProviderSettings, getSelectedProviderId } from "./settings-store.js";
 import { getCurrentMeeting, setAgenda, setLiveAnalysis, transcriptToText, type Meeting } from "./meetings-store.js";
@@ -21,7 +22,7 @@ export type LiveTrackerOptions = {
   onUpdate: (state: TrackerState) => void;
   /** The "live checklist" setting; when off, nothing is sent to the model automatically. */
   isEnabled: () => boolean;
-  generate?: typeof realGenerate;
+  generate?: (request: GenerateRequest) => Promise<GenerateResult>;
   now?: () => number;
 };
 
@@ -39,13 +40,13 @@ export class LiveTracker {
   private running = false;
   private readonly onUpdate: (state: TrackerState) => void;
   private readonly isEnabled: () => boolean;
-  private readonly generate: typeof realGenerate;
+  private readonly generate: (request: GenerateRequest) => Promise<GenerateResult>;
   private readonly now: () => number;
 
   constructor(options: LiveTrackerOptions) {
     this.onUpdate = options.onUpdate;
     this.isEnabled = options.isEnabled;
-    this.generate = options.generate ?? realGenerate;
+    this.generate = options.generate ?? ((request) => meteredGenerate("tracker", request));
     this.now = options.now ?? Date.now;
   }
 
@@ -128,6 +129,8 @@ export class LiveTracker {
         systemPrompt: buildTrackerSystemPrompt(),
         transcript: buildTrackerUserPrompt(statuses, actions, excerpt),
         maxTokens: 700,
+        // Nothing is shown while it runs: one JSON answer instead of a stream.
+        stream: false,
         signal: new AbortController().signal,
         onDelta: (delta) => {
           collected += delta;

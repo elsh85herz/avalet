@@ -34,7 +34,7 @@ function harness(agenda: string[] = ["Какой лимит", "Кто подтв
       const done = Promise.resolve().then(() => request.onDelta(reply.text));
       pending = done;
       await done;
-      return reply.text;
+      return { text: reply.text, usage: { inputTokens: 100, outputTokens: 10, estimated: false } };
     },
   });
   const meeting = startMeeting({ mode: "requirements", context: "", agenda });

@@ -1,4 +1,4 @@
-import { generate } from "./providers/index.js";
+import { meteredGenerate } from "./metering/metered.js";
 import { getApiKey, getProviderSettings, getSelectedProviderId } from "./settings-store.js";
 import { readMeeting, setSummary, transcriptToText } from "./meetings-store.js";
 import { VisibleTextStream, splitSummary, type MeetingAnalysis } from "./summary-format.js";
@@ -37,7 +37,7 @@ export async function summarizeMeeting(
   const agenda = meeting.agenda ?? [];
   const stream = new VisibleTextStream();
   let collected = "";
-  await generate({
+  await meteredGenerate("summary", {
     providerId,
     apiKey,
     baseUrl: settings.baseUrl,

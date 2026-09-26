@@ -24,6 +24,7 @@ test("DeepSeek requests turn reasoning off so the first word is not delayed", as
   await generate({ ...base, providerId: "deepseek", baseUrl: "https://api.deepseek.com" });
   assert.deepEqual(sent.body().thinking, { type: "disabled" });
   assert.equal(sent.body().stream, true);
+  assert.deepEqual(sent.body().stream_options, { include_usage: true });
 });
 
 test("other OpenAI-compatible providers get no extra fields", async () => {

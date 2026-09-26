@@ -7,6 +7,7 @@ import { startAudioCapture, type AudioCaptureHandle } from "../capture/audio-cap
 import { IconHelp, IconMoon, IconSun } from "../icons.js";
 import { parseAgendaText } from "../lib/agenda.js";
 import { SpeechModels } from "./SpeechModels.js";
+import { UsageCounter } from "./UsageCounter.js";
 
 export function SettingsPanel() {
   const bridge = getBridge();
@@ -260,7 +261,7 @@ export function SettingsPanel() {
     await bridge.settings.selectProvider(providerId);
   }
 
-  async function handleFieldChange(field: "model" | "baseUrl", value: string) {
+  async function handleFieldChange(field: "model" | "baseUrl" | "backgroundModel", value: string) {
     setProviders((prev) =>
       prev.map((p) => (p.providerId === selectedProviderId ? { ...p, [field]: value } : p)),
     );
@@ -391,6 +392,16 @@ export function SettingsPanel() {
               onChange={(e) => void handleFieldChange("model", e.target.value)}
             />
           </label>
+          <label>
+            {t.backgroundModel}
+            <input
+              type="text"
+              value={current.backgroundModel}
+              placeholder={current.model}
+              onChange={(e) => void handleFieldChange("backgroundModel", e.target.value)}
+            />
+            <span className="hint">{t.backgroundModelHint}</span>
+          </label>
           {preset.baseUrlPlaceholder ? (
             <label>
               {t.baseUrl}
@@ -420,6 +431,11 @@ export function SettingsPanel() {
           ) : null}
         </section>
       ) : null}
+
+      <section className="usage">
+        <h3 className="section-title">{strings.usage.title}</h3>
+        <UsageCounter uiLanguage={uiLanguage} detailed />
+      </section>
 
       <section className="permissions">
         <div className="perm-row">

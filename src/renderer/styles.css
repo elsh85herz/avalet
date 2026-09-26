@@ -1457,3 +1457,37 @@ select {
 a {
   color: var(--accent-text);
 }
+
+/* --- usage counters --- */
+
+.usage-line {
+  margin: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-breakdown {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.usage-breakdown > div {
+  display: contents;
+}
+
+.usage-breakdown dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-chip {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

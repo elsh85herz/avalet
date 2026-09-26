@@ -4,6 +4,7 @@ import type { MeetingMode, SessionState, TrackerState } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { QUICK_ACTIONS } from "../live/quick-actions.js";
 import { IconCamera, IconCopy, IconNotes, IconPause, IconPlay } from "../icons.js";
+import { compactTokens, useUsage } from "./UsageCounter.js";
 
 const EMPTY_TRACKER: TrackerState = { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled: false };
 
@@ -42,6 +43,8 @@ export function OverlayApp() {
   const textById = useRef<Record<string, string>>({});
 
   const t = UI_STRINGS[uiLanguage];
+  const usage = useUsage();
+  const meetingTokens = usage?.meeting ? usage.meeting.inputTokens + usage.meeting.outputTokens : 0;
 
   useEffect(() => {
     void bridge.settings.getAll().then((all) => {
@@ -311,6 +314,11 @@ export function OverlayApp() {
       >
         {copied ? "✓" : <IconCopy />}
       </button>
+      {meetingTokens > 0 ? (
+        <span className="usage-chip" title={t.usage.overlayTitle}>
+          {compactTokens(meetingTokens, uiLanguage)}
+        </span>
+      ) : null}
     </div>
   );
 

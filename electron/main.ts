@@ -17,6 +17,7 @@ import { initMain as initAudioLoopbackMain } from "electron-audio-loopback";
 import { AppCore, type Emit, type Handler, type WindowChannel } from "./app-core.js";
 import { PythonRuntime, defaultSidecarCommand, type SidecarCommand } from "./python-runtime.js";
 import { SpeechModelManager } from "./model-manager.js";
+import { UsageLedger } from "./metering/ledger.js";
 import { hfHubCacheDir } from "./speech-models.js";
 import { captureScreenshot } from "./ipc/screenshot.js";
 import { isOcrAvailable, recognizeScreenText, warmUpOcr } from "./ocr/index.js";
@@ -231,6 +232,7 @@ function createCore(): AppCore {
   return new AppCore({
     sidecar,
     models,
+    ledger: new UsageLedger(electronStore("avalet-usage")),
     emit,
     captureScreen: async () => {
       if (e2e) return null;

@@ -38,6 +38,9 @@ const api: AvaletApi = {
     setTheme: (theme) => invoke("avalet:theme-set", theme),
     setUiLanguage: (language) => invoke("avalet:ui-language-set", language),
   },
+  usage: {
+    get: () => invoke("avalet:usage-get"),
+  },
   speech: {
     models: () => invoke("avalet:speech-models"),
     download: (model) => invoke("avalet:speech-model-download", model),
@@ -134,6 +137,7 @@ const api: AvaletApi = {
     onSummaryDone: on("avalet:event:summary-done"),
     onTrackerUpdate: on("avalet:event:tracker-update"),
     onSummaryError: on("avalet:event:summary-error"),
+    onUsageChanged: on("avalet:event:usage-changed"),
   },
 };
 
