@@ -50,8 +50,14 @@ export function createOverlayWindow(preloadPath: string, entryUrl: string): Brow
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
       preload: preloadPath,
     },
+  });
+  // The overlay never navigates or opens windows; anything that tries is dropped.
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", (event, url) => {
+    if (url !== win.webContents.getURL()) event.preventDefault();
   });
 
   win.setAlwaysOnTop(true, "screen-saver");

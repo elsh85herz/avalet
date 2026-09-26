@@ -44,6 +44,8 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
   const [capturing, setCapturing] = useState(false);
   // Mirrored in a ref for the reconnect listener, which subscribes once.
   const handleRef = useRef<AudioCaptureHandle | null>(null);
+  // A second click while the first Start is still asking for permissions must not open a second capture.
+  const startingRef = useRef<Promise<boolean> | null>(null);
 
   useEffect(() => {
     void bridge.session.getState().then(setState);
@@ -56,7 +58,16 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
     return () => unsubscribers.forEach((u) => u());
   }, []);
 
-  async function start(): Promise<boolean> {
+  function start(): Promise<boolean> {
+    if (!startingRef.current) {
+      startingRef.current = startOnce().finally(() => {
+        startingRef.current = null;
+      });
+    }
+    return startingRef.current;
+  }
+
+  async function startOnce(): Promise<boolean> {
     setProblem(null);
     try {
       if (!handleRef.current && !fakeCapture) {

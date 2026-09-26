@@ -192,6 +192,8 @@ export class LiveSession {
     private readonly captureScreen: () => Promise<{ image: string; ocrImage: string } | null>,
     /** Text on a screenshot (PNG base64), or null when no recognizer is available. */
     private readonly recognizeText: (pngBase64: string) => Promise<string | null>,
+    /** Clock for the trigger pacing; tests pass a fake one. */
+    private readonly now: () => number = Date.now,
   ) {}
 
   getState(): "idle" | "listening" | "paused" {
@@ -288,7 +290,7 @@ export class LiveSession {
   private maybeTrigger(otherJustPaused: boolean): void {
     if (this.paused || this.generating || !getAutoDetectEnabled()) return;
     if (this.transcript.length === 0 || this.segmentSinceTrigger.length === 0) return;
-    const now = Date.now();
+    const now = this.now();
     const sinceLast = now - this.lastGenerateAt;
     if (sinceLast < MIN_INTERVAL_MS) return;
 
@@ -376,7 +378,7 @@ export class LiveSession {
     options: { includeScreenshot?: boolean } = {},
   ): Promise<void> {
     this.generating = true;
-    this.lastGenerateAt = Date.now();
+    this.lastGenerateAt = this.now();
     this.segmentSinceTrigger = "";
     this.abortController = new AbortController();
 

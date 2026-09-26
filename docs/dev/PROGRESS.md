@@ -54,13 +54,21 @@ Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work con
   - Fixed: after "End meeting" the windows kept showing "paused" (state was not re-broadcast).
   - Verified: `npm run check` ok (typecheck, i18n 313 strings each, 106 unit tests); `xvfb-run npx playwright test` 10/10; 29 screenshots in `docs/screens/`.
 
+- Step 5 (tests and evidence):
+  - New unit tests: meetings store, live-session triggers (pause, cues, 6 s gap, 45 s fallback, auto off, paused, transcription errors, paywall), human errors.
+  - `electron/integration.test.ts`: full meeting through AppCore handlers with the fake sidecar process and the mock model over HTTP (start refused without model, download, start, transcript, suggestion, usage, stop, summary with JSON tail, export .md/.txt, reset); trial through the proxy then 402 and paywall.
+  - E2E (Playwright, 11 tests): wizard, Simple meeting, model missing, paywall and mock payment, own key test, Advanced switch, AVALET_ADVANCED, Advanced checklist and history, contrast in both themes, keyboard-only wizard, no layout jump. 34 screenshots in `docs/screens/`.
+  - Coverage (`npm run test:coverage`): ledger/metered/access/weights/usage 100%, model manager 98%, meetings store 92%, billing service 91%, live session 85%, app-core 72%.
+  - Self-review: see REPORT; fixed overlay hardening and double Start.
+  - Verified: `npm run check` (129 unit/integration tests), `xvfb-run -a npx playwright test` 11/11.
+
 ## In progress
 
-- Step 5: integration test with fake sidecar and mock provider, coverage, remaining unit tests, self-review.
+- Step 6: CI and macOS release workflow, builder config check, MAC_VERIFY, version bump, CHANGELOG.
 
 ## Next
 
-- Steps 6..7.
+- Step 7, final report.
 
 ## Blockers
 
