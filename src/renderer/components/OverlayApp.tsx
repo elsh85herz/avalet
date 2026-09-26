@@ -5,7 +5,7 @@ import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { QUICK_ACTIONS } from "../live/quick-actions.js";
 import { IconCamera, IconCopy, IconNotes, IconPause, IconPlay } from "../icons.js";
 
-const EMPTY_TRACKER: TrackerState = { meetingId: null, agendaStatus: [], actions: [], busy: false };
+const EMPTY_TRACKER: TrackerState = { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled: false };
 
 type Block = {
   id: string;
@@ -438,15 +438,17 @@ export function OverlayApp() {
               {t.tracker.add}
             </button>
           </div>
-          <button
-            type="button"
-            className="tracker-refresh"
-            title={t.tracker.refreshTitle}
-            disabled={tracker.busy}
-            onClick={() => void bridge.tracker.refresh().then(setTracker)}
-          >
-            {t.tracker.refresh}
-          </button>
+          {tracker.enabled ? (
+            <button
+              type="button"
+              className="tracker-refresh"
+              title={t.tracker.refreshTitle}
+              disabled={tracker.busy}
+              onClick={() => void bridge.tracker.refresh().then(setTracker)}
+            >
+              {t.tracker.refresh}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>

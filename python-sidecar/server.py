@@ -7,7 +7,14 @@ Commands:
 - ``ping``: readiness check.
 - ``transcribe_chunk``: local speech-to-text on one ~5s audio chunk via
   faster-whisper. Params: ``audio_base64`` (16-bit PCM mono WAV, base64),
-  optional ``language`` (ISO code, omit for auto-detect).
+  optional ``language`` (ISO code, omit for auto-detect). Only uses a model
+  that is already on disk; a missing one is the error
+  ``model_not_downloaded:<name>``, never a silent download.
+
+One-shot mode: ``server.py --download <small|medium|turbo>`` downloads one
+model into the Hugging Face cache and exits (0 on success). The app runs it
+as a separate process so Cancel can stop it, and watches the cache folder for
+progress (electron/speech-models.ts).
 
 All responses: ``{"id": <request-id>, "ok": true, "result": ...}`` or
 ``{"id": <request-id>, "ok": false, "error": <string>}``.
@@ -51,20 +58,54 @@ _model = None
 _model_name = None
 
 
+def _local_model_path(name: str) -> str | None:
+    """Path of an already downloaded model, or None. Never touches the network."""
+    from faster_whisper.utils import download_model  # type: ignore
+
+    try:
+        return download_model(name, local_files_only=True)
+    except Exception:  # noqa: BLE001 - not cached yet
+        return None
+
+
 def _get_model(name: str | None = None):
-    """Loads the requested model once and keeps it; switching drops the old one."""
+    """Loads the requested model once and keeps it; switching drops the old one.
+
+    Downloading is a separate, visible step (``--download``), so a model that
+    is not on disk is an error here, not a silent multi-minute wait.
+    """
     global _model, _model_name
     wanted = name if name in ALLOWED_MODELS else DEFAULT_MODEL
     if _model is None or _model_name != wanted:
         from faster_whisper import WhisperModel  # type: ignore
 
+        path = _local_model_path(wanted)
+        if path is None:
+            raise RuntimeError(f"model_not_downloaded:{wanted}")
         _model = None
         _log(f"loading whisper model={wanted!r} compute={COMPUTE_TYPE!r}")
         started = time.time()
-        _model = WhisperModel(wanted, device="auto", compute_type=COMPUTE_TYPE)
+        _model = WhisperModel(path, device="auto", compute_type=COMPUTE_TYPE)
         _model_name = wanted
         _log(f"model loaded in {time.time() - started:.2f}s")
     return _model
+
+
+def _download(name: str) -> int:
+    """One-shot download of a model into the Hugging Face cache; resumes partial files."""
+    if name not in ALLOWED_MODELS:
+        _log(f"unknown model: {name!r}")
+        return 2
+    from faster_whisper.utils import download_model  # type: ignore
+
+    _log(f"downloading whisper model={name!r}")
+    try:
+        download_model(name)
+    except Exception as error:  # noqa: BLE001 - reported to the app via stderr and exit code
+        _log(f"download failed: {error}")
+        return 1
+    _log(f"downloaded whisper model={name!r}")
+    return 0
 
 
 def _wav_base64_to_float_pcm(audio_base64: str) -> tuple[list[float], int]:
@@ -163,6 +204,8 @@ def _handle(message: dict) -> dict:
 
 
 def main() -> int:
+    if len(sys.argv) == 3 and sys.argv[1] == "--download":
+        return _download(sys.argv[2])
     _log("sidecar starting")
     if os.environ.get("AVALET_PRELOAD_MODEL") == "1":
         try:

@@ -1,6 +1,7 @@
-export type MeetingMode = "free" | "requirements" | "grooming" | "demo" | "review" | "interview";
+import { MEETING_MODES, type MeetingMode } from "./shared/ipc-contract.js";
 
-export const MEETING_MODES: MeetingMode[] = ["free", "requirements", "grooming", "demo", "review", "interview"];
+export { MEETING_MODES };
+export type { MeetingMode };
 
 export function isMeetingMode(value: unknown): value is MeetingMode {
   return typeof value === "string" && (MEETING_MODES as string[]).includes(value);

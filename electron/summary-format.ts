@@ -1,4 +1,5 @@
 import type { Meeting } from "./meetings-store.js";
+import type { ActionItem, ActionState, AgendaStatusItem } from "./shared/ipc-contract.js";
 
 // The summary call returns the protocol text first and, after this marker, a
 // small JSON block with the machine-readable part: which agenda questions got
@@ -6,18 +7,7 @@ import type { Meeting } from "./meetings-store.js";
 // transcript is only sent once.
 export const ANALYSIS_MARKER = "@@AVALET_JSON@@";
 
-export type AgendaStatusItem = {
-  question: string;
-  closed: boolean;
-  note: string;
-  /** Being discussed right now (live tracker only). */
-  active?: boolean;
-  /** Set by the analyst by hand: the tracker and the summary leave it alone. */
-  manual?: boolean;
-};
-/** proposed = found by the model, waiting for the analyst; a missing state means confirmed (older records). */
-export type ActionState = "proposed" | "confirmed" | "dismissed";
-export type ActionItem = { task: string; owner: string; due: string; id?: string; state?: ActionState };
+export type { ActionItem, ActionState, AgendaStatusItem };
 export type MeetingAnalysis = { agendaStatus: AgendaStatusItem[]; actions: ActionItem[] };
 
 /** One agenda question per line; list bullets and numbering are stripped. */

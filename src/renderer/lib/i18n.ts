@@ -112,8 +112,34 @@ export type UiStrings = {
     speechModel: string;
     speechModels: Record<"small" | "medium" | "turbo", string>;
     speechHint: string;
+    liveTracker: string;
+    liveTrackerOn: string;
+    liveTrackerOff: string;
     perm: Record<PermState, string>;
     sessionStates: Record<SessionKey, string>;
+  };
+  models: {
+    title: string;
+    size: string;
+    absent: string;
+    partial: string;
+    downloading: string;
+    retrying: string;
+    ready: string;
+    error: string;
+    download: string;
+    continue: string;
+    retry: string;
+    cancel: string;
+    remove: string;
+    removeConfirm: string;
+    use: string;
+    inUse: string;
+    recommended: string;
+    vpnHint: string;
+    vpnLink: string;
+    missingForStart: string;
+    missingAction: string;
   };
   modes: Record<MeetingModeKey, string>;
   modeHelp: Record<MeetingModeKey, string>;
@@ -279,12 +305,15 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       speechLanguages: { ru: "Russian", en: "English", auto: "Detect automatically" },
       speechModel: "Accuracy",
       speechModels: {
-        small: "Fast (small, 0.5 GB)",
-        medium: "More accurate (medium, 1.5 GB)",
-        turbo: "Most accurate (turbo, 1.6 GB)",
+        small: "Fast (small)",
+        medium: "More accurate (medium)",
+        turbo: "Most accurate (turbo)",
       },
       speechHint:
-        "Runs on your Mac. A larger model understands speech better but is slower, and is downloaded the first time it is used (a few minutes; a VPN may be needed). Nothing is transcribed until the download finishes. A fixed language is more reliable than detecting it on every phrase.",
+        "Runs on your Mac. A larger model understands speech better but is slower. Download the ones you want once; after that they work without internet. A fixed language is more reliable than detecting it on every phrase.",
+      liveTracker: "Live checklist (agenda marks and action points during the call)",
+      liveTrackerOn: "A small background model call every 30 to 90 seconds keeps the agenda and tasks current. Not yet checked on real meetings.",
+      liveTrackerOff: "Off: agenda marks are set by hand; the summary still fills them in after the call.",
       perm: {
         granted: "Granted",
         denied: "Denied",
@@ -293,6 +322,29 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         unknown: "Unknown",
       },
       sessionStates: { idle: "Idle", listening: "Listening", paused: "Paused" },
+    },
+    models: {
+      title: "Speech model",
+      size: "GB",
+      absent: "Not downloaded",
+      partial: "Partly downloaded",
+      downloading: "Downloading",
+      retrying: "Connection lost, trying again",
+      ready: "Ready, works offline",
+      error: "Download failed",
+      download: "Download",
+      continue: "Continue",
+      retry: "Try again",
+      cancel: "Cancel",
+      remove: "Delete",
+      removeConfirm: "Delete this model from disk? You can download it again later.",
+      use: "Use",
+      inUse: "In use",
+      recommended: "recommended",
+      vpnHint: "Slow or not downloading: turn on a VPN for the first download.",
+      vpnLink: "the VPN we use",
+      missingForStart: "The speech model is not downloaded yet, so nothing can be transcribed.",
+      missingAction: "Download the model",
     },
     modes: {
       free: "Free",
@@ -466,12 +518,15 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       speechLanguages: { ru: "Русский", en: "English", auto: "Определять автоматически" },
       speechModel: "Точность",
       speechModels: {
-        small: "Быстро (small, 0,5 ГБ)",
-        medium: "Точнее (medium, 1,5 ГБ)",
-        turbo: "Максимум (turbo, 1,6 ГБ)",
+        small: "Быстро (small)",
+        medium: "Точнее (medium)",
+        turbo: "Максимум (turbo)",
       },
       speechHint:
-        "Работает на вашем Mac. Большая модель лучше понимает речь, но медленнее, и скачивается при первом использовании (несколько минут, может понадобиться VPN). Пока загрузка не закончится, расшифровки не будет. Фиксированный язык надёжнее, чем угадывание на каждой фразе.",
+        "Работает на вашем Mac. Большая модель лучше понимает речь, но медленнее. Скачайте нужные один раз, дальше они работают без интернета. Фиксированный язык надёжнее, чем угадывание на каждой фразе.",
+      liveTracker: "Живой чек-лист (отметки повестки и задачи по ходу звонка)",
+      liveTrackerOn: "Небольшой фоновый запрос к модели раз в 30-90 секунд обновляет повестку и задачи. Пока не проверен на реальных встречах.",
+      liveTrackerOff: "Выключен: отметки повестки ставятся вручную, итог встречи всё равно заполнит их после звонка.",
       perm: {
         granted: "Разрешено",
         denied: "Запрещено",
@@ -480,6 +535,29 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         unknown: "Неизвестно",
       },
       sessionStates: { idle: "Ожидание", listening: "Слушаю", paused: "Пауза" },
+    },
+    models: {
+      title: "Модель распознавания речи",
+      size: "ГБ",
+      absent: "Не скачана",
+      partial: "Скачана частично",
+      downloading: "Скачивается",
+      retrying: "Связь прервалась, пробуем ещё раз",
+      ready: "Готова, работает без интернета",
+      error: "Не удалось скачать",
+      download: "Скачать",
+      continue: "Продолжить",
+      retry: "Повторить",
+      cancel: "Отменить",
+      remove: "Удалить",
+      removeConfirm: "Удалить эту модель с диска? Её можно будет скачать снова.",
+      use: "Выбрать",
+      inUse: "Используется",
+      recommended: "рекомендуем",
+      vpnHint: "Медленно или не скачивается: включите VPN на время первой загрузки.",
+      vpnLink: "VPN, которым пользуемся мы",
+      missingForStart: "Модель распознавания речи ещё не скачана, поэтому расшифровки не будет.",
+      missingAction: "Скачать модель",
     },
     modes: {
       free: "Свободный",

@@ -3,19 +3,15 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { app } from "electron";
+import { nativeDir } from "../platform/paths.js";
 import type { OcrEngine, OcrResult } from "./types.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HELPER_TIMEOUT_MS = 10_000;
 
 // Packaged: resources/native (see electron-builder.config.mjs extraResources).
 // Dev: <repo>/native/bin, built by scripts/build-native.sh.
 function helperPath(): string {
-  return app.isPackaged
-    ? path.join(process.resourcesPath, "native", "avalet-ocr")
-    : path.join(__dirname, "../../native/bin/avalet-ocr");
+  return path.join(nativeDir(), "avalet-ocr");
 }
 
 export const appleVisionEngine: OcrEngine = {

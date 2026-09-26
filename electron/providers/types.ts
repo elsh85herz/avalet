@@ -14,6 +14,8 @@ export type ProviderPreset = {
   /** Only used by "openai-compatible" — the URL up to (not including) "/chat/completions". */
   defaultBaseUrl?: string;
   defaultModel: string;
+  /** Cheaper model for background calls (live checklist); "" = same as the main model. */
+  defaultBackgroundModel?: string;
   /** Whether this preset's default model accepts image content (screenshots). */
   supportsVision: boolean;
   /** Extra top-level fields merged into every chat-completions request body (openai-compatible only). */
@@ -29,6 +31,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     label: "Claude (Anthropic)",
     kind: "anthropic",
     defaultModel: "claude-sonnet-5",
+    defaultBackgroundModel: "claude-haiku-4-5",
     supportsVision: true,
   },
   {
@@ -37,6 +40,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     kind: "openai-compatible",
     defaultBaseUrl: "https://api.openai.com/v1",
     defaultModel: "gpt-4.1",
+    defaultBackgroundModel: "gpt-4.1-mini",
     supportsVision: true,
   },
   {
@@ -49,6 +53,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     // images through the OpenAI-style image_url content block, up to 1024
     // tokens per image, resized to about 1300x1300.
     defaultModel: "deepseek-flash",
+    defaultBackgroundModel: "deepseek-flash",
     supportsVision: true,
     // deepseek-flash reasons before answering by default (thinking mode on,
     // effort high, per DeepSeek's Thinking Mode guide, checked 2026-09-20),

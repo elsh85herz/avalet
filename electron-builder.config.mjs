@@ -5,7 +5,8 @@ export default {
   directories: {
     output: "release",
   },
-  files: ["dist-electron/**/*", "!dist-electron/**/*.test.js", "dist/**/*", "package.json"],
+  // Test code never ships: *.test.js files and the test-only helpers.
+  files: ["dist-electron/**/*", "!dist-electron/**/*.test.js", "!dist-electron/testing/**", "dist/**/*", "package.json"],
   // .venv is bundled (must be created with `python3 -m venv --copies .venv`
   // via scripts/setup-python.sh — a symlinked venv breaks once copied here).
   extraResources: [

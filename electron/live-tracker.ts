@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { generate } from "./providers/index.js";
+import { generate as realGenerate } from "./providers/index.js";
 import { logLine } from "./log.js";
-import { getApiKey, getProviderSettings, getSelectedProviderId } from "./settings-store.js";
+import { getApiKey, getBackgroundModel, getProviderSettings, getSelectedProviderId } from "./settings-store.js";
 import { getCurrentMeeting, setAgenda, setLiveAnalysis, transcriptToText, type Meeting } from "./meetings-store.js";
-import type { ActionItem, ActionState, AgendaStatusItem } from "./summary-format.js";
+import type { ActionState, TrackerState } from "./shared/ipc-contract.js";
 import { parseAgendaText } from "./summary-format.js";
 import {
   TRACKER_EXCERPT_CHARS,
@@ -15,11 +15,14 @@ import {
   shouldRunTracker,
 } from "./live-tracker-logic.js";
 
-export type TrackerState = {
-  meetingId: string | null;
-  agendaStatus: AgendaStatusItem[];
-  actions: ActionItem[];
-  busy: boolean;
+export type { TrackerState };
+
+export type LiveTrackerOptions = {
+  onUpdate: (state: TrackerState) => void;
+  /** The "live checklist" setting; when off, nothing is sent to the model automatically. */
+  isEnabled: () => boolean;
+  generate?: typeof realGenerate;
+  now?: () => number;
 };
 
 const OVERLAP_SEGMENTS = 3;
@@ -34,32 +37,45 @@ export class LiveTracker {
   private cursor = 0;
   private lastRunAt = 0;
   private running = false;
+  private readonly onUpdate: (state: TrackerState) => void;
+  private readonly isEnabled: () => boolean;
+  private readonly generate: typeof realGenerate;
+  private readonly now: () => number;
 
-  constructor(private readonly onUpdate: (state: TrackerState) => void) {}
+  constructor(options: LiveTrackerOptions) {
+    this.onUpdate = options.onUpdate;
+    this.isEnabled = options.isEnabled;
+    this.generate = options.generate ?? realGenerate;
+    this.now = options.now ?? Date.now;
+  }
 
   getState(): TrackerState {
     const meeting = getCurrentMeeting();
-    if (!meeting || meeting.endedAt) return { meetingId: null, agendaStatus: [], actions: [], busy: false };
+    const enabled = this.isEnabled();
+    if (!meeting || meeting.endedAt) return { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled };
     return {
       meetingId: meeting.id,
       agendaStatus: reconcileAgenda(meeting.agenda ?? [], meeting.agendaStatus),
       actions: meeting.actions ?? [],
       busy: this.running,
+      enabled,
     };
   }
 
-  /** Called after every committed transcript segment. */
-  note(endsWithPause: boolean): void {
+  /** Called after every committed transcript segment; returns whether a model call was started. */
+  note(endsWithPause: boolean): boolean {
+    if (!this.isEnabled()) return false;
     const meeting = this.activeMeeting();
-    if (!meeting || this.running) return;
+    if (!meeting || this.running) return false;
     const newChars = meeting.transcript.slice(this.cursor).reduce((sum, seg) => sum + seg.text.length, 0);
-    if (!shouldRunTracker({ now: Date.now(), lastRunAt: this.lastRunAt, newChars, endsWithPause })) return;
+    if (!shouldRunTracker({ now: this.now(), lastRunAt: this.lastRunAt, newChars, endsWithPause })) return false;
     void this.run();
+    return true;
   }
 
-  /** Manual refresh (button) and the final pass on Stop: ignores the pacing rules. */
+  /** Manual refresh (button) and the final pass on Stop: ignores the pacing rules, not the setting. */
   async refresh(): Promise<void> {
-    if (this.running || !this.activeMeeting()) return;
+    if (!this.isEnabled() || this.running || !this.activeMeeting()) return;
     await this.run();
   }
 
@@ -75,7 +91,9 @@ export class LiveTracker {
     if (meeting.id !== this.meetingId) {
       this.meetingId = meeting.id;
       this.cursor = 0;
-      this.lastRunAt = 0;
+      // The pacing counts from the start of the meeting: no call in the first
+      // 30 s, and the 90 s ceiling applies to the first call too.
+      this.lastRunAt = meeting.startedAt;
     }
     return meeting;
   }
@@ -86,7 +104,7 @@ export class LiveTracker {
     const fresh = meeting.transcript.slice(this.cursor);
     if (fresh.length === 0) return;
     this.running = true;
-    this.lastRunAt = Date.now();
+    this.lastRunAt = this.now();
     this.onUpdate(this.getState());
 
     const endIndex = meeting.transcript.length;
@@ -101,11 +119,12 @@ export class LiveTracker {
     const t0 = Date.now();
     let collected = "";
     try {
-      await generate({
+      await this.generate({
         providerId,
         apiKey: getApiKey(providerId),
         baseUrl: settings.baseUrl,
-        model: settings.model,
+        // Background work: the cheaper model when one is set for this provider.
+        model: getBackgroundModel(providerId),
         systemPrompt: buildTrackerSystemPrompt(),
         transcript: buildTrackerUserPrompt(statuses, actions, excerpt),
         maxTokens: 700,

@@ -5,75 +5,37 @@ import {
   ipcMain,
   nativeImage,
   nativeTheme,
+  safeStorage,
   type DesktopCapturerSource,
 } from "electron";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import Store from "electron-store";
 import { initMain as initAudioLoopbackMain } from "electron-audio-loopback";
-import { PythonRuntime } from "./python-runtime.js";
+import { AppCore, type Emit, type Handler, type WindowChannel } from "./app-core.js";
+import { PythonRuntime, defaultSidecarCommand, type SidecarCommand } from "./python-runtime.js";
+import { SpeechModelManager } from "./model-manager.js";
+import { hfHubCacheDir } from "./speech-models.js";
 import { captureScreenshot } from "./ipc/screenshot.js";
 import { isOcrAvailable, recognizeScreenText, warmUpOcr } from "./ocr/index.js";
-import { logLine } from "./log.js";
+import { configureLog, logLine } from "./log.js";
+import { configurePaths, getPaths, sidecarDir } from "./platform/paths.js";
+import type { KeyValueStore } from "./platform/kv.js";
 import { checkMicAccess, checkScreenAccess } from "./ipc/permissions.js";
 import { listScreenSources } from "./ipc/screen-sources.js";
-import { appendHistoryBlock, clearHistory, getHistory, type HistoryBlock } from "./history-store.js";
-import { LiveSession, type LiveBlock } from "./live-session.js";
-import { LiveTracker } from "./live-tracker.js";
-import { isMeetingMode, MODE_SUMMARY } from "./modes.js";
+import { initHistoryStore } from "./history-store.js";
+import { appendSegment, endCurrentMeeting, flushCurrentMeeting, initMeetingsStore, setLiveAnalysis, startMeeting } from "./meetings-store.js";
 import {
-  appendSegment,
-  setLiveAnalysis,
-  deleteMeeting,
-  endCurrentMeeting,
-  flushCurrentMeeting,
-  getCurrentMeeting,
-  listMeetings,
-  transcriptToRawText,
-  readMeeting,
-  renameMeeting,
-  setAgenda,
-  setCurrentMode,
-  setCurrentContext,
-  startMeeting,
-} from "./meetings-store.js";
-import { summarizeMeeting } from "./meeting-summary.js";
-import { buildProtocolMarkdown, parseAgendaText } from "./summary-format.js";
-import {
-  getAllProviderSettings,
-  getAutoDetectEnabled,
   getMainPinned,
-  getMeetingMode,
-  getScreenshotTextEnabled,
-  getSpeechLanguage,
-  getSpeechModel,
   getOverlayOpacity,
-  getPreferredMicDeviceId,
   getPreferredScreenSourceId,
-  getSelectedProviderId,
-  getAgendaText,
-  getSessionContext,
   getTheme,
-  getUiLanguage,
-  hasApiKey,
-  setAgendaText,
-  setApiKey,
-  setAutoDetectEnabled,
+  initSettingsStore,
   setMainPinned,
-  setMeetingMode,
-  setScreenshotTextEnabled,
-  setSpeechLanguage,
-  setSpeechModel,
-  SPEECH_LANGUAGES,
-  SPEECH_MODELS,
   setOverlayOpacity,
-  setPreferredMicDeviceId,
-  setPreferredScreenSourceId,
-  setSelectedProviderId,
-  setSessionContext,
   setTheme,
-  setUiLanguage,
-  updateProviderSettings,
 } from "./settings-store.js";
 import {
   createOverlayWindow,
@@ -84,6 +46,7 @@ import {
   showOverlayWindow,
   toggleClickThrough,
 } from "./overlay-window.js";
+import { EXTERNAL_CHANNELS, INVOKE_CHANNELS, type InvokeChannel, type Theme } from "./shared/ipc-contract.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -92,9 +55,14 @@ const preloadPath = path.join(__dirname, "preload.cjs");
 const rendererDistPath = path.join(__dirname, "../dist");
 const iconPath = path.join(__dirname, "../assets/icon.png");
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+/** Test mode: fake sidecar, fake model download, no real capture. Never set in a normal launch. */
+const e2e = process.env.AVALET_E2E === "1";
+
+// Tests run each launch against its own profile directory.
+if (process.env.AVALET_USER_DATA_DIR) app.setPath("userData", process.env.AVALET_USER_DATA_DIR);
 
 let mainWindow: BrowserWindow | null = null;
-const pythonRuntime = new PythonRuntime();
+let core: AppCore | null = null;
 
 function entryUrl(page: "main" | "overlay"): string {
   if (devServerUrl) return `${devServerUrl}/${page}.html`;
@@ -111,11 +79,11 @@ function createMainWindow(): void {
     minHeight: 560,
     title: "Avalet",
     // On macOS the window is a translucent "sidebar" vibrancy pane (same
-    // material System Settings uses) with inset traffic lights — the HTML
+    // material System Settings uses) with inset traffic lights; the HTML
     // body stays transparent (styles.css) and lets it show through. Other
-    // platforms fall back to a plain opaque window, same as before.
+    // platforms fall back to a plain opaque window.
     show: false,
-    backgroundColor: isMac ? undefined : "#0b0d10",
+    backgroundColor: isMac ? undefined : getTheme() === "light" ? "#f5f5f7" : "#0b0d10",
     titleBarStyle: isMac ? "hiddenInset" : undefined,
     trafficLightPosition: isMac ? { x: 16, y: 16 } : undefined,
     vibrancy: isMac ? "sidebar" : undefined,
@@ -123,6 +91,7 @@ function createMainWindow(): void {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
       preload: preloadPath,
     },
   });
@@ -143,11 +112,23 @@ function createMainWindow(): void {
       app.focus({ steal: true });
     }
   });
+  lockDownNavigation(win);
   void win.loadURL(entryUrl("main"));
   if (devServerUrl) win.webContents.openDevTools({ mode: "detach" });
   mainWindow = win;
   win.on("closed", () => {
     mainWindow = null;
+  });
+}
+
+/** The app's pages never navigate or open windows; links go to the system browser only if they are http(s). */
+function lockDownNavigation(win: BrowserWindow): void {
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//.test(url)) void import("electron").then(({ shell }) => shell.openExternal(url));
+    return { action: "deny" };
+  });
+  win.webContents.on("will-navigate", (event, url) => {
+    if (url !== win.webContents.getURL()) event.preventDefault();
   });
 }
 
@@ -171,111 +152,118 @@ function toggleMainWindow(): void {
   }
 }
 
-function broadcastToOverlay(channel: string, payload?: unknown): void {
-  getOverlayWindow()?.webContents.send(channel, payload);
-}
-
-function broadcastState(state: "idle" | "listening" | "paused"): void {
-  broadcastToOverlay("avalet:event:session-state", state);
-  mainWindow?.webContents.send("avalet:event:session-state", state);
-}
-
-const liveTracker = new LiveTracker((state) => {
-  broadcastToOverlay("avalet:event:tracker-update", state);
-  mainWindow?.webContents.send("avalet:event:tracker-update", state);
-});
-
-const liveSession = new LiveSession(
-  pythonRuntime,
-  {
-    onBlockStart: (block: LiveBlock) => broadcastToOverlay("avalet:event:block-start", { id: block.id }),
-    onBlockDelta: (id, delta) => broadcastToOverlay("avalet:event:block-delta", { id, delta }),
-    onBlockDone: (id) => broadcastToOverlay("avalet:event:block-done", { id }),
-    onBlockError: (id, message) => broadcastToOverlay("avalet:event:block-error", { id, message }),
-    onStateChange: broadcastState,
-    onTranscriptionError: (message) => {
-      broadcastToOverlay("avalet:event:transcription-error", message);
-      mainWindow?.webContents.send("avalet:event:transcription-error", message);
-    },
-    onTranscriptionRecovered: () => {
-      broadcastToOverlay("avalet:event:transcription-recovered");
-      mainWindow?.webContents.send("avalet:event:transcription-recovered");
-    },
-    onTranscriptSegment: (segment, meta) => {
-      appendSegment(segment);
-      mainWindow?.webContents.send("avalet:event:transcript-segment", segment);
-      liveTracker.note(meta.endsWithPause);
-    },
-  },
-  async () => {
-    try {
-      const shot = await captureScreenshot();
-      return { image: shot.base64, ocrImage: shot.ocrBase64 };
-    } catch (error) {
-      console.error("[main] screenshot capture failed:", error);
-      return null;
-    }
-  },
-  async (pngBase64) => {
-    try {
-      return await recognizeScreenText(pngBase64);
-    } catch (error) {
-      console.error("[main] text recognition failed:", error);
-      return null;
-    }
-  },
-);
+const emit: Emit = (channel, payload, target = "both") => {
+  if (target !== "main") {
+    const overlay = getOverlayWindow();
+    if (overlay && !overlay.isDestroyed()) overlay.webContents.send(channel, payload);
+  }
+  if (target !== "overlay" && mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
+};
 
 // Real native switch, not just CSS: window vibrancy on macOS follows
 // nativeTheme; elsewhere there is no vibrancy, so the window's own
 // background has to change with the theme or light mode ends up dark-on-dark.
-function applyTheme(theme: "dark" | "light"): void {
+function applyTheme(theme: Theme): void {
   setTheme(theme);
   nativeTheme.themeSource = theme;
   if (!isMac) mainWindow?.setBackgroundColor(theme === "light" ? "#f5f5f7" : "#0b0d10");
 }
 
-function pickLabels(labels: unknown): (key: string, fallback: string) => string {
-  const l = (labels ?? {}) as Record<string, unknown>;
-  return (key, fallback) => (typeof l[key] === "string" ? (l[key] as string) : fallback);
+function fixture(name: string): string {
+  return path.join(getPaths().devRoot, "test", "fixtures", name);
 }
 
-function renderProtocol(id: string, labels: unknown, modeLabel: unknown): string {
-  const meeting = readMeeting(id);
-  if (!meeting) throw new Error("meeting not found");
-  const pick = pickLabels(labels);
-  return buildProtocolMarkdown(
-    meeting,
-    {
-      date: pick("date", "Date"),
-      mode: pick("mode", "Mode"),
-      participants: pick("participants", "Participants"),
-      agenda: pick("agenda", "Agenda"),
-      discussions: pick("discussions", "Discussion"),
-      actions: pick("actions", "Agreements and tasks"),
-      actionTask: pick("actionTask", "Task"),
-      actionOwner: pick("actionOwner", "Owner"),
-      actionDue: pick("actionDue", "Due"),
-      agendaClosed: pick("agendaClosed", "closed"),
-      agendaOpen: pick("agendaOpen", "open"),
+function sidecarCommand(): SidecarCommand {
+  if (!e2e) return defaultSidecarCommand();
+  return { command: process.execPath, args: [fixture("fake-sidecar.mjs")], env: { ELECTRON_RUN_AS_NODE: "1" } };
+}
+
+function spawnModelDownload(model: string) {
+  if (e2e) {
+    return spawn(process.execPath, [fixture("fake-model-download.mjs"), model], {
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+  }
+  const { command, args } = defaultSidecarCommand();
+  return spawn(command, [args[0], "--download", model], {
+    cwd: sidecarDir(),
+    // Plain HTTP downloads write a growing .incomplete file, which is what the
+    // progress bar measures; the chunked transfer backend does not.
+    env: { ...process.env, HF_HUB_DISABLE_XET: "1" },
+    stdio: ["ignore", "ignore", "pipe"],
+  });
+}
+
+function electronStore(name: string, defaults: Record<string, unknown> = {}): KeyValueStore {
+  return new Store<Record<string, unknown>>({ name, defaults }) as unknown as KeyValueStore;
+}
+
+function initStores(): void {
+  configureLog(app.getPath("logs"));
+  configurePaths({ isPackaged: app.isPackaged, resourcesPath: process.resourcesPath });
+  initSettingsStore(electronStore("avalet-settings"), safeStorage, { forceAdvanced: process.env.AVALET_ADVANCED === "1" });
+  initHistoryStore(electronStore("avalet-history", { blocks: [] }));
+  initMeetingsStore(path.join(app.getPath("userData"), "meetings"));
+}
+
+async function chooseSavePath(defaultName: string, filterName: string, extension: string): Promise<string | null> {
+  const options = {
+    defaultPath: path.join(app.getPath("documents"), `${defaultName}.${extension}`),
+    filters: [{ name: filterName, extensions: [extension] }],
+  };
+  // E2E cannot click a native dialog: exports go to a folder the test chose.
+  if (e2e && process.env.AVALET_E2E_EXPORT_DIR) {
+    return path.join(process.env.AVALET_E2E_EXPORT_DIR, `${defaultName}.${extension}`);
+  }
+  const result = mainWindow ? await dialog.showSaveDialog(mainWindow, options) : await dialog.showSaveDialog(options);
+  if (result.canceled || !result.filePath) return null;
+  return result.filePath;
+}
+
+function createCore(): AppCore {
+  const sidecar = new PythonRuntime(sidecarCommand);
+  const models = new SpeechModelManager({
+    cacheDir: () => hfHubCacheDir(),
+    spawnDownload: spawnModelDownload,
+    onChange: (rows) => emit("avalet:event:models-changed", rows, "main"),
+  });
+  return new AppCore({
+    sidecar,
+    models,
+    emit,
+    captureScreen: async () => {
+      if (e2e) return null;
+      try {
+        const shot = await captureScreenshot();
+        return { image: shot.base64, ocrImage: shot.ocrBase64 };
+      } catch (error) {
+        console.error("[main] screenshot capture failed:", error);
+        return null;
+      }
     },
-    typeof modeLabel === "string" ? modeLabel : meeting.mode,
-    MODE_SUMMARY[meeting.mode].headings,
-  );
+    recognizeText: async (imageBase64) => {
+      try {
+        return await recognizeScreenText(imageBase64);
+      } catch (error) {
+        console.error("[main] text recognition failed:", error);
+        return null;
+      }
+    },
+    isOcrAvailable,
+    chooseSavePath,
+    onSessionStarted: () => {
+      void warmUpOcr().catch(() => {});
+      createOverlayWindow(preloadPath, entryUrl("overlay"));
+      showOverlayWindow();
+    },
+  });
 }
 
-function renderRawTranscript(id: string, labels: unknown): string {
-  const meeting = readMeeting(id);
-  if (!meeting) throw new Error("meeting not found");
-  const pick = pickLabels(labels);
-  return transcriptToRawText(meeting, { me: pick("me", "Me"), other: pick("other", "Other"), date: pick("date", "Date") });
-}
-
-function registerIpc(): void {
-  // Loopback capture picks a screen source itself (no native share picker) —
+function registerIpc(appCore: AppCore): void {
+  // Loopback capture picks a screen source itself (no native share picker):
   // steer it toward whatever the user chose in Settings, falling back to
-  // the first available source if nothing's set or the saved one vanished
-  // (e.g. a display got unplugged).
+  // the first available source if nothing's set or the saved one vanished.
   initAudioLoopbackMain({
     onAfterGetSources: (sources: DesktopCapturerSource[]) => {
       const preferred = getPreferredScreenSourceId();
@@ -284,368 +272,49 @@ function registerIpc(): void {
     },
   });
 
-  ipcMain.handle("avalet:settings-get-all", async () => ({
-    selectedProviderId: getSelectedProviderId(),
-    providers: getAllProviderSettings().map((s) => ({
-      providerId: s.providerId,
-      model: s.model,
-      baseUrl: s.baseUrl,
-      hasApiKey: hasApiKey(s.providerId),
-    })),
-    sessionContext: getSessionContext(),
-    agendaText: getAgendaText(),
-    autoDetectEnabled: getAutoDetectEnabled(),
-    overlayOpacity: getOverlayOpacity(),
-    theme: getTheme(),
-    uiLanguage: getUiLanguage(),
-    meetingMode: getMeetingMode(),
-    mainPinned: getMainPinned(),
-    screenshotText: getScreenshotTextEnabled(),
-    ocrAvailable: await isOcrAvailable(),
-    speechLanguage: getSpeechLanguage(),
-    speechModel: getSpeechModel(),
-  }));
-
-  ipcMain.handle("avalet:speech-set", (_event, patch: unknown) => {
-    const p = (patch ?? {}) as { language?: unknown; model?: unknown };
-    if (p.language !== undefined) {
-      if (!SPEECH_LANGUAGES.includes(p.language as never)) throw new Error("unknown speech language");
-      setSpeechLanguage(p.language as never);
-    }
-    if (p.model !== undefined) {
-      if (!SPEECH_MODELS.includes(p.model as never)) throw new Error("unknown speech model");
-      setSpeechModel(p.model as never);
-    }
-  });
-
-  ipcMain.handle("avalet:screenshot-text-set", (_event, enabled: unknown) => {
-    setScreenshotTextEnabled(Boolean(enabled));
-  });
-
-  ipcMain.handle("avalet:main-set-pinned", (_event, pinned: unknown) => {
-    const next = Boolean(pinned);
-    setMainPinned(next);
-    if (mainWindow) applyMainPinned(mainWindow, next);
-  });
-  ipcMain.handle("avalet:main-toggle", () => toggleMainWindow());
-  ipcMain.handle("avalet:app-quit", () => app.quit());
-
-  // Clears only the suggestion blocks in the overlay; the meeting record and
-  // its transcript are untouched.
-  ipcMain.handle("avalet:history-clear", () => {
-    clearHistory();
-    broadcastToOverlay("avalet:event:history-cleared");
-  });
-
-  ipcMain.handle("avalet:meeting-mode-set", (_event, mode: unknown) => {
-    if (!isMeetingMode(mode)) throw new Error("unknown meeting mode");
-    setMeetingMode(mode);
-    setCurrentMode(mode);
-    broadcastToOverlay("avalet:event:meeting-mode-changed", mode);
-    mainWindow?.webContents.send("avalet:event:meeting-mode-changed", mode);
-  });
-
-  ipcMain.handle("avalet:meetings-list", () => listMeetings());
-  ipcMain.handle("avalet:meetings-current", () => getCurrentMeeting());
-  ipcMain.handle("avalet:meetings-get", (_event, id: unknown) => {
-    if (typeof id !== "string") throw new Error("id must be a string");
-    return readMeeting(id);
-  });
-  ipcMain.handle("avalet:meetings-rename", (_event, id: unknown, title: unknown) => {
-    if (typeof id !== "string" || typeof title !== "string") throw new Error("invalid arguments");
-    renameMeeting(id, title);
-  });
-  ipcMain.handle("avalet:meetings-delete", (_event, id: unknown) => {
-    if (typeof id !== "string") throw new Error("id must be a string");
-    deleteMeeting(id);
-  });
-
-  let summaryAbort: AbortController | null = null;
-  ipcMain.handle("avalet:meetings-summarize", async (_event, id: unknown) => {
-    if (typeof id !== "string") throw new Error("id must be a string");
-    summaryAbort?.abort();
-    const controller = new AbortController();
-    summaryAbort = controller;
-    flushCurrentMeeting();
-    try {
-      const { text, analysis } = await summarizeMeeting(id, controller.signal, {
-        onDelta: (delta) => mainWindow?.webContents.send("avalet:event:summary-delta", { id, delta }),
-      });
-      mainWindow?.webContents.send("avalet:event:summary-done", {
-        id,
-        text,
-        agendaStatus: analysis?.agendaStatus ?? null,
-        actions: analysis?.actions ?? null,
-      });
-      return text;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      mainWindow?.webContents.send("avalet:event:summary-error", { id, message });
-      throw error;
-    } finally {
-      if (summaryAbort === controller) summaryAbort = null;
-    }
-  });
-
-  async function saveFile(defaultName: string, filterName: string, extension: string, content: string): Promise<string | null> {
-    const safe = defaultName.replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80);
-    const options = {
-      defaultPath: path.join(app.getPath("documents"), `${safe}.${extension}`),
-      filters: [{ name: filterName, extensions: [extension] }],
-    };
-    const result = mainWindow ? await dialog.showSaveDialog(mainWindow, options) : await dialog.showSaveDialog(options);
-    if (result.canceled || !result.filePath) return null;
-    fs.writeFileSync(result.filePath, content, "utf8");
-    return result.filePath;
-  }
-
-  // The protocol: agenda checklist, per-topic discussion and the action table. No transcript in it.
-  ipcMain.handle("avalet:meetings-export", async (_event, id: unknown, labels: unknown, modeLabel: unknown) => {
-    if (typeof id !== "string") throw new Error("id must be a string");
-    const meeting = readMeeting(id);
-    if (!meeting) throw new Error("meeting not found");
-    return saveFile(meeting.title, "Markdown", "md", renderProtocol(id, labels, modeLabel));
-  });
-
-  // The raw transcript exactly as recognized, without any model processing.
-  ipcMain.handle("avalet:meetings-export-transcript", async (_event, id: unknown, labels: unknown) => {
-    if (typeof id !== "string") throw new Error("id must be a string");
-    const meeting = readMeeting(id);
-    if (!meeting) throw new Error("meeting not found");
-    return saveFile(`${meeting.title} - transcript`, "Text", "txt", renderRawTranscript(id, labels));
-  });
-
-  // Plain-text variant of the protocol for the clipboard: markdown marks stripped.
-  ipcMain.handle("avalet:meetings-to-text", (_event, id: unknown, labels: unknown, modeLabel: unknown) => {
-    if (typeof id !== "string") throw new Error("id must be a string");
-    return renderProtocol(id, labels, modeLabel).replace(/^#+ /gm, "").replace(/\*\*/g, "");
-  });
-
-  ipcMain.handle("avalet:meetings-set-agenda", (_event, id: unknown, agenda: unknown) => {
-    if (typeof id !== "string") throw new Error("id must be a string");
-    if (!Array.isArray(agenda) || agenda.some((q) => typeof q !== "string")) throw new Error("agenda must be a string array");
-    return setAgenda(id, (agenda as string[]).map((q) => q.trim()).filter(Boolean));
-  });
-
-  ipcMain.handle("avalet:agenda-set", (_event, text: unknown) => {
-    if (typeof text !== "string") throw new Error("text must be a string");
-    setAgendaText(text);
-  });
-
-  ipcMain.handle("avalet:context-set", (_event, text: unknown) => {
-    if (typeof text !== "string") throw new Error("text must be a string");
-    setSessionContext(text);
-    setCurrentContext(text);
-  });
-
-  ipcMain.handle("avalet:auto-detect-set", (_event, enabled: unknown) => {
-    const next = Boolean(enabled);
-    setAutoDetectEnabled(next);
-    // Toggleable from both windows; broadcast so the other one stays in sync.
-    broadcastToOverlay("avalet:event:auto-detect-changed", next);
-    mainWindow?.webContents.send("avalet:event:auto-detect-changed", next);
-  });
-
-  ipcMain.handle("avalet:overlay-set-opacity", (_event, opacity: unknown) => {
-    if (typeof opacity !== "number" || Number.isNaN(opacity)) throw new Error("opacity must be a number");
-    setOverlayOpacity(opacity);
-    const applied = getOverlayOpacity();
-    // One setting drives every window: overlay and main, and every open slider follows.
-    setOverlayWindowOpacity(applied);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setOpacity(applied);
-      mainWindow.webContents.send("avalet:event:opacity-changed", applied);
-    }
-    broadcastToOverlay("avalet:event:opacity-changed", applied);
-  });
-
-  ipcMain.handle("avalet:overlay-set-collapsed", (_event, collapsed: unknown) => {
-    setOverlayCollapsed(Boolean(collapsed));
-  });
-
-  ipcMain.handle("avalet:theme-set", (_event, theme: unknown) => {
-    if (theme !== "dark" && theme !== "light") throw new Error("theme must be 'dark' or 'light'");
-    applyTheme(theme);
-    broadcastToOverlay("avalet:event:theme-changed", theme);
-    mainWindow?.webContents.send("avalet:event:theme-changed", theme);
-  });
-
-  ipcMain.handle("avalet:ui-language-set", (_event, language: unknown) => {
-    if (language !== "ru" && language !== "en") throw new Error("language must be 'ru' or 'en'");
-    setUiLanguage(language);
-    broadcastToOverlay("avalet:event:ui-language-changed", language);
-    mainWindow?.webContents.send("avalet:event:ui-language-changed", language);
-  });
-
-  ipcMain.handle("avalet:session-ask", async (_event, question: unknown) => {
-    if (typeof question !== "string") throw new Error("question must be a string");
-    await liveSession.askManual(question);
-  });
-
-  ipcMain.handle("avalet:session-ask-screen", async () => {
-    await liveSession.askAboutScreen();
-  });
-
-  ipcMain.handle("avalet:session-process-now", async () => {
-    await liveSession.processNow();
-  });
-
-  ipcMain.handle("avalet:settings-select-provider", (_event, providerId: unknown) => {
-    if (typeof providerId !== "string") throw new Error("providerId must be a string");
-    setSelectedProviderId(providerId);
-  });
-
-  ipcMain.handle(
-    "avalet:settings-update-provider",
-    (_event, providerId: unknown, patch: unknown) => {
-      if (typeof providerId !== "string") throw new Error("providerId must be a string");
-      const p = (patch ?? {}) as { model?: unknown; baseUrl?: unknown };
-      updateProviderSettings(providerId, {
-        model: typeof p.model === "string" ? p.model : undefined,
-        baseUrl: typeof p.baseUrl === "string" ? p.baseUrl : undefined,
-      });
+  // Channels that need a window, a dialog or an Electron-only API.
+  const windowHandlers: { [C in WindowChannel]: Handler<C> } = {
+    "avalet:main-set-pinned": (pinned) => {
+      const next = Boolean(pinned);
+      setMainPinned(next);
+      if (mainWindow) applyMainPinned(mainWindow, next);
     },
-  );
+    "avalet:main-toggle": () => toggleMainWindow(),
+    "avalet:app-quit": () => app.quit(),
+    "avalet:overlay-set-opacity": (opacity) => {
+      if (typeof opacity !== "number" || Number.isNaN(opacity)) throw new Error("opacity must be a number");
+      setOverlayOpacity(opacity);
+      const applied = getOverlayOpacity();
+      // One setting drives every window: overlay and main, and every open slider follows.
+      setOverlayWindowOpacity(applied);
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setOpacity(applied);
+      emit("avalet:event:opacity-changed", applied);
+    },
+    "avalet:overlay-set-collapsed": (collapsed) => setOverlayCollapsed(Boolean(collapsed)),
+    "avalet:overlay-show": () => showOverlayWindow(),
+    "avalet:overlay-hide": () => hideOverlayWindow(),
+    "avalet:overlay-click-through": (enabled) => toggleClickThrough(Boolean(enabled)),
+    "avalet:theme-set": (theme) => {
+      if (theme !== "dark" && theme !== "light") throw new Error("theme must be 'dark' or 'light'");
+      applyTheme(theme);
+      emit("avalet:event:theme-changed", theme);
+    },
+    "avalet:capture-screenshot": () => captureScreenshot(),
+    "avalet:permissions-check": () => ({ mic: checkMicAccess(), screen: checkScreenAccess() }),
+    "avalet:screen-list-sources": () => listScreenSources(),
+  };
 
-  ipcMain.handle("avalet:settings-set-api-key", (_event, providerId: unknown, apiKey: unknown) => {
-    if (typeof providerId !== "string") throw new Error("providerId must be a string");
-    if (typeof apiKey !== "string") throw new Error("apiKey must be a string");
-    setApiKey(providerId, apiKey);
-  });
-
-  ipcMain.handle("avalet:session-start", async () => {
-    if (!pythonRuntime.getStatus().running) {
-      await pythonRuntime.start().catch((error) => {
-        console.error("[main] python-sidecar failed to start:", error);
-      });
-    }
-    void warmUpOcr().catch(() => {});
-    const meeting = startMeeting({
-      titlePrefix: getUiLanguage() === "ru" ? "Встреча" : "Meeting",
-      mode: getMeetingMode(),
-      context: getSessionContext(),
-      agenda: parseAgendaText(getAgendaText()),
-    });
-    mainWindow?.webContents.send("avalet:event:meeting-started", meeting);
-    createOverlayWindow(preloadPath, entryUrl("overlay"));
-    showOverlayWindow();
-    liveSession.start();
-  });
-
-  ipcMain.handle("avalet:session-stop", () => {
-    liveSession.stop();
-    flushCurrentMeeting();
-    // One last pass so the checklist matches what was said before the pause.
-    void liveTracker.refresh();
-  });
-
-  ipcMain.handle("avalet:tracker-get", () => liveTracker.getState());
-  ipcMain.handle("avalet:tracker-refresh", async () => {
-    await liveTracker.refresh();
-    return liveTracker.getState();
-  });
-  ipcMain.handle("avalet:tracker-toggle-agenda", (_event, index: unknown) => {
-    if (!Number.isInteger(index)) throw new Error("index must be an integer");
-    return liveTracker.toggleAgenda(index as number);
-  });
-  ipcMain.handle("avalet:tracker-add-agenda", (_event, text: unknown) => {
-    if (typeof text !== "string") throw new Error("text must be a string");
-    return liveTracker.addAgenda(text);
-  });
-  ipcMain.handle("avalet:tracker-set-action", (_event, id: unknown, state: unknown) => {
-    if (typeof id !== "string") throw new Error("id must be a string");
-    if (state !== "proposed" && state !== "confirmed" && state !== "dismissed") throw new Error("invalid state");
-    return liveTracker.setActionState(id, state);
-  });
-  ipcMain.handle("avalet:tracker-add-action", (_event, text: unknown) => {
-    if (typeof text !== "string") throw new Error("text must be a string");
-    return liveTracker.addAction(text);
-  });
-
-  // The overlay window's page can finish loading after `session-start`
-  // already broadcast its state change (send() has no queue for a
-  // renderer that hasn't attached its listener yet) — fetched once on
-  // mount so the collapsed/expanded strip never gets stuck on a stale
-  // default instead of the real current state.
-  ipcMain.handle("avalet:session-get-state", () => liveSession.getState());
-
-  // Ends the current meeting record as well: the next Start opens a new one.
-  ipcMain.handle("avalet:session-reset", () => {
-    liveSession.reset();
-    liveTracker.reset();
-    clearHistory();
-    const ended = endCurrentMeeting();
-    broadcastToOverlay("avalet:event:history-cleared");
-    mainWindow?.webContents.send("avalet:event:meeting-ended", ended);
-  });
-
-  ipcMain.handle("avalet:history-get", (): HistoryBlock[] => getHistory());
-  ipcMain.handle("avalet:history-append", (_event, block: unknown) => {
-    const b = block as Partial<HistoryBlock>;
-    if (typeof b.id !== "string" || typeof b.text !== "string") throw new Error("invalid history block");
-    if (b.status !== "done" && b.status !== "error") throw new Error("invalid history block status");
-    appendHistoryBlock({ id: b.id, text: b.text, status: b.status, createdAt: Date.now() });
-  });
-
-  ipcMain.handle("avalet:capture-screenshot", () => captureScreenshot());
-
-  ipcMain.handle("avalet:permissions-check", () => ({
-    mic: checkMicAccess(),
-    screen: checkScreenAccess(),
-  }));
-
-  ipcMain.handle("avalet:mic-get-preferred", () => getPreferredMicDeviceId());
-  ipcMain.handle("avalet:mic-set-preferred", (_event, deviceId: unknown) => {
-    if (typeof deviceId !== "string") throw new Error("deviceId must be a string");
-    setPreferredMicDeviceId(deviceId);
-  });
-
-  ipcMain.handle("avalet:screen-list-sources", () => listScreenSources());
-  ipcMain.handle("avalet:screen-get-preferred", () => getPreferredScreenSourceId());
-  ipcMain.handle("avalet:screen-set-preferred", (_event, sourceId: unknown) => {
-    if (typeof sourceId !== "string") throw new Error("sourceId must be a string");
-    setPreferredScreenSourceId(sourceId);
-  });
-
-  ipcMain.handle("avalet:capture-audio-chunk", async (_event, audioBase64: unknown, channel: unknown, meta: unknown) => {
-    if (typeof audioBase64 !== "string") throw new Error("audioBase64 must be a string");
-    const m = (meta ?? {}) as { startedAt?: unknown; endedAt?: unknown; endedBySilence?: unknown };
-    const endedAt = typeof m.endedAt === "number" ? m.endedAt : Date.now();
-    await liveSession.ingestAudioChunk(audioBase64, channel === "other" ? "other" : "me", {
-      startedAt: typeof m.startedAt === "number" ? m.startedAt : endedAt,
-      endedAt,
-      endedBySilence: Boolean(m.endedBySilence),
-    });
-  });
-
-  // Settings window owns the actual MediaStreams (see audio-capture.ts) — it
-  // reports up/down state here so it can be broadcast to the overlay, which
-  // has no direct access to those streams.
-  ipcMain.handle("avalet:audio-degraded-set", (_event, state: unknown) => {
-    const s = (state ?? {}) as { me?: unknown; other?: unknown };
-    broadcastToOverlay("avalet:event:audio-degraded", { me: Boolean(s.me), other: Boolean(s.other) });
-  });
-
-  // The overlay can't reach the Settings window's MediaStreams directly —
-  // relay the request there so whichever renderer holds the live
-  // AudioCaptureHandle can actually call .reconnect() on it.
-  ipcMain.handle("avalet:capture-reconnect-request", (_event, channel: unknown) => {
-    mainWindow?.webContents.send(
-      "avalet:event:reconnect-audio-requested",
-      channel === "me" || channel === "other" ? channel : "both",
-    );
-  });
-
-  ipcMain.handle("avalet:overlay-show", () => showOverlayWindow());
-  ipcMain.handle("avalet:overlay-hide", () => hideOverlayWindow());
-  ipcMain.handle("avalet:overlay-click-through", (_event, enabled: unknown) =>
-    toggleClickThrough(Boolean(enabled)),
-  );
+  const all = { ...appCore.handlers, ...windowHandlers } as Record<string, Handler<InvokeChannel>>;
+  const missing = INVOKE_CHANNELS.filter((channel) => !all[channel] && !EXTERNAL_CHANNELS.includes(channel));
+  if (missing.length > 0) throw new Error(`IPC channels without a handler: ${missing.join(", ")}`);
+  for (const [channel, handler] of Object.entries(all)) {
+    ipcMain.handle(channel, (_event, ...args: unknown[]) => handler(...args));
+  }
 }
 
 // Design check without a Mac: AVALET_SCREENSHOT_DIR=<dir> electron . renders
 // both windows in both themes to PNGs and quits. Used under Xvfb on CI/servers.
-async function runScreenshotMode(dir: string): Promise<void> {
+async function runScreenshotMode(dir: string, appCore: AppCore): Promise<void> {
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const shoot = async (win: BrowserWindow, name: string) => {
     const image = await win.webContents.capturePage();
@@ -658,11 +327,11 @@ async function runScreenshotMode(dir: string): Promise<void> {
   await wait(1500);
   await shoot(main, "main-settings-dark");
   applyTheme("light");
-  main.webContents.send("avalet:event:theme-changed", "light");
+  emit("avalet:event:theme-changed", "light");
   await wait(500);
   await shoot(main, "main-settings-light");
   applyTheme("dark");
-  main.webContents.send("avalet:event:theme-changed", "dark");
+  emit("avalet:event:theme-changed", "dark");
   main.setSize(480, 720);
   const overlay = createOverlayWindow(preloadPath, entryUrl("overlay"));
   showOverlayWindow();
@@ -680,22 +349,21 @@ async function runScreenshotMode(dir: string): Promise<void> {
     ],
     actions: [
       { id: "demo-1", task: "Прислать описание процесса колл-центра", owner: "Собеседник", due: "до пятницы", state: "proposed" },
-      { id: "demo-2", task: "Завести задачу в Jira по лимитам", owner: "Я", due: "срок не назван", state: "confirmed" },
+      { id: "demo-2", task: "Завести задачу по лимитам", owner: "Я", due: "срок не назван", state: "confirmed" },
     ],
   });
   const base = Date.now() - 90_000;
   appendSegment({ at: base, speaker: "other", text: "Нам нужно, чтобы клиент мог менять лимит по карте прямо в приложении." });
   appendSegment({ at: base + 12_000, speaker: "me", text: "Лимит дневной или разовый? И кто подтверждает изменение выше порога?" });
   appendSegment({ at: base + 30_000, speaker: "other", text: "Дневной. Выше 300 тысяч нужен звонок из колл-центра, это уже есть в другом процессе." });
-  main.webContents.send("avalet:event:meeting-started", fake);
+  emit("avalet:event:meeting-started", fake, "main");
   for (const theme of ["dark", "light"] as const) {
     applyTheme(theme);
-    main.webContents.send("avalet:event:theme-changed", theme);
-    overlay.webContents.send("avalet:event:theme-changed", theme);
+    emit("avalet:event:theme-changed", theme);
     await wait(400);
     await shoot(main, `main-meeting-${theme}`);
     overlay.webContents.send("avalet:event:session-state", "listening");
-    overlay.webContents.send("avalet:event:tracker-update", liveTracker.getState());
+    overlay.webContents.send("avalet:event:tracker-update", appCore.liveTracker.getState());
     await wait(400);
     await shoot(overlay, `overlay-${theme}-expanded`);
     await overlay.webContents.executeJavaScript('document.querySelector(".tracker-toggle")?.click()');
@@ -706,19 +374,21 @@ async function runScreenshotMode(dir: string): Promise<void> {
     await wait(400);
     await shoot(overlay, `overlay-${theme}-collapsed`);
   }
-  main.webContents.send("avalet:event:meeting-ended", endCurrentMeeting());
+  emit("avalet:event:meeting-ended", endCurrentMeeting(), "main");
   applyTheme("dark");
-  main.webContents.send("avalet:event:theme-changed", "dark");
+  emit("avalet:event:theme-changed", "dark");
   await wait(400);
   app.quit();
 }
 
 app.whenReady().then(() => {
-  logLine(`[app] Avalet ${app.getVersion()} on ${process.platform}/${process.arch}, ${app.isPackaged ? "packaged" : "dev"}`);
+  initStores();
+  logLine(`[app] Avalet ${app.getVersion()} on ${process.platform}/${process.arch}, ${app.isPackaged ? "packaged" : "dev"}${e2e ? ", e2e" : ""}`);
   nativeTheme.themeSource = getTheme();
-  // Every launch starts fully opaque; the slider on the overlay then adjusts both windows.
+  // Every launch starts fully opaque; the opacity slider then adjusts both windows.
   setOverlayOpacity(1);
-  registerIpc();
+  core = createCore();
+  registerIpc(core);
   if (process.platform === "darwin" && app.dock) {
     const dockIcon = nativeImage.createFromPath(iconPath);
     if (!dockIcon.isEmpty()) app.dock.setIcon(dockIcon);
@@ -726,20 +396,24 @@ app.whenReady().then(() => {
   createMainWindow();
   const screenshotDir = process.env.AVALET_SCREENSHOT_DIR;
   if (screenshotDir) {
-    mainWindow?.webContents.once("did-finish-load", () => void runScreenshotMode(screenshotDir));
+    const appCore = core;
+    mainWindow?.webContents.once("did-finish-load", () => void runScreenshotMode(screenshotDir, appCore));
   }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
 });
 
-app.on("window-all-closed", async () => {
+app.on("window-all-closed", () => {
   flushCurrentMeeting();
-  await pythonRuntime.stop();
   if (process.platform !== "darwin") app.quit();
 });
 
-app.on("before-quit", async () => {
-  flushCurrentMeeting();
-  await pythonRuntime.stop();
+let quitting = false;
+app.on("before-quit", (event) => {
+  if (quitting || !core) return;
+  // Save the meeting and stop the recognizer before the process goes away.
+  event.preventDefault();
+  quitting = true;
+  void core.shutdown().finally(() => app.quit());
 });

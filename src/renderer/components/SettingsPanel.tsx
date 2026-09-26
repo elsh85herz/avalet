@@ -6,6 +6,7 @@ import { PROVIDER_PRESETS_UI } from "../providers/presets.js";
 import { startAudioCapture, type AudioCaptureHandle } from "../capture/audio-capture.js";
 import { IconHelp, IconMoon, IconSun } from "../icons.js";
 import { parseAgendaText } from "../lib/agenda.js";
+import { SpeechModels } from "./SpeechModels.js";
 
 export function SettingsPanel() {
   const bridge = getBridge();
@@ -48,6 +49,8 @@ export function SettingsPanel() {
   const [ocrAvailable, setOcrAvailable] = useState(false);
   const [speechLanguage, setSpeechLanguageState] = useState<"ru" | "en" | "auto">("ru");
   const [speechModel, setSpeechModelState] = useState<"small" | "medium" | "turbo">("small");
+  const [liveTracker, setLiveTrackerState] = useState(false);
+  const speechSectionRef = useRef<HTMLElement | null>(null);
 
   const strings = UI_STRINGS[uiLanguage];
   const t = strings.settings;
@@ -108,6 +111,7 @@ export function SettingsPanel() {
     setOcrAvailable(all.ocrAvailable);
     setSpeechLanguageState(all.speechLanguage);
     setSpeechModelState(all.speechModel);
+    setLiveTrackerState(all.liveTrackerEnabled);
     document.documentElement.dataset.theme = all.theme;
   }
 
@@ -119,6 +123,12 @@ export function SettingsPanel() {
   async function handleSpeechModel(model: "small" | "medium" | "turbo") {
     setSpeechModelState(model);
     await bridge.settings.setSpeech({ model });
+  }
+
+  async function handleToggleLiveTracker() {
+    const next = !liveTracker;
+    setLiveTrackerState(next);
+    await bridge.settings.setLiveTracker(next);
   }
 
   async function handleToggleScreenshotText() {
@@ -283,7 +293,12 @@ export function SettingsPanel() {
       }
       if (!contextSaved) await handleSaveContext();
       if (!agendaSaved) await handleSaveAgenda(agendaDraft, false);
-      await bridge.session.start();
+      const result = await bridge.session.start();
+      if (!result.ok) {
+        setError(strings.models.missingForStart);
+        speechSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
       await refreshPermissions();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -458,7 +473,7 @@ export function SettingsPanel() {
         ) : null}
       </section>
 
-      <section className="context speech-settings">
+      <section className="context speech-settings" ref={speechSectionRef}>
         <h3 className="section-title">{t.speechTitle}</h3>
         <label className="mode-select">
           {t.speechLanguage}
@@ -470,16 +485,15 @@ export function SettingsPanel() {
             ))}
           </select>
         </label>
-        <label className="mode-select">
-          {t.speechModel}
-          <select value={speechModel} onChange={(e) => void handleSpeechModel(e.target.value as "small" | "medium" | "turbo")}>
-            {(["small", "medium", "turbo"] as const).map((name) => (
-              <option key={name} value={name}>
-                {t.speechModels[name]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="mode-select">
+          <span>{t.speechModel}</span>
+          <SpeechModels
+            uiLanguage={uiLanguage}
+            selected={speechModel}
+            onSelect={(model) => void handleSpeechModel(model)}
+            allowDelete
+          />
+        </div>
         <p className="hint">{t.speechHint}</p>
       </section>
 
@@ -563,6 +577,13 @@ export function SettingsPanel() {
           {t.autoSuggest}
         </label>
         <p className="hint">{autoDetectEnabled ? t.autoSuggestOnHint : t.autoSuggestOffHint}</p>
+        <label className="auto-detect-toggle">
+          <span className="switch">
+            <input type="checkbox" checked={liveTracker} onChange={() => void handleToggleLiveTracker()} />
+          </span>
+          {t.liveTracker}
+        </label>
+        <p className="hint">{liveTracker ? t.liveTrackerOn : t.liveTrackerOff}</p>
         <label className="auto-detect-toggle">
           <span className="switch">
             <input

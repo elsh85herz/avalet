@@ -1,179 +1,321 @@
-import { safeStorage } from "electron";
-import Store from "electron-store";
-import { PROVIDER_PRESETS } from "./providers/index.js";
-import { RETIRED_MODELS } from "./providers/types.js";
-import type { MeetingMode } from "./modes.js";
+import type { KeyValueStore, SecretBox } from "./platform/kv.js";
+import { PROVIDER_PRESETS, RETIRED_MODELS } from "./providers/types.js";
+import {
+  MEETING_MODES,
+  SPEECH_LANGUAGES,
+  SPEECH_MODELS,
+  type MeetingMode,
+  type SpeechLanguage,
+  type SpeechModelName,
+  type Theme,
+  type UiLanguage,
+  type UiLevel,
+} from "./shared/ipc-contract.js";
 
-export type SpeechLanguage = "ru" | "en" | "auto";
-export type SpeechModel = "small" | "medium" | "turbo";
-export const SPEECH_LANGUAGES: SpeechLanguage[] = ["ru", "en", "auto"];
-export const SPEECH_MODELS: SpeechModel[] = ["small", "medium", "turbo"];
+export { SPEECH_LANGUAGES, SPEECH_MODELS };
+export type { SpeechLanguage };
+export type SpeechModel = SpeechModelName;
 
 export type ProviderSettings = {
   providerId: string;
   model: string;
+  /** Cheaper model for background calls (live checklist); "" = use `model`. */
+  backgroundModel?: string;
   baseUrl?: string;
   /** API key, encrypted at rest via OS keychain (safeStorage), base64-wrapped for JSON storage. */
   apiKeyEncrypted?: string;
 };
 
-type StoreShape = {
+export type SettingsShape = {
+  /** Bumped by migrateSettings; absent in files written before 0.2. */
+  schemaVersion: number;
   selectedProviderId: string;
   providers: Record<string, ProviderSettings>;
   /** Web Audio `deviceId` of the preferred mic input, or "" for the OS default. */
   preferredMicDeviceId: string;
-  /** `desktopCapturer` source id of the preferred screen for system-audio
-   * loopback, or "" to fall back to whatever loopback picks first. */
+  /** `desktopCapturer` source id of the preferred screen for system-audio loopback, or "". */
   preferredScreenSourceId: string;
   /** Free-text briefing (ticket/spec/agenda) pasted before a call, folded into the system prompt. */
   sessionContext: string;
-  /** Agenda for the next call: one question per line. Copied into each new meeting, where it stays editable. */
+  /** Agenda for the next call: one question per line. Copied into each new meeting. */
   agendaText: string;
-  /** When false, LiveSession only responds to askManual() — no automatic periodic suggestions. */
+  /** When false, LiveSession only responds to askManual(): no automatic suggestions. */
   autoDetectEnabled: boolean;
-  /** Overlay window opacity, 0.2-1. Adjustable live from the overlay itself. */
+  /** Window opacity, 0.2-1. */
   overlayOpacity: number;
-  /** App-wide light/dark appearance — also drives Electron's `nativeTheme`
-   * so window vibrancy actually renders in the matching shade, not just CSS. */
-  theme: "dark" | "light";
-  /** Language of the overlay's own UI (button labels/tooltips/placeholders).
-   * The model's own answer language is fixed to Russian in the system
-   * prompt (see live-session.ts) — not user-configurable. */
-  uiLanguage: "ru" | "en";
+  theme: Theme;
+  /** Language of the app's own UI. The model's answer language is fixed in the prompts. */
+  uiLanguage: UiLanguage;
+  /** Simple: guided, minimum controls. Advanced: every setting. */
+  uiLevel: UiLevel;
+  /** First-run wizard finished or skipped. */
+  onboardingDone: boolean;
   /** Prompt preset for the kind of meeting; see electron/modes.ts. */
   meetingMode: MeetingMode;
   /** Keep the main (notes) window above other windows. */
   mainPinned: boolean;
-  /** Also send locally recognized text with screenshots to models that see images (slower, off by default). */
+  /** Also send locally recognized text with screenshots to models that see images. */
   screenshotText: boolean;
-  /** Spoken language for transcription; "auto" lets whisper guess on every chunk. */
   speechLanguage: SpeechLanguage;
-  /** Whisper model size: bigger is more accurate and slower. */
   speechModel: SpeechModel;
+  /** Live checklist on/off as chosen by the user; null = the default for the UI level. */
+  liveTrackerEnabled: boolean | null;
 };
 
-const defaults: StoreShape = {
-  selectedProviderId: "anthropic",
-  providers: Object.fromEntries(
+export const SETTINGS_SCHEMA_VERSION = 1;
+
+export function defaultProviders(): Record<string, ProviderSettings> {
+  return Object.fromEntries(
     PROVIDER_PRESETS.map((preset) => [
       preset.id,
-      { providerId: preset.id, model: preset.defaultModel, baseUrl: preset.defaultBaseUrl },
+      {
+        providerId: preset.id,
+        model: preset.defaultModel,
+        backgroundModel: preset.defaultBackgroundModel ?? "",
+        baseUrl: preset.defaultBaseUrl,
+      },
     ]),
-  ),
-  preferredMicDeviceId: "",
-  preferredScreenSourceId: "",
-  sessionContext: "",
-  agendaText: "",
-  autoDetectEnabled: true,
-  overlayOpacity: 1,
-  theme: "dark",
-  uiLanguage: "ru",
-  meetingMode: "free",
-  mainPinned: true,
-  screenshotText: false,
-  speechLanguage: "ru",
-  speechModel: "small",
-};
+  );
+}
 
-const store = new Store<StoreShape>({ name: "avalet-settings", defaults });
+export function defaultSettings(): SettingsShape {
+  return {
+    schemaVersion: SETTINGS_SCHEMA_VERSION,
+    selectedProviderId: "anthropic",
+    providers: defaultProviders(),
+    preferredMicDeviceId: "",
+    preferredScreenSourceId: "",
+    sessionContext: "",
+    agendaText: "",
+    autoDetectEnabled: true,
+    overlayOpacity: 1,
+    theme: "dark",
+    uiLanguage: "ru",
+    uiLevel: "simple",
+    onboardingDone: false,
+    meetingMode: "free",
+    mainPinned: true,
+    screenshotText: false,
+    speechLanguage: "ru",
+    speechModel: "small",
+    liveTrackerEnabled: null,
+  };
+}
+
+/**
+ * Brings a stored settings document up to the current schema. Pure: takes the
+ * raw JSON, returns the fields to write (empty when nothing changed).
+ *
+ * v0 -> v1 (0.2): an install that already has a saved key is an existing user,
+ * who keeps every control (Advanced) and skips the first-run wizard; everybody
+ * else starts in Simple with the wizard. Providers gain a background model.
+ */
+export function migrateSettings(raw: Record<string, unknown>): Record<string, unknown> {
+  const version = typeof raw.schemaVersion === "number" ? raw.schemaVersion : 0;
+  if (version >= SETTINGS_SCHEMA_VERSION) return {};
+  const patch: Record<string, unknown> = { schemaVersion: SETTINGS_SCHEMA_VERSION };
+  if (version < 1) {
+    const providers = (raw.providers && typeof raw.providers === "object" ? raw.providers : {}) as Record<
+      string,
+      ProviderSettings
+    >;
+    const hasKey = Object.values(providers).some((p) => Boolean(p?.apiKeyEncrypted));
+    // An install that ever wrote a settings file with a provider list has been used before.
+    const existingInstall = hasKey || Object.keys(raw).length > 0;
+    if (raw.uiLevel === undefined) patch.uiLevel = hasKey ? "advanced" : "simple";
+    if (raw.onboardingDone === undefined) patch.onboardingDone = hasKey;
+    if (raw.liveTrackerEnabled === undefined) patch.liveTrackerEnabled = null;
+    if (existingInstall && Object.keys(providers).length > 0) {
+      const next: Record<string, ProviderSettings> = {};
+      for (const [id, settings] of Object.entries(providers)) {
+        const preset = PROVIDER_PRESETS.find((p) => p.id === id);
+        next[id] = { ...settings, backgroundModel: settings.backgroundModel ?? preset?.defaultBackgroundModel ?? "" };
+      }
+      patch.providers = next;
+    }
+  }
+  return patch;
+}
+
+let kv: KeyValueStore | null = null;
+let secrets: SecretBox | null = null;
+let advancedForced = false;
+
+/** Called once by main.ts (electron-store + safeStorage) or by tests (MemoryKV + fake box). */
+export function initSettingsStore(store: KeyValueStore, box: SecretBox, options: { forceAdvanced?: boolean } = {}): void {
+  kv = store;
+  secrets = box;
+  advancedForced = Boolean(options.forceAdvanced);
+  const patch = migrateSettings(store.store);
+  for (const [key, value] of Object.entries(patch)) store.set(key, value);
+}
+
+function db(): KeyValueStore {
+  if (!kv) throw new Error("settings store not initialized");
+  return kv;
+}
+
+function read<K extends keyof SettingsShape>(key: K): SettingsShape[K] {
+  const value = db().get(key) as SettingsShape[K] | undefined;
+  return value === undefined ? defaultSettings()[key] : value;
+}
+
+function write<K extends keyof SettingsShape>(key: K, value: SettingsShape[K]): void {
+  db().set(key, value);
+}
 
 export function getPreferredMicDeviceId(): string {
-  return store.get("preferredMicDeviceId") ?? "";
+  return read("preferredMicDeviceId") ?? "";
 }
 
 export function setPreferredMicDeviceId(deviceId: string): void {
-  store.set("preferredMicDeviceId", deviceId);
+  write("preferredMicDeviceId", deviceId);
 }
 
 export function getPreferredScreenSourceId(): string {
-  return store.get("preferredScreenSourceId") ?? "";
+  return read("preferredScreenSourceId") ?? "";
 }
 
 export function setPreferredScreenSourceId(sourceId: string): void {
-  store.set("preferredScreenSourceId", sourceId);
+  write("preferredScreenSourceId", sourceId);
 }
 
 export function getAgendaText(): string {
-  return store.get("agendaText") ?? "";
+  return read("agendaText") ?? "";
 }
 
 export function setAgendaText(text: string): void {
-  store.set("agendaText", text);
+  write("agendaText", text);
 }
 
 export function getSessionContext(): string {
-  return store.get("sessionContext") ?? "";
+  return read("sessionContext") ?? "";
 }
 
 export function setSessionContext(text: string): void {
-  store.set("sessionContext", text);
+  write("sessionContext", text);
 }
 
 export function getAutoDetectEnabled(): boolean {
-  return store.get("autoDetectEnabled") ?? true;
+  return read("autoDetectEnabled") ?? true;
 }
 
 export function setAutoDetectEnabled(enabled: boolean): void {
-  store.set("autoDetectEnabled", enabled);
+  write("autoDetectEnabled", enabled);
 }
 
 export function getOverlayOpacity(): number {
-  return store.get("overlayOpacity") ?? 1;
+  const value = read("overlayOpacity");
+  return typeof value === "number" && Number.isFinite(value) ? Math.min(1, Math.max(0.2, value)) : 1;
 }
 
 export function setOverlayOpacity(opacity: number): void {
-  store.set("overlayOpacity", Math.min(1, Math.max(0.2, opacity)));
+  write("overlayOpacity", Math.min(1, Math.max(0.2, opacity)));
 }
 
-export function getTheme(): "dark" | "light" {
-  return store.get("theme") ?? "dark";
+export function getTheme(): Theme {
+  return read("theme") === "light" ? "light" : "dark";
 }
 
-export function setTheme(theme: "dark" | "light"): void {
-  store.set("theme", theme);
+export function setTheme(theme: Theme): void {
+  write("theme", theme);
 }
 
-export function getUiLanguage(): "ru" | "en" {
-  return store.get("uiLanguage") ?? "ru";
+export function getUiLanguage(): UiLanguage {
+  return read("uiLanguage") === "en" ? "en" : "ru";
 }
 
-export function setUiLanguage(language: "ru" | "en"): void {
-  store.set("uiLanguage", language);
+export function setUiLanguage(language: UiLanguage): void {
+  write("uiLanguage", language);
+}
+
+/** AVALET_ADVANCED=1 forces Advanced for the launch without changing the stored choice. */
+export function getUiLevel(): UiLevel {
+  if (advancedForced) return "advanced";
+  return read("uiLevel") === "advanced" ? "advanced" : "simple";
+}
+
+export function isUiLevelForced(): boolean {
+  return advancedForced;
+}
+
+export function setUiLevel(level: UiLevel): void {
+  write("uiLevel", level);
+}
+
+export function getOnboardingDone(): boolean {
+  return read("onboardingDone") === true;
+}
+
+export function setOnboardingDone(done: boolean): void {
+  write("onboardingDone", done);
+}
+
+/**
+ * The live checklist is not verified on a real meeting yet: on by default in
+ * Advanced, off in Simple, unless the user flipped the switch themselves.
+ */
+export function getLiveTrackerEnabled(): boolean {
+  const stored = read("liveTrackerEnabled");
+  if (typeof stored === "boolean") return stored;
+  return getUiLevel() === "advanced";
+}
+
+export function setLiveTrackerEnabled(enabled: boolean): void {
+  write("liveTrackerEnabled", enabled);
 }
 
 export function getMeetingMode(): MeetingMode {
-  return store.get("meetingMode") ?? "free";
+  const value = read("meetingMode");
+  return MEETING_MODES.includes(value) ? value : "free";
 }
 
 export function setMeetingMode(mode: MeetingMode): void {
-  store.set("meetingMode", mode);
+  write("meetingMode", mode);
 }
 
 function readProviders(): Record<string, ProviderSettings> {
-  return store.get("providers") ?? {};
+  return read("providers") ?? {};
 }
 
 function writeProvider(providerId: string, settings: ProviderSettings): void {
   const providers = readProviders();
   providers[providerId] = settings;
-  store.set("providers", providers);
+  write("providers", providers);
 }
 
 export function getSelectedProviderId(): string {
-  return store.get("selectedProviderId");
+  const id = read("selectedProviderId");
+  return PROVIDER_PRESETS.some((p) => p.id === id) ? id : "anthropic";
 }
 
 export function setSelectedProviderId(providerId: string): void {
-  store.set("selectedProviderId", providerId);
+  if (!PROVIDER_PRESETS.some((p) => p.id === providerId)) throw new Error("unknown provider");
+  write("selectedProviderId", providerId);
 }
 
 export function getProviderSettings(providerId: string): ProviderSettings {
   const existing = readProviders()[providerId];
   const preset = PROVIDER_PRESETS.find((p) => p.id === providerId);
   if (!existing) {
-    return { providerId, model: preset?.defaultModel ?? "", baseUrl: preset?.defaultBaseUrl };
+    return {
+      providerId,
+      model: preset?.defaultModel ?? "",
+      backgroundModel: preset?.defaultBackgroundModel ?? "",
+      baseUrl: preset?.defaultBaseUrl,
+    };
   }
-  return { ...existing, model: RETIRED_MODELS[existing.model] ?? existing.model };
+  return {
+    ...existing,
+    model: RETIRED_MODELS[existing.model] ?? existing.model,
+    backgroundModel: RETIRED_MODELS[existing.backgroundModel ?? ""] ?? existing.backgroundModel ?? "",
+  };
+}
+
+/** The model background calls use: the provider's background model, else its main model. */
+export function getBackgroundModel(providerId: string): string {
+  const settings = getProviderSettings(providerId);
+  return settings.backgroundModel?.trim() || settings.model;
 }
 
 export function getAllProviderSettings(): ProviderSettings[] {
@@ -182,32 +324,45 @@ export function getAllProviderSettings(): ProviderSettings[] {
 
 export function updateProviderSettings(
   providerId: string,
-  patch: { model?: string; baseUrl?: string },
+  patch: { model?: string; baseUrl?: string; backgroundModel?: string },
 ): void {
-  writeProvider(providerId, { ...getProviderSettings(providerId), ...patch });
+  if (!PROVIDER_PRESETS.some((p) => p.id === providerId)) throw new Error("unknown provider");
+  const clean = Object.fromEntries(Object.entries(patch).filter(([, v]) => typeof v === "string"));
+  writeProvider(providerId, { ...getProviderSettings(providerId), ...clean });
 }
 
-/** Returns the decrypted API key, or "" if none is stored / safeStorage is unavailable. */
+function box(): SecretBox {
+  if (!secrets) throw new Error("settings store not initialized");
+  return secrets;
+}
+
+/** Returns the decrypted API key, or "" if none is stored / encryption is unavailable. */
 export function getApiKey(providerId: string): string {
   const settings = getProviderSettings(providerId);
   if (!settings.apiKeyEncrypted) return "";
-  if (!safeStorage.isEncryptionAvailable()) return "";
+  const raw = Buffer.from(settings.apiKeyEncrypted, "base64");
+  if (!box().isEncryptionAvailable()) return "";
   try {
-    return safeStorage.decryptString(Buffer.from(settings.apiKeyEncrypted, "base64"));
+    return box().decryptString(raw);
   } catch {
     return "";
   }
 }
 
+/**
+ * Keys are stored only encrypted by the OS keychain. When encryption is not
+ * available (no keychain, some Linux setups) the key is refused instead of
+ * being written in the clear.
+ */
 export function setApiKey(providerId: string, apiKey: string): void {
   const current = getProviderSettings(providerId);
-  if (!apiKey) {
+  const trimmed = apiKey.trim();
+  if (!trimmed) {
     writeProvider(providerId, { ...current, apiKeyEncrypted: undefined });
     return;
   }
-  const encrypted = safeStorage.isEncryptionAvailable()
-    ? safeStorage.encryptString(apiKey).toString("base64")
-    : Buffer.from(apiKey, "utf8").toString("base64"); // dev-only fallback, no OS keychain available
+  if (!box().isEncryptionAvailable()) throw new Error("secure storage is not available on this system");
+  const encrypted = box().encryptString(trimmed).toString("base64");
   writeProvider(providerId, { ...current, apiKeyEncrypted: encrypted });
 }
 
@@ -217,35 +372,35 @@ export function hasApiKey(providerId: string): boolean {
 }
 
 export function getMainPinned(): boolean {
-  return store.get("mainPinned") ?? true;
+  return read("mainPinned") ?? true;
 }
 
 export function setMainPinned(pinned: boolean): void {
-  store.set("mainPinned", pinned);
+  write("mainPinned", pinned);
 }
 
 export function getScreenshotTextEnabled(): boolean {
-  return store.get("screenshotText") ?? false;
+  return read("screenshotText") ?? false;
 }
 
 export function setScreenshotTextEnabled(enabled: boolean): void {
-  store.set("screenshotText", enabled);
+  write("screenshotText", enabled);
 }
 
 export function getSpeechLanguage(): SpeechLanguage {
-  const value = store.get("speechLanguage");
+  const value = read("speechLanguage");
   return SPEECH_LANGUAGES.includes(value) ? value : "ru";
 }
 
 export function setSpeechLanguage(language: SpeechLanguage): void {
-  store.set("speechLanguage", language);
+  write("speechLanguage", language);
 }
 
 export function getSpeechModel(): SpeechModel {
-  const value = store.get("speechModel");
+  const value = read("speechModel");
   return SPEECH_MODELS.includes(value) ? value : "small";
 }
 
 export function setSpeechModel(model: SpeechModel): void {
-  store.set("speechModel", model);
+  write("speechModel", model);
 }

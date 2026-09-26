@@ -241,7 +241,6 @@ button:disabled {
 
 .perm-pill {
   font-size: 11px;
-  text-transform: capitalize;
   border-radius: 999px;
   padding: 2px 10px;
   border: 1px solid var(--muted);
@@ -1381,4 +1380,80 @@ select {
 .tracker-refresh {
   margin-top: 6px;
   font-size: 11px;
+}
+
+/* --- speech models --- */
+
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.model-row.active {
+  border-color: var(--accent);
+}
+
+.model-head,
+.model-status,
+.model-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.model-head {
+  justify-content: space-between;
+}
+
+.model-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.model-size,
+.model-percent {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--card-border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.model-error {
+  margin: 0;
+  font-size: 12px;
+}
+
+.hint.warn {
+  color: var(--text);
+}
+
+a {
+  color: var(--accent-text);
 }

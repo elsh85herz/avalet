@@ -18,15 +18,22 @@ Resume rule: read `CLOUD_TASK.md`, then this file, then `DECISIONS.md`. Work con
 
 ## Done
 
-(nothing yet)
+- Step 1 (baseline and hygiene):
+  - Shared IPC contract `electron/shared/ipc-contract.ts`; preload/renderer/main use it; drift fails `tsc` (checked).
+  - `electron/app-core.ts` holds all non-window IPC handlers; `main.ts` is a thin shell; a test asserts every channel has exactly one handler.
+  - Stores injectable (MemoryKV + fake keychain in tests); settings schema v1 with migration (existing key => Advanced, no wizard).
+  - Speech model manager (ported from `wip/model-manager` by hand): states absent/downloading/ready/error, progress, cancel, delete, auto-retry with resume; sidecar never downloads on Start (`model_not_downloaded`), Start returns `{ok:false, reason:"model-missing"}`.
+  - Live checklist behind a setting (Advanced on, Simple off), background model, tests for all trigger rules.
+  - Fixtures: `test/fixtures/fake-sidecar.mjs`, `test/fixtures/fake-model-download.mjs` (sparse files).
+  - Verified: `npm run typecheck` ok, `npm test` 81/81, `npm run build` ok, app runs under Xvfb (screenshot mode).
 
 ## In progress
 
-- Step 1: baseline and hygiene.
+- Step 2: token metering.
 
 ## Next
 
-- Step 1 remainder, then Steps 2..7 in order.
+- Steps 3..7 in order.
 
 ## Blockers
 

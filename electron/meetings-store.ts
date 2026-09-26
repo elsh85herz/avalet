@@ -1,51 +1,31 @@
-import { app } from "electron";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import type { MeetingMode } from "./modes.js";
 import type { ActionItem, AgendaStatusItem } from "./summary-format.js";
+import type { Meeting, MeetingListItem, TranscriptSegment } from "./shared/ipc-contract.js";
 
-export type TranscriptSegment = {
-  at: number;
-  speaker: "me" | "other";
-  text: string;
-};
-
-export type Meeting = {
-  id: string;
-  title: string;
-  startedAt: number;
-  endedAt?: number;
-  mode: MeetingMode;
-  context: string;
-  transcript: TranscriptSegment[];
-  summary?: string;
-  summaryAt?: number;
-  /** Questions to get answered on this call, one per entry; may be edited during the meeting. */
-  agenda?: string[];
-  /** Per-question outcome from the last summary: closed or still open. */
-  agendaStatus?: AgendaStatusItem[];
-  /** Action points extracted by the last summary. */
-  actions?: ActionItem[];
-};
-
-export type MeetingListItem = {
-  id: string;
-  title: string;
-  startedAt: number;
-  endedAt?: number;
-  mode: MeetingMode;
-  segmentCount: number;
-  hasSummary: boolean;
-};
+export type { Meeting, MeetingListItem, TranscriptSegment };
 
 // One JSON file per meeting under userData/meetings. A transcript grows by a
 // segment every few seconds for an hour or more, so rewriting a single small
 // file beats rewriting one big store with every meeting in it.
+let rootDir: string | null = null;
+let current: Meeting | null = null;
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** main.ts passes <userData>/meetings; tests pass a temp directory. Resets the in-memory current meeting. */
+export function initMeetingsStore(dir: string): void {
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = null;
+  current = null;
+  rootDir = dir;
+}
+
 function meetingsDir(): string {
-  const dir = path.join(app.getPath("userData"), "meetings");
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+  if (!rootDir) throw new Error("meetings store not initialized");
+  fs.mkdirSync(rootDir, { recursive: true });
+  return rootDir;
 }
 
 function meetingPath(id: string): string {
@@ -60,8 +40,6 @@ function writeMeeting(meeting: Meeting): void {
   fs.renameSync(tmp, file);
 }
 
-let current: Meeting | null = null;
-let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 function scheduleFlush(): void {
   if (flushTimer) return;

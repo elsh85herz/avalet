@@ -1,82 +1,109 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { app } from "electron";
 import { logLine } from "./log.js";
+import { sidecarDir } from "./platform/paths.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+export type SidecarCommand = { command: string; args: string[]; env?: NodeJS.ProcessEnv };
+
+/** The real recognizer: python-sidecar/server.py inside its bundled venv. */
+export function defaultSidecarCommand(): SidecarCommand {
+  const venvBin = process.platform === "win32" ? "Scripts/python.exe" : "bin/python3";
+  return {
+    command: path.join(sidecarDir(), ".venv", venvBin),
+    args: [path.join(sidecarDir(), "server.py")],
+  };
+}
 
 /**
  * Talks JSON-RPC (newline-delimited) to python-sidecar/server.py over
- * stdin/stdout — keeps the heavy Python/ML runtime out of the Electron main
+ * stdin/stdout: keeps the heavy Python/ML runtime out of the Electron main
  * process without native Node bindings. Expects `python-sidecar/.venv`
  * created by `scripts/setup-python.sh` (see README); packaged builds ship
- * that venv under resources/python-sidecar.
+ * that venv under resources/python-sidecar. Tests and E2E pass a command for
+ * a fake sidecar that speaks the same protocol.
  */
 export class PythonRuntime {
   private proc: ChildProcessWithoutNullStreams | null = null;
   private ready = false;
+  private starting: Promise<void> | null = null;
   private nextId = 1;
   private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
   private buffer = "";
 
-  private resolveInterpreterPath(): string {
-    const venvBin = process.platform === "win32" ? "Scripts/python.exe" : "bin/python3";
-    return path.join(this.sidecarDir(), ".venv", venvBin);
-  }
-
-  private sidecarDir(): string {
-    // In dev: <repo>/python-sidecar. Packaged: resources/python-sidecar (see
-    // electron-builder.config.mjs extraResources).
-    return app.isPackaged
-      ? path.join(process.resourcesPath, "python-sidecar")
-      : path.join(__dirname, "../python-sidecar");
-  }
+  constructor(
+    private readonly resolveCommand: () => SidecarCommand = defaultSidecarCommand,
+    private readonly readyTimeoutMs = 30_000,
+  ) {}
 
   getStatus(): { running: boolean; ready: boolean } {
     return { running: this.proc !== null, ready: this.ready };
   }
 
-  async start(): Promise<void> {
-    if (this.proc) return;
-    const interpreter = this.resolveInterpreterPath();
-    const script = path.join(this.sidecarDir(), "server.py");
-    const proc = spawn(interpreter, [script], {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env },
-    });
+  /** Starts the process once; concurrent callers share the same start. */
+  start(): Promise<void> {
+    if (this.proc && this.ready) return Promise.resolve();
+    if (!this.starting) {
+      this.starting = this.spawnAndWait().finally(() => {
+        this.starting = null;
+      });
+    }
+    return this.starting;
+  }
+
+  private async spawnAndWait(): Promise<void> {
+    const { command, args, env } = this.resolveCommand();
+    const proc = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, ...env } });
     this.proc = proc;
+    this.buffer = "";
 
     proc.stdout.setEncoding("utf8");
     proc.stdout.on("data", (chunk: string) => this.onStdout(chunk));
     proc.stderr.setEncoding("utf8");
-    proc.stderr.on("data", (chunk: string) => {
-      logLine(`[python-sidecar] ${chunk.trim()}`);
+    proc.stderr.on("data", (chunk: string) => logLine(`[python-sidecar] ${chunk.trim()}`));
+    // A missing or broken interpreter must not surface as an uncaught error
+    // dialog: it is reported to whoever asked to start it.
+    proc.on("error", (error) => {
+      logLine(`[python-sidecar] failed to start: ${error.message}`);
+      if (this.proc === proc) this.detach(new Error(`python-sidecar failed to start: ${error.message}`));
     });
     proc.on("exit", (code) => {
-      console.error(`[python-sidecar] exited with code ${code}`);
-      this.proc = null;
-      this.ready = false;
-      for (const { reject } of this.pending.values()) {
-        reject(new Error("python-sidecar exited"));
-      }
-      this.pending.clear();
+      logLine(`[python-sidecar] exited with code ${code}`);
+      if (this.proc === proc) this.detach(new Error("python-sidecar exited"));
     });
+    // Writing to a process that just died raises EPIPE on stdin.
+    proc.stdin.on("error", () => {});
 
-    await this.waitForReady();
+    await this.waitForReady(proc);
   }
 
-  private waitForReady(): Promise<void> {
+  private detach(error: Error): void {
+    this.proc = null;
+    this.ready = false;
+    for (const { reject } of this.pending.values()) reject(error);
+    this.pending.clear();
+  }
+
+  private waitForReady(proc: ChildProcessWithoutNullStreams): Promise<void> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error("python-sidecar did not become ready in time")), 30_000);
+      const finish = (error?: Error) => {
+        clearTimeout(timeout);
+        clearInterval(check);
+        proc.off("error", onError);
+        proc.off("exit", onExit);
+        if (error) reject(error);
+        else resolve();
+      };
+      const onError = (error: Error) => finish(error);
+      const onExit = () => finish(new Error("python-sidecar exited before it was ready"));
+      const timeout = setTimeout(() => {
+        finish(new Error("python-sidecar did not become ready in time"));
+        proc.kill();
+      }, this.readyTimeoutMs);
       const check = setInterval(() => {
-        if (this.ready) {
-          clearInterval(check);
-          clearTimeout(timeout);
-          resolve();
-        }
-      }, 100);
+        if (this.ready) finish();
+      }, 25);
+      proc.once("error", onError);
+      proc.once("exit", onExit);
     });
   }
 
@@ -108,19 +135,20 @@ export class PythonRuntime {
   }
 
   async call<T>(command: string, params: Record<string, unknown> = {}): Promise<T> {
-    if (!this.proc || !this.ready) throw new Error("python-sidecar is not running");
+    const proc = this.proc;
+    if (!proc || !this.ready) throw new Error("python-sidecar is not running");
     const id = this.nextId++;
     const request = JSON.stringify({ id, command, params }) + "\n";
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject });
-      this.proc!.stdin.write(request);
+      proc.stdin.write(request);
     });
   }
 
   async stop(): Promise<void> {
-    if (!this.proc) return;
-    this.proc.kill();
-    this.proc = null;
-    this.ready = false;
+    const proc = this.proc;
+    if (!proc) return;
+    this.detach(new Error("python-sidecar stopped"));
+    proc.kill();
   }
 }
