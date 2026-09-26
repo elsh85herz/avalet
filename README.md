@@ -9,12 +9,13 @@ Local-first: audio never leaves your Mac and transcription runs on-device. For t
 
 [Русская версия](README.ru.md)
 
-> Status: release candidate 0.2.0-rc.1. Built by a practicing systems analyst for their own meetings first. macOS only for now.
+> Status: release candidate 0.2.0-rc.2. Built by a practicing systems analyst for their own meetings first. macOS only for now.
 
 ## What it does
 
 - **Guided first run.** Four short screens: permissions (with a live status and a "how to fix" button), access (your own key, with a real test call; "Avalet without keys" is shown as coming soon), the speech model download (progress, cancel, resume), and the meeting context with a 20-second self-test that shows a real suggestion before your first call.
-- **Simple by default, everything in Advanced.** The Simple level is Start/Pause, meeting type, context, transcript, summary and export. Advanced (Settings, "Advanced mode") has every provider setting, models, the live checklist, screenshot text and logs.
+- **Simple by default, everything in Advanced.** Simple is the same working product with fewer settings, not fewer tools: Start, Pause, End, meeting type, context, transcript, summary and export in the main window, and the full overlay (Pause/Resume, End, Auto, language, opacity, screenshot, notes, all quick actions). Its Settings cover access and the key test, meeting type and role, all speech models, where files are saved and appearance, and show which model answers. Advanced (Settings, "Advanced mode") adds provider URLs, model names, the background model, the live checklist switch, screenshot text and the log folder.
+- **One clear problem at a time.** The Simple home shows one line of what is ready (speech model, key, microphone, screen recording) and at most one problem, most blocking first, with one button: download the model, check the key, open System Settings. Start never listens without a ready speech model; during the first download it waits and starts by itself.
 
 - **Live suggestions** as the conversation goes: clarifying questions, gaps and risks in what's being discussed, a crisp restatement of what was just said. Triggered by question/change cues in speech and by the other side pausing, not on a timer.
 - **Drafts on demand.** Ask for a database schema, an ER diagram, an API contract, a process flow, and you get a concrete draft with stated assumptions, then it gets revised as new details arrive.
@@ -24,7 +25,7 @@ Local-first: audio never leaves your Mac and transcription runs on-device. For t
 - **Manual ask, quick actions, screenshot.** Type a question any time, tap "Summarize" / "Risks?" / "Ask a question" / "Explain this", or send a screenshot of your screen for a priority read. Models that see images (Claude, OpenAI, DeepSeek) get the picture, which is the fast path; an optional setting adds the text recognized on your Mac for exact names, numbers and code (about a second slower). Models that do not (local ones) always get the screen as recognized text. If a provider refuses the image, Avalet retries with the text.
 - **Meeting modes.** Requirements gathering, grooming and estimation, demo and acceptance, document review, interview, or free: each shifts what the assistant pays attention to.
 - **Transcript and meeting summary.** Every call is saved as a meeting with a timestamped, speaker-tagged transcript. One button writes the summary in an analyst's format: decisions, open questions, requirements, risks, tasks. Export to Markdown or copy as plain text.
-- **Stop / Resume / history.** Stop freezes live output without losing anything, page through earlier blocks, resume instantly. History is kept on disk.
+- **Pause / Resume / End / history.** Labelled buttons in the overlay and the main window: Pause freezes live output without losing anything, page through earlier blocks, resume instantly; End closes the meeting and hides the overlay. History is kept on disk.
 - **Token usage you can see.** Counts come from the providers' own responses, per month and per meeting, in Settings; the overlay shows a small per-meeting number. Background work can use a cheaper model. When Avalet tokens run out, nothing breaks: the transcript keeps recording and the app offers more tokens or your own key.
 - **Overlay stays out of your screen share** (macOS content protection), the way presenter notes do.
 - **Works for any meeting where you have to answer fast and to the point:** requirements sessions, grooming, demos, architecture reviews, technical interviews.
@@ -78,7 +79,7 @@ system audio (loopback)               5s WAV chunks, tagged "other"
                                   |
               electron/live-session.ts -> your LLM provider (streamed)
                                   |
-                 overlay window: live block, Stop / Resume, history,
+                 overlay window: live block, Pause / Resume, End, history,
                  manual ask, quick actions, screenshot
 ```
 
@@ -93,7 +94,7 @@ system audio (loopback)               5s WAV chunks, tagged "other"
 
 | First run | Simple meeting | Overlay |
 |---|---|---|
-| ![Access step](docs/screens/wizard-2-access-coming-soon-dark.png) | ![Meeting with summary](docs/screens/simple-meeting-summary-dark.png) | ![Suggestion](docs/screens/overlay-simple-suggestion-dark.png) |
+| ![Access step](docs/screens/wizard-2-access-coming-soon-dark.png) | ![Meeting with summary](docs/screens/simple-meeting-summary-dark.png) | ![Overlay controls](docs/screens/overlay-simple-controls-dark.png) |
 
 All screens, both themes: [`docs/screens/`](docs/screens/README.md). They are rendered by the end-to-end tests on Linux, so the macOS translucency is missing there.
 
@@ -106,7 +107,7 @@ All screens, both themes: [`docs/screens/`](docs/screens/README.md). They are re
 - **Speech model is downloaded from Hugging Face** on first run. If that's slow or blocked on your network, use a VPN for the first download (ours: [ast-net.ru](https://ast-net.ru)); the model is cached afterwards. Bundling the model with the app is on the roadmap.
 - **Text recognition on screenshots is macOS only** for now (Apple Vision, works offline). Building from source needs the Xcode Command Line Tools (`xcode-select --install`); the downloadable app already includes it. On other platforms screenshots go to vision models as images only.
 - **DeepSeek runs with reasoning switched off** (`thinking: disabled`): `deepseek-flash` otherwise thinks before every answer, which adds seconds. Screenshots need `deepseek-flash`; `deepseek-v4-pro` does not take images (Avalet then falls back to recognized text).
-- **Logs and timings** are written to `~/Library/Logs/Avalet/avalet.log` (timings and errors only, never meeting text, screen text, or keys). Attach it when reporting slowness.
+- **Logs and timings** are written to `~/Library/Logs/Avalet/avalet.log` (timings and errors only, never meeting text, screen text, or keys; key-shaped strings are cut out and a repeated warning is written once per ten minutes). Attach it when reporting slowness.
 - **Consent.** Recording a call may require the other participants' consent depending on your jurisdiction. Avalet shows a visible listening indicator, but consent is on whoever runs it.
 
 ## Roadmap

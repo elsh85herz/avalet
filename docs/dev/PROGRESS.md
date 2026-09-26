@@ -133,13 +133,16 @@ Resume rule: read `CLOUD_TASK_2.md` (current task, 0.2.0-rc.2) and `CLOUD_TASK.m
   - `electron/log.ts`: identical lines within 10 min are counted, not repeated; key-shaped strings redacted. `electron/log-hygiene.test.ts`: repeat suppression, redaction, and a full own-key meeting with a canary in the transcript/context and the key: neither reaches the log.
   - Verified: `npm run check` (146/146), `xvfb-run ... npx playwright test` 14/14.
 
+- Step 6 (docs and versioning): version `0.2.0-rc.2` (package.json, package-lock.json), CHANGELOG, READMEs RU/EN (Simple level, one problem at a time, Pause/Resume/End, logs, overlay screenshot), MAC_VERIFY (steps 4, 7a, 7b, 7c, 8a), CLEANUP (`CLOUD_TASK_2.md` to delete, sensitive rescan clean), REPORT section "0.2.0-rc.2".
+  - Final verification: `npm run check` 146/146, i18n 352 strings; `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 14/14; `npm run test:coverage`.
+
 ## rc.2: In progress
 
-- Step 6 (docs and versioning, REPORT section).
+(nothing: all steps of CLOUD_TASK_2.md done)
 
 ## rc.2: Next
 
-- Steps 2 to 6 of CLOUD_TASK_2.md, then the REPORT section "0.2.0-rc.2".
+- Owner: MAC_VERIFY on the rc.2 build (new steps first); decisions in REPORT.md "0.2.0-rc.2".
 
 ## rc.2: Blockers
 

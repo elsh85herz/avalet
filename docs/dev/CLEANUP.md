@@ -1,7 +1,7 @@
 # Cleanup before going public
 
 Everything that exists only because of the autonomous session lives in
-`docs/dev/` and `CLOUD_TASK.md`. Product files that stay: `docs/screens/`,
+`docs/dev/`, `CLOUD_TASK.md` and `CLOUD_TASK_2.md`. Product files that stay: `docs/screens/`,
 README updates, `CHANGELOG.md`, `.github/workflows/`, tests (`electron/**/*.test.ts`,
 `electron/testing/`, `test/`, `e2e/`, `playwright.config.ts`), `server-mock/`
 (the tests and E2E need it).
@@ -9,6 +9,7 @@ README updates, `CHANGELOG.md`, `.github/workflows/`, tests (`electron/**/*.test
 ## (a) Delete before going public
 
 - `CLOUD_TASK.md` (the task text for the autonomous session; contains market strategy)
+- `CLOUD_TASK_2.md` (the task text for the 0.2.0-rc.2 session; mentions the payment gateway choice)
 - `docs/dev/PROGRESS.md`
 - `docs/dev/DECISIONS.md`
 - `docs/dev/REPORT.md`
@@ -23,7 +24,7 @@ README updates, `CHANGELOG.md`, `.github/workflows/`, tests (`electron/**/*.test
 ## (c) Commands
 
 ```bash
-git rm CLOUD_TASK.md docs/dev/PROGRESS.md docs/dev/DECISIONS.md docs/dev/REPORT.md docs/dev/CLEANUP.md
+git rm CLOUD_TASK.md CLOUD_TASK_2.md docs/dev/PROGRESS.md docs/dev/DECISIONS.md docs/dev/REPORT.md docs/dev/CLEANUP.md
 git commit -m "Remove autonomous-session scaffolding"
 
 # after the squash merge of release/v0.2-autopilot into main:
@@ -39,6 +40,7 @@ employer names found. Remaining items for a human decision:
 
 - `docs/dev/market-check.md`: removed from the repo, the copy is kept privately outside it.
 - `CLOUD_TASK.md`: market and pricing strategy ("Russian market first", tier budgets). Deleted by the commands above.
+- `CLOUD_TASK_2.md`: names the planned payment gateway and the owner's test findings. Deleted by the commands above. Rescanned on 2026-09-26 for the rc.2 diff (`git diff aeba8a1 | grep` for key patterns, emails, bank and employer names): only the test canaries `sk-canary-...`/`sk-test-...` in tests, which are not keys.
 - Pricing and budgets in code and docs: 990 RUB/month placeholder, 500,000 trial and 5,000,000 Pro weighted tokens (`electron/billing/config.ts`, `server-mock/server.mjs`, `docs/dev/billing-api.md`, READMEs, CHANGELOG). Public by design once the plan is announced; check they are final.
 - `electron/billing/config.ts` `PRODUCTION_PUBLIC_KEY`: a placeholder public key (its private key never existed on disk). Not a secret, but it must be replaced by the real server key before the built-in provider can work.
 - Commit messages on this branch end with a `Claude-Session:` link to the session transcript. A squash merge with a new message drops them from `main`; the branch itself is deleted by the commands above.

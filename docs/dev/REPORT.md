@@ -61,3 +61,61 @@ runs only on macOS runners), and the upgrade from a 0.1 install.
 1. Run `MAC_VERIFY.md` on the `.dmg` from the Release (macOS) workflow and fix what it finds.
 2. Use it on real meetings with an own key for a week; tune the checklist and suggestion timing from the ledger and logs.
 3. Stand up the billing server (contract ready, mock shows the flows), then enable the built-in provider.
+
+---
+
+# 0.2.0-rc.2 (2026-09-26, CLOUD_TASK_2.md)
+
+Branch `release/v0.2-autopilot`, version `0.2.0-rc.2`, not tagged. One commit
+per step; details in `PROGRESS.md` ("rc.2") and `DECISIONS.md` (section "0.2.0-rc.2" and the replaced lines).
+
+## What changed
+
+1. **Simple overlay has every meeting control.** Labelled Pause/Resume and End, Auto, language, opacity, screenshot, notes, all four quick actions, in both levels. End from the overlay closes the meeting, releases the mic, hides the overlay. Main window header: Pause/Resume on every screen while a meeting runs.
+2. **Simple Settings complete.** Access and key test, model in use (read-only), meeting type/role/agenda, all speech models with delete and a plain guide, export folder (new setting), opacity, language. Wizard: "Other models can be chosen later in Settings".
+3. **Built-in provider not a dead end.** `builtInProviderAvailable` (false with the placeholder URL/key unless `AVALET_BILLING_URL` or the mock): Avalet shows "Coming soon", no billing call at all; an install with Avalet selected goes back to an own key. With an own key billing is never contacted by itself; failures logged once per session.
+4. **One clear problem.** Pure `problems.ts`: fixed order, one sentence, one button, readiness line. Budget wording only for an exhausted Avalet plan. "Key is not checked yet" + Check (per-key check state). Start never opens the mic without a ready model and waits for a download in progress. Wizard sample no longer about limits and shown with its conversation.
+5. **Robustness.** Resume after cancel tested (unit + E2E); log skips identical lines (10 min, with a count) and redacts key-shaped strings; canary test for meeting text and key.
+6. **Docs.** Version, CHANGELOG, READMEs (RU/EN), MAC_VERIFY (steps 4, 7a, 7b, 7c, 8a), CLEANUP (`CLOUD_TASK_2.md`).
+
+## Verified here (Linux container, commands run)
+
+| Command | Result |
+|---|---|
+| `npm run check` (typecheck, `check-i18n`, unit + integration) | ok; 352 strings per language; 146/146 tests (was 129) |
+| `npm run build` then `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` | 14/14 (was 11): Simple overlay controls, pause/end from overlay and header, auto off, Simple Settings items, no-billing-server state incl. app log, model missing/waiting, unchecked key, cancel/continue, paywall with Pause/End visible, mock trial/Pro |
+| `npm run test:coverage` | problems 97%, access 100%, billing config 100%, billing service 95%, log 96%, model manager 98% |
+| `test/problems.test.ts` | own-key mode cannot produce limit/budget/"used up" text in any status, key state or model state, RU and EN |
+| `electron/billing/availability.test.ts` | zero billing calls when unavailable, and in own-key mode at startup, on the timer and on refresh |
+| `electron/log-hygiene.test.ts` | canary transcript text and key absent from the log after a full meeting, present in the exports |
+| Screenshots | regenerated in `docs/screens/` (new: overlay controls, strip paused, auto off, coming soon, key unchecked, home ready, start waits, model partial) |
+
+## Needs a Mac (`MAC_VERIFY.md`)
+
+The overlay rows at 380 px with macOS fonts (checked only with Linux fonts);
+the mic indicator going off after End from the overlay (step 7b; E2E uses a
+fake capture); a refused Start leaving the mic closed (7c); permission polling
+reflecting System Settings changes; the export folder picker and the save
+dialog opening in it; the normal launch showing "Coming soon" with a clean log
+(8a); everything from the rc.1 list (real capture, Hugging Face download,
+Vision OCR, `.dmg`).
+
+## Known gaps
+
+- "Build-time" availability is the two constants in `electron/billing/config.ts`; there is no separate build flag. A build that replaces both turns Avalet on.
+- Keys saved before rc.2 show "Key is not checked yet" once, until Check or the first answer.
+- The owner's "question about a limit" was read two ways (budget text; the wizard sample about a card limit); both are addressed, the exact screen was not available here.
+- Opacity keeps its label "Opacity" (the task calls it brightness).
+- Not touched on purpose: billing server, prices, gateway, token hint, checklist default, speech engine, `npm audit` findings in dev dependencies.
+
+## Decisions needing the owner
+
+1. Avalet in the wizard: disabled with "Coming soon" (current) or hidden. *Recommended: keep disabled, it tells users what is coming.*
+2. End without a confirmation (both windows). *Recommended: keep; nothing is lost, the meeting stays in History.*
+3. Readiness line always visible on the Simple home. *Recommended: keep for rc.2, revisit after a week of use.*
+
+## Next steps
+
+1. Run `MAC_VERIFY.md` (new steps 4, 7a to 7c, 8a first) on the rc.2 `.dmg`.
+2. A week of real meetings in Simple with an own key; then decide the checklist default.
+3. Billing server and Robokassa integration as a separate task; replacing the two config constants turns the built-in provider on.

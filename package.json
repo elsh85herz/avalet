@@ -1,7 +1,7 @@
 {
   "name": "avalet",
   "description": "Meeting assistant for systems analysts: listens to the call, suggests what to ask, keeps the transcript. Local-first, bring your own LLM.",
-  "version": "0.2.0-rc.1",
+  "version": "0.2.0-rc.2",
   "private": true,
   "type": "module",
   "main": "dist-electron/main.js",

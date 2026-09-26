@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.0-rc.2 (unreleased)
+
+Fixes after the first test on a Mac. Simple is now the same working product as Advanced with fewer settings, not fewer tools.
+
+### Changed
+- **Overlay controls are the same in Simple and Advanced:** labelled Pause/Resume and End, Auto, interface language, opacity slider, screenshot and notes. All four quick actions are one click away ("More actions" is gone); Simple highlights "Clarifying question". Icon-only buttons have tooltips and accessible names.
+- **End from the overlay.** Closes the meeting (as in the main window), releases the microphone and hides the overlay until the next Start. While a meeting runs, the main window header has a Pause/Resume button on every screen.
+- **Simple Settings are complete for real work:** access and key test, the model in use (read-only), meeting type, role and agenda, all speech models with download, cancel, continue and delete plus a plain guide (small vs turbo, first download needs internet, often a VPN from Russia), where files are saved, opacity and language. The wizard says other models can be chosen later.
+- **"Avalet without keys" shows as "Coming soon"** until a billing server is configured in the build. Nothing is sent to a billing server then; an install that had Avalet selected goes back to an own key.
+- **With your own key the billing server is never contacted** by itself (no startup refresh, no timer); a failure is logged once per session.
+- **One clear problem on the Simple home,** most blocking first (speech model, permissions, access, recognition, audio, Avalet budget), each with one button, plus a one-line readiness summary. Budget wording appears only when the Avalet plan is really used up. A saved key that was never checked says "Key is not checked yet" with a Check button.
+- **Start never listens without a ready speech model.** A missing or partial model is explained with Download or Continue in place; during the first download Start waits and begins by itself.
+- The wizard's sample conversation is shown with the sample suggestion and is no longer about card limits.
+- The log skips identical lines within ten minutes and cuts out anything shaped like a key.
+
+### Added
+- Setting for the export folder (default Documents), in Simple and Advanced Settings.
+
+### Fixed
+- After a refused Start (no speech model) the microphone stayed open.
+- Resume on an overlay left over after End started a meeting without audio capture.
+
+
 ## 0.2.0-rc.1 (unreleased)
 
 ### New
