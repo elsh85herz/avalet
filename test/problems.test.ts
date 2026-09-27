@@ -167,8 +167,19 @@ test("lost audio is only a problem while capturing; permissions not asked yet ar
   assert.equal(topProblem(input({ capturing: false, audioDegraded: { me: true, other: true } })), null);
   assert.equal(topProblem(input({ permissions: { mic: "not-determined", screen: "not-determined" } })), null);
   assert.deepEqual(
-    readinessOf(input({ permissions: { mic: "not-determined", screen: "denied" } })).slice(2).map((r) => r.state),
+    readinessOf(input({ capturing: false, permissions: { mic: "not-determined", screen: "denied" } }))
+      .slice(2)
+      .map((r) => r.state),
     ["pending", "missing"],
   );
   assert.equal(topProblem(input({ micBlockedOnStart: true }))?.kind, "mic-blocked");
+});
+
+test("an active capture is trusted over a stuck or lagging permission query", () => {
+  // Seen on an unsigned Mac build: systemPreferences.getMediaAccessStatus
+  // stayed "not-determined" while the meeting was actually listening.
+  assert.equal(
+    readinessOf(input({ capturing: true, permissions: { mic: "not-determined", screen: "granted" } }))[2].state,
+    "ok",
+  );
 });

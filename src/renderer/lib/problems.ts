@@ -172,10 +172,16 @@ export function readinessOf(input: ProblemInput): Readiness[] {
       : access.canUseAvalet
         ? "ok"
         : "missing";
+  // A live capture is stronger evidence than the permission query: on an
+  // unsigned build, macOS's own systemPreferences.getMediaAccessStatus has
+  // been seen stuck on "not-determined" while getUserMedia was already
+  // granted and recording fine, with no way to tell from here whether that
+  // query will ever catch up.
+  const micState = input.capturing ? "ok" : perm(input.permissions?.mic, input.micBlockedOnStart);
   return [
     { item: "model", state: !model ? "pending" : model.state === "ready" ? "ok" : model.state === "downloading" ? "pending" : "missing" },
     { item: "access", state: accessState },
-    { item: "mic", state: perm(input.permissions?.mic, input.micBlockedOnStart) },
+    { item: "mic", state: micState },
     { item: "screen", state: perm(input.permissions?.screen) },
   ];
 }
