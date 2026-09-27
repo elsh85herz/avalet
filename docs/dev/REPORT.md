@@ -148,6 +148,7 @@ Details in `PROGRESS.md` ("Mode tiers") and `DECISIONS.md` ("Mode tiers").
 | `test/locks.test.ts` | renderer: 768 own-key / no-server states in RU and EN, no option marked, no "Pro" in labels, no locked checklist, no plan UI |
 | `electron/integration.test.ts` (3 new) | trial refuses review, demo and the checklist, a stored locked mode starts as free, a mock payment unlocks all; the owner's three-tier split via `/mock/features`; own key with a trial token on the install is never limited |
 | `e2e/tiers.spec.ts` | preview then mock payment unlocks review in place; checklist locked in Simple Settings, overlay and Advanced with previews; own key: no lock anywhere, the review list fills |
+| GitHub Actions CI run 25 (commit `ca98c04`) | green: typecheck, i18n, unit and integration tests, coverage, build, E2E under Xvfb (first green CI on this branch since rc.2 step 10) |
 | Screenshots | new in `docs/screens/`: `tier-preview-review-dark`, `tier-preview-unlocked-dark`, `tier-preview-checklist-dark`, `tier-simple-settings-trial-dark`, `overlay-checklist-locked-dark`, `overlay-checklist-preview-dark`, `overlay-requirements-board-dark`, `overlay-review-board-dark`; others regenerated |
 
 ## Needs a Mac

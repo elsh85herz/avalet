@@ -165,6 +165,7 @@ Baseline: `npm ci` ok, `npm run check` ok (147/147).
 - Verified: `npm run check` 168/168, i18n 394 strings; `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 17/17.
 
 - REPORT.md section "Mode tiers" (decisions for the owner: tier resolution first, the Simple/Advanced paragraph); sensitive rescan recorded in CLEANUP.
+- GitHub Actions CI run 25 on `ca98c04`: green, E2E included.
 
 ### In progress
 
