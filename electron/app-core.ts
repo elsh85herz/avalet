@@ -95,6 +95,7 @@ export const WINDOW_CHANNELS = [
   "avalet:main-toggle",
   "avalet:main-show-access",
   "avalet:main-focus",
+  "avalet:main-hide",
   "avalet:app-quit",
   "avalet:open-logs",
   "avalet:overlay-set-opacity",

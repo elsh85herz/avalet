@@ -75,14 +75,19 @@ function Shell() {
         setLastEnded(null);
         setAdvancedTab("meeting");
         setSimpleView("home");
+        // Interview: overlay only, the notes window would just be a second
+        // thing to look at while answering questions.
+        if (meeting.mode === "interview") void bridge.app.hideMain();
       }),
       bridge.events.onMeetingEnded((ended) => {
         setCurrent(null);
         setLastEnded(ended);
         // Always land on the summary, whichever tab was open (Settings, History...)
-        // when End was pressed, in the main window or from the overlay.
+        // when End was pressed, in the main window or from the overlay, and
+        // whether or not the window was hidden for an interview meeting.
         setAdvancedTab("meeting");
         setSimpleView("home");
+        void bridge.app.focusMain();
       }),
       bridge.events.onNavigate((to) => {
         if (to !== "access") return;

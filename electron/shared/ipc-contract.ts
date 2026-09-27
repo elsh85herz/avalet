@@ -290,6 +290,8 @@ export type InvokeMap = {
   "avalet:main-show-access": [[], void];
   /** Brings the main window to the front, wherever it already is (the overlay's End, so the summary is not left hidden behind a minimized window). */
   "avalet:main-focus": [[], void];
+  /** Hides the main window (an interview meeting starting: only the overlay is needed). */
+  "avalet:main-hide": [[], void];
   "avalet:app-quit": [[], void];
   "avalet:open-logs": [[], void];
   "avalet:history-clear": [[], void];
@@ -485,6 +487,7 @@ export type AvaletApi = {
     toggleMainWindow: () => Promise<void>;
     showAccess: () => Promise<void>;
     focusMain: () => Promise<void>;
+    hideMain: () => Promise<void>;
     /** Opens the folder with avalet.log (timings and errors only, never meeting text). */
     openLogs: () => Promise<void>;
     quit: () => Promise<void>;
@@ -578,6 +581,7 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:main-toggle": true,
   "avalet:main-show-access": true,
   "avalet:main-focus": true,
+  "avalet:main-hide": true,
   "avalet:app-quit": true,
   "avalet:open-logs": true,
   "avalet:history-clear": true,

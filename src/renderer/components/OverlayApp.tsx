@@ -187,14 +187,12 @@ export function OverlayApp() {
   }
 
   // Same as "End meeting" in the main window: stop, close the record. The
-  // main window hears meeting-ended and releases the microphone. It also
-  // gets brought to front here — otherwise a minimized main window leaves
-  // the user with no visible window at all once the overlay closes.
+  // main window hears meeting-ended, releases the microphone, and brings
+  // itself back to front (it may be minimized, or hidden for an interview).
   async function endMeeting() {
     setPeeking(false);
     await bridge.session.stop();
     await bridge.session.reset();
-    await bridge.app.focusMain();
   }
 
   async function processNow() {
@@ -610,7 +608,9 @@ export function OverlayApp() {
         </div>
       ) : null}
 
-      {tracker.enabled || tracker.agendaStatus.length > 0 || visibleActions.length > 0 ? trackerPanel : null}
+      {meetingMode !== "interview" && (tracker.enabled || tracker.agendaStatus.length > 0 || visibleActions.length > 0)
+        ? trackerPanel
+        : null}
 
       <div className="overlay-body-content">
         {current ? (
@@ -621,7 +621,7 @@ export function OverlayApp() {
       </div>
 
       <div className="quick-actions">
-        {!autoDetectEnabled ? (
+        {!autoDetectEnabled || meetingMode === "interview" ? (
           <button
             type="button"
             className="process-btn"
@@ -632,17 +632,19 @@ export function OverlayApp() {
             {t.processNowLabel}
           </button>
         ) : null}
-        {QUICK_ACTIONS.map((qa) => (
-          <button
-            key={qa.key}
-            type="button"
-            className={qa.key === PRIMARY_ACTION && !advanced ? "primary" : ""}
-            onClick={() => void ask(qa.prompt)}
-            disabled={asking}
-          >
-            {t.quickActions[qa.key]}
-          </button>
-        ))}
+        {meetingMode !== "interview"
+          ? QUICK_ACTIONS.map((qa) => (
+              <button
+                key={qa.key}
+                type="button"
+                className={qa.key === PRIMARY_ACTION && !advanced ? "primary" : ""}
+                onClick={() => void ask(qa.prompt)}
+                disabled={asking}
+              >
+                {t.quickActions[qa.key]}
+              </button>
+            ))
+          : null}
       </div>
 
       <div className="ask-row">

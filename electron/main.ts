@@ -360,6 +360,9 @@ function registerIpc(appCore: AppCore): void {
       mainWindow?.show();
       mainWindow?.focus();
     },
+    "avalet:main-hide": () => {
+      mainWindow?.hide();
+    },
     "avalet:app-quit": () => app.quit(),
     "avalet:open-logs": () => {
       void shell.openPath(app.getPath("logs"));
