@@ -30,15 +30,18 @@ export function HowItWorks({ uiLanguage, mode, onClose }: Props) {
   const qa = t.quickActions;
   const [step, setStep] = useState(1);
 
+  // Boxes measured directly off the screenshots (pixel border-color scan,
+  // not eyeballed) — see docs/dev for how to regenerate the screenshots if
+  // the overlay layout changes and these drift.
   const pages: Page[] = [
     { image: overlayExpanded, title: g.overlayTitle, body: g.overlayBody },
-    { image: overlayExpanded, spot: { x: 22, y: 6, w: 200, h: 32, radius: 18 }, title: g.endTitle, body: g.endBody },
-    { image: overlayExpanded, spot: { x: 278, y: 50, w: 58, h: 28, radius: 16 }, title: g.autoTitle, body: g.autoBody },
-    { image: overlayExpanded, spot: { x: 0, y: 483, w: 64, h: 28, radius: 14 }, title: qa.summarize, body: g.actionSummarize },
-    { image: overlayExpanded, spot: { x: 59, y: 483, w: 56, h: 28, radius: 14 }, title: qa.risks, body: g.actionRisks },
-    { image: overlayExpanded, spot: { x: 110, y: 481, w: 163, h: 30, radius: 16 }, title: qa.askQuestion, body: g.actionAskQuestion },
-    { image: overlayExpanded, spot: { x: 271, y: 483, w: 102, h: 28, radius: 14 }, title: qa.explainThis, body: g.actionExplain },
-    { image: overlayChecklist, spot: { x: 2, y: 114, w: 376, h: 26, radius: 10 }, title: g.trackerTitle, body: g.trackerBody },
+    { image: overlayExpanded, spot: { x: 30, y: 9, w: 188, h: 31, radius: 18 }, title: g.endTitle, body: g.endBody },
+    { image: overlayExpanded, spot: { x: 279, y: 44, w: 51, h: 33, radius: 16 }, title: g.autoTitle, body: g.autoBody },
+    { image: overlayExpanded, spot: { x: 11, y: 482, w: 59, h: 29, radius: 14 }, title: qa.summarize, body: g.actionSummarize },
+    { image: overlayExpanded, spot: { x: 70, y: 482, w: 58, h: 29, radius: 14 }, title: qa.risks, body: g.actionRisks },
+    { image: overlayExpanded, spot: { x: 127, y: 482, w: 151, h: 29, radius: 16 }, title: qa.askQuestion, body: g.actionAskQuestion },
+    { image: overlayExpanded, spot: { x: 277, y: 482, w: 81, h: 29, radius: 14 }, title: qa.explainThis, body: g.actionExplain },
+    { image: overlayChecklist, spot: { x: 2, y: 110, w: 376, h: 37, radius: 12 }, title: g.trackerTitle, body: g.trackerBody },
   ];
   const total = pages.length;
   const page = pages[step - 1]!;

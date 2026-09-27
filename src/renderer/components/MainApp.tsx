@@ -79,6 +79,10 @@ function Shell() {
       bridge.events.onMeetingEnded((ended) => {
         setCurrent(null);
         setLastEnded(ended);
+        // Always land on the summary, whichever tab was open (Settings, History...)
+        // when End was pressed, in the main window or from the overlay.
+        setAdvancedTab("meeting");
+        setSimpleView("home");
       }),
       bridge.events.onNavigate((to) => {
         if (to !== "access") return;
@@ -228,8 +232,8 @@ function Shell() {
         </div>
         {advancedTab === "meeting" ? (
           <div className="tab-body">
-            {current ? (
-              <MeetingView meeting={current} uiLanguage={settings.uiLanguage} live />
+            {current ?? lastEnded ? (
+              <MeetingView meeting={(current ?? lastEnded)!} uiLanguage={settings.uiLanguage} live={!(current ?? lastEnded)!.endedAt} />
             ) : (
               <p className="hint">{t.meeting.noCurrent}</p>
             )}
