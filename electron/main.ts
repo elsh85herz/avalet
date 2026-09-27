@@ -427,19 +427,23 @@ async function runScreenshotMode(dir: string, appCore: AppCore): Promise<void> {
   const fake = startMeeting({
     mode: "requirements",
     context: "",
-    agenda: ["Кто подтверждает изменение лимита", "Какой лимит: дневной или разовый", "Сроки и владелец интеграции"],
+    agenda: process.env.AVALET_SCREENSHOT_NO_TRACKER
+      ? []
+      : ["Кто подтверждает изменение лимита", "Какой лимит: дневной или разовый", "Сроки и владелец интеграции"],
   });
-  setLiveAnalysis(fake.id, {
-    agendaStatus: [
-      { question: "Кто подтверждает изменение лимита", closed: false, active: true, note: "выше 300 тыс. звонок из колл-центра" },
-      { question: "Какой лимит: дневной или разовый", closed: true, note: "дневной" },
-      { question: "Сроки и владелец интеграции", closed: false, note: "" },
-    ],
-    actions: [
-      { id: "demo-1", task: "Прислать описание процесса колл-центра", owner: "Собеседник", due: "до пятницы", state: "proposed" },
-      { id: "demo-2", task: "Завести задачу по лимитам", owner: "Я", due: "срок не назван", state: "confirmed" },
-    ],
-  });
+  if (!process.env.AVALET_SCREENSHOT_NO_TRACKER) {
+    setLiveAnalysis(fake.id, {
+      agendaStatus: [
+        { question: "Кто подтверждает изменение лимита", closed: false, active: true, note: "выше 300 тыс. звонок из колл-центра" },
+        { question: "Какой лимит: дневной или разовый", closed: true, note: "дневной" },
+        { question: "Сроки и владелец интеграции", closed: false, note: "" },
+      ],
+      actions: [
+        { id: "demo-1", task: "Прислать описание процесса колл-центра", owner: "Собеседник", due: "до пятницы", state: "proposed" },
+        { id: "demo-2", task: "Завести задачу по лимитам", owner: "Я", due: "срок не назван", state: "confirmed" },
+      ],
+    });
+  }
   const base = Date.now() - 90_000;
   appendSegment({ at: base, speaker: "other", text: "Нам нужно, чтобы клиент мог менять лимит по карте прямо в приложении." });
   appendSegment({ at: base + 12_000, speaker: "me", text: "Лимит дневной или разовый? И кто подтверждает изменение выше порога?" });

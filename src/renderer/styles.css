@@ -682,7 +682,7 @@ button:disabled {
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   padding: 0 12px 8px;
   -webkit-app-region: no-drag;
 }
@@ -691,7 +691,7 @@ button:disabled {
   background: var(--panel);
   border: 1px solid var(--border);
   font-size: 11px;
-  padding: 4px 8px;
+  padding: 4px 6px;
 }
 
 .quick-actions button:hover:not(:disabled) {
@@ -1805,12 +1805,63 @@ a {
   font-size: 14px;
 }
 
-.guide-actions {
+.guide-shot {
   margin: 0;
-  padding-left: 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+}
+
+.guide-shot-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+
+.guide-shot-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.guide-spot {
+  position: absolute;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+  pointer-events: none;
+  animation: guide-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes guide-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-spot {
+    animation: none;
+  }
+}
+
+.guide-shot figcaption h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.guide-shot figcaption p {
+  margin: 0;
+  color: var(--text);
 }
 
 .sample {

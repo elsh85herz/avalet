@@ -241,7 +241,6 @@ export type UiStrings = {
     intro: string;
     overlayTitle: string;
     overlayBody: string;
-    actionsTitle: string;
     actionSummarize: string;
     actionRisks: string;
     actionAskQuestion: string;
@@ -632,11 +631,10 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       overlayTitle: "The overlay",
       overlayBody:
         "A small floating panel that stays on top of other windows and is excluded from your own screen share. Suggestions stream into it in blocks as the call goes; use the arrows to page through earlier ones.",
-      actionsTitle: "The four buttons",
-      actionSummarize: "Recap: the last couple of minutes in 2-3 bullets. For catching up if you looked away.",
-      actionRisks: "Risks?: what in the requirement just discussed looks shaky or incomplete right now.",
-      actionAskQuestion: "Ask a question: one sharp clarifying question to ask next, when you are not sure what to ask.",
-      actionExplain: "Explain: what was just said or shown on screen, in plain terms.",
+      actionSummarize: "The last couple of minutes in 2-3 bullets. For catching up if you looked away.",
+      actionRisks: "What in the requirement just discussed looks shaky or incomplete right now.",
+      actionAskQuestion: "One sharp clarifying question to ask next, when you are not sure what to ask yourself.",
+      actionExplain: "What was just said or shown on screen, in plain terms.",
       autoTitle: "Auto",
       autoBody:
         "On by default: a suggestion appears by itself after the other side pauses. Turn it off to only get one when you press a button or type a question, useful in a quiet or very fast-moving call.",
@@ -1033,11 +1031,10 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       overlayTitle: "Оверлей",
       overlayBody:
         "Маленькая плавающая панель поверх других окон, которая не попадает в вашу же трансляцию экрана. Подсказки приходят в неё живыми блоками по ходу звонка; стрелками можно пролистать более ранние.",
-      actionsTitle: "Четыре кнопки",
-      actionSummarize: "Кратко: последние пару минут в 2-3 тезисах. Если отвлеклись и хотите догнать разговор.",
-      actionRisks: "Риски?: что в только что обсуждённом требовании выглядит шатко или неполно прямо сейчас.",
-      actionAskQuestion: "Уточняющий вопрос: одна острая мысль, что спросить дальше, если не знаете сами.",
-      actionExplain: "Объяснить: что только что сказали или показали на экране, простыми словами.",
+      actionSummarize: "Последние пару минут в 2-3 тезисах. Если отвлеклись и хотите догнать разговор.",
+      actionRisks: "Что в только что обсуждённом требовании выглядит шатко или неполно прямо сейчас.",
+      actionAskQuestion: "Одна острая мысль, что спросить дальше, если не знаете сами.",
+      actionExplain: "Что только что сказали или показали на экране, простыми словами.",
       autoTitle: "Авто",
       autoBody:
         "Включено по умолчанию: подсказка появляется сама после паузы собеседника. Выключите, чтобы получать её только по кнопке или вопросу, пригодится на тихом или очень быстром звонке.",
