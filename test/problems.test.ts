@@ -48,6 +48,7 @@ function input(over: Partial<ProblemInput> = {}): ProblemInput {
     transcriptionError: false,
     audioDegraded: { me: false, other: false },
     capturing: true,
+    micConfirmed: false,
     ...over,
   };
 }
@@ -179,7 +180,14 @@ test("an active capture is trusted over a stuck or lagging permission query", ()
   // Seen on an unsigned Mac build: systemPreferences.getMediaAccessStatus
   // stayed "not-determined" while the meeting was actually listening.
   assert.equal(
-    readinessOf(input({ capturing: true, permissions: { mic: "not-determined", screen: "granted" } }))[2].state,
+    readinessOf(input({ capturing: true, micConfirmed: false, permissions: { mic: "not-determined", screen: "granted" } }))[2]
+      .state,
+    "ok",
+  );
+  // Once confirmed this run, stays "ok" between meetings too (not capturing right now).
+  assert.equal(
+    readinessOf(input({ capturing: false, micConfirmed: true, permissions: { mic: "not-determined", screen: "granted" } }))[2]
+      .state,
     "ok",
   );
 });

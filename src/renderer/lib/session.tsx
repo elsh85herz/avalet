@@ -21,6 +21,8 @@ type SessionApi = {
   transcriptionError: string | null;
   /** Capture is running (mic streams held by this window). */
   capturing: boolean;
+  /** getUserMedia succeeded at least once this run: unlike capturing, this never goes back to false. */
+  micConfirmed: boolean;
   /** Start was pressed while the speech model is still downloading: the meeting starts when it is ready. */
   waitingForModel: boolean;
   /** Forget a Start that waits for the model. */
@@ -46,6 +48,7 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
   const [audioDegraded, setAudioDegraded] = useState({ me: false, other: false });
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
+  const [micConfirmed, setMicConfirmed] = useState(false);
   const [waitingForModel, setWaitingForModel] = useState(false);
   const waitingRef = useRef(false);
   // Mirrored in a ref for the reconnect listener, which subscribes once.
@@ -112,6 +115,7 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
           },
         });
         setCapturing(true);
+        setMicConfirmed(true);
       }
       const result = await bridge.session.start();
       if (!result.ok) {
@@ -156,6 +160,7 @@ export function SessionProvider({ children, fakeCapture }: { children: ReactNode
     audioDegraded,
     transcriptionError,
     capturing,
+    micConfirmed,
     waitingForModel,
     cancelWaiting: () => setWaiting(false),
     start,

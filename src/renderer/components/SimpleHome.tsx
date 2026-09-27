@@ -70,6 +70,7 @@ export function SimpleHome({ uiLanguage, meeting, openSettings }: Props) {
     transcriptionError: Boolean(session.transcriptionError),
     audioDegraded: session.audioDegraded,
     capturing: session.capturing,
+    micConfirmed: session.micConfirmed,
   };
   const top = topProblem(problemInput);
   const status = listening
