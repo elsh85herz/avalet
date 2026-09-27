@@ -158,15 +158,19 @@ Baseline: `npm ci` ok, `npm run check` ok (147/147).
 
 - Gating core: `electron/shared/tiers.ts` (`PLAN_FEATURES`, `featureGate()`: own key and no billing server return "open" first), `Feature` and `AccessState.features` in the IPC contract, optional token `features` (validated, unknown values dropped), mock server `POST /mock/features`, `billing-api.md` updated. AppCore: `gate()`, the live tracker is enabled only when the plan includes it, `meeting-mode-set` refuses a locked mode, Start with a locked stored mode starts as `free` and tells the pickers. Tests: `electron/shared/tiers.test.ts` (invariants over every tier/status/features combination and through `deriveAccess`, table per plan, server features), integration (trial refuses review/demo/checklist, mock payment unlocks; owner's three-tier split through `/mock/features`; own key never limited), token features validation. `npm run check` 159/159.
 
+- Mode boards: markers in the requirements/grooming prompts and the "Risks?" quick action, `src/renderer/lib/mode-board.ts` (+ `test/mode-board.test.ts`, incl. "every marker is asked for by its prompt"), overlay panel with counts and Copy, grooming's "Risks?" asks about hidden work (`quickActionsFor`), mock model answers with markers per mode.
+- Locked preview UX: `src/renderer/lib/locks.ts` (+ `test/locks.test.ts`, renderer invariant over every own-key / no-server combination in RU and EN), `ModePicker` (Simple home, Settings, wizard), `LockedPreview` (real screenshot, plan line, included modes, Get Pro, Not now, own-key hint; unlocks in place after payment), `ChecklistSetting` (Advanced: locked row; Simple: only in Avalet mode), overlay locked checklist row and in-panel hint, guide page wording when locked. Preview images `src/renderer/assets/guide/mode-*.png` from the screenshot mode (extended: one overlay per mode with the board open).
+- E2E: pre-existing failures fixed (the how-it-works guide added in rc.2 steps 8-11 blocked 13 tests; CI was red before this task); advanced meeting on an own key with the requirements board; new `e2e/tiers.spec.ts` (trial preview then mock payment unlocks review; checklist locked in Settings, overlay and Advanced with previews; own key: no lock anywhere, review board). Screenshots added: `tier-*`, `overlay-checklist-locked-dark`, `overlay-checklist-preview-dark`, `overlay-requirements-board-dark`, `overlay-review-board-dark`; others regenerated.
+- Docs: CHANGELOG (Unreleased), READMEs (mode boards; tiers not named: unsigned pricing), MAC_VERIFY 8b (EN/RU), billing-api `features`.
+- Verified: `npm run check` 168/168, i18n 394 strings; `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 17/17.
+
 ### In progress
 
-- Mode boards (next step).
+- REPORT section.
 
 ### Next
 
-1. Mode boards (prompt markers, `src/renderer/lib/mode-board.ts`, overlay panel, grooming "Hidden work?").
-2. Locked preview UX (ModePicker, LockedPreview, checklist rows in Settings and overlay), guide images, E2E preview then upgrade, screenshots.
-3. Docs: REPORT section, CHANGELOG, MAC_VERIFY step.
+1. REPORT.md dated section (what changed, verified, needs a Mac, gaps, decisions incl. the tier resolution and the uiLevel paragraph, next steps); final sensitive scan; CI check on GitHub.
 
 ### Blockers
 

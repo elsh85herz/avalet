@@ -55,7 +55,7 @@ import {
   showOverlayWindow,
   toggleClickThrough,
 } from "./overlay-window.js";
-import { EXTERNAL_CHANNELS, INVOKE_CHANNELS, type InvokeChannel, type Theme } from "./shared/ipc-contract.js";
+import { EXTERNAL_CHANNELS, INVOKE_CHANNELS, type InvokeChannel, type MeetingMode, type Theme } from "./shared/ipc-contract.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -403,6 +403,18 @@ function registerIpc(appCore: AppCore): void {
   }
 }
 
+/** Sample answers with the markers each mode's board collects (screenshot mode only). */
+const SCREENSHOT_MODE_ANSWERS: Partial<Record<MeetingMode, string>> = {
+  requirements:
+    "Требование: клиент меняет дневной лимит по карте в приложении.\nТребование: изменение выше 300 тысяч подтверждает колл-центр.\nРиск: не описано, что будет, если звонок не состоялся.\nУточните: кто владелец интеграции с колл-центром?",
+  grooming:
+    "Срез: смена дневного лимита без подтверждения. Критерий: новый лимит действует сразу.\nСрез: подтверждение выше порога через колл-центр. Критерий: без звонка лимит не меняется.\nОтдельная задача: история изменений лимита в личном кабинете.\nРиск: миграция текущих лимитов не оценена.",
+  demo:
+    "Отклонение: по требованию выше порога нужен звонок, показано без подтверждения.\nОтклонение: нет сообщения об ошибке при лимите ниже нуля.\nПопросите показать: что видит клиент, если колл-центр не дозвонился.",
+  review:
+    "Замечание: раздел 3, порог подтверждения не указан, сказал владелец продукта.\nЗамечание: раздел 5, нет схемы интеграции, сказал архитектор.\nРешение: порог 300 тысяч принят, владелец аналитик, срок пятница.",
+};
+
 // Design check without a Mac: AVALET_SCREENSHOT_DIR=<dir> electron . renders
 // both windows in both themes to PNGs and quits. Used under Xvfb on CI/servers.
 async function runScreenshotMode(dir: string, appCore: AppCore): Promise<void> {
@@ -469,9 +481,27 @@ async function runScreenshotMode(dir: string, appCore: AppCore): Promise<void> {
     await wait(400);
     await shoot(overlay, `overlay-${theme}-collapsed`);
   }
-  emit("avalet:event:meeting-ended", endCurrentMeeting(), "main");
+  // One overlay per mode with a board, the board open: the images of the
+  // locked-mode previews (src/renderer/assets/guide/mode-*.png).
   applyTheme("dark");
   emit("avalet:event:theme-changed", "dark");
+  for (const [mode, text] of Object.entries(SCREENSHOT_MODE_ANSWERS) as Array<[MeetingMode, string]>) {
+    overlay.webContents.send("avalet:event:history-cleared", undefined);
+    overlay.webContents.send("avalet:event:meeting-mode-changed", mode);
+    overlay.webContents.send("avalet:event:tracker-update", { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled: false });
+    overlay.webContents.send("avalet:event:session-state", "listening");
+    const id = `shot-${mode}`;
+    overlay.webContents.send("avalet:event:block-start", { id });
+    overlay.webContents.send("avalet:event:block-delta", { id, delta: text });
+    overlay.webContents.send("avalet:event:block-done", { id });
+    await wait(400);
+    await overlay.webContents.executeJavaScript(
+      '(() => { const b = document.querySelector(".board .tracker-toggle"); if (b && b.getAttribute("aria-expanded") !== "true") b.click(); })()',
+    );
+    await wait(400);
+    await shoot(overlay, `mode-${mode}`);
+  }
+  emit("avalet:event:meeting-ended", endCurrentMeeting(), "main");
   await wait(400);
   app.quit();
 }

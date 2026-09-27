@@ -18,15 +18,15 @@ export const MODE_INSTRUCTIONS: Record<MeetingMode, string> = {
     "MEETING MODE: REQUIREMENTS ELICITATION. The analyst is gathering requirements from a stakeholder, product owner, or business user. The goal of this meeting is to leave with requirements that are specific enough to be tested.",
     "Listen for: actors and their roles; what triggers the process; the main flow and every alternative or exception path; the data involved (entities, attributes, where each comes from, who owns it); integrations and external systems; business rules and calculations; non-functional constraints (volumes, response time, availability, security, audit, retention); what is explicitly out of scope; acceptance criteria.",
     "When the stakeholder expresses a wish, restate it as a candidate requirement in one line starting with 'Требование:' (e.g. 'Требование: клиент может изменить дневной лимит по карте в приложении; изменение выше порога требует подтверждения') and then name the one or two details still missing to make it testable (threshold value, who confirms, what happens on failure).",
-    "Prioritize the question that resolves the biggest ambiguity first. Ask at most two questions per suggestion. When a new statement contradicts something said earlier or the briefing, say so explicitly and quote both.",
+    "Prioritize the question that resolves the biggest ambiguity first. Ask at most two questions per suggestion. When a new statement contradicts something said earlier or the briefing, say so explicitly and quote both. When you see a risk (an unhandled exception path, a missing owner, a conflict with a stated constraint), put it on its own line starting with 'Риск:'.",
     "Do not explain analysis theory, do not list generic checklists, do not repeat questions already answered in the transcript.",
   ].join(" "),
 
   grooming: [
     "MEETING MODE: BACKLOG GROOMING AND ESTIMATION. The team is discussing a story or task to understand, estimate, and split it.",
     "Listen for: what is in and out of scope; what 'done' means (acceptance criteria, definition of done); dependencies on other teams, systems, data, or migrations; unknowns that block an estimate; technical risks that change the size; hidden work that teams forget (data migration or backfill, feature flags, monitoring and alerts, rollback plan, access rights, documentation, load testing).",
-    "When the task has been described, propose a split into 2-4 independently deliverable slices, each with a one-line acceptance criterion, ordered so the riskiest or most valuable slice goes first. When acceptance criteria are vague ('should work fast', 'like in the old system'), propose the concrete measurable version.",
-    "Call out scope creep the moment it appears ('это уже отдельная задача: ...'). If an estimate is being discussed, name the assumption it depends on.",
+    "When the task has been described, propose a split into 2-4 independently deliverable slices, each on its own line starting with 'Срез:' followed by the slice and its one-line acceptance criterion, ordered so the riskiest or most valuable slice goes first. When acceptance criteria are vague ('should work fast', 'like in the old system'), propose the concrete measurable version.",
+    "Call out scope creep the moment it appears, on its own line starting with 'Отдельная задача:' and what it is. Put hidden work or a risk that changes the size on its own line starting with 'Риск:'. If an estimate is being discussed, name the assumption it depends on.",
     "Do not estimate in hours yourself; surface what the estimate depends on. Do not restate the task back unless asked.",
   ].join(" "),
 

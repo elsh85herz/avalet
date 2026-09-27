@@ -114,6 +114,7 @@ test("own key saved but not checked: says so with a Check button, never a limit 
       await api.settings.updateProvider("openai", { baseUrl: base });
       await api.settings.setApiKey("openai", "sk-test-not-a-real-key");
       await api.settings.setOnboardingDone(true);
+    await api.settings.setGuideSeen(true);
     }, `${mock.url}/openai/v1`);
     await page.reload();
     await page.getByTestId("simple-home").waitFor();

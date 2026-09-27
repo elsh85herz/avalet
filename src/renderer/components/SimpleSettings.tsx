@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { PROVIDER_PRESETS_UI } from "../providers/presets.js";
 import { ContextFields } from "./ContextFields.js";
+import { ChecklistSetting } from "./ChecklistSetting.js";
 import { getBridge } from "../lib/bridge.js";
 import { SPEECH_LANGUAGES, type SpeechLanguage } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
@@ -89,6 +90,7 @@ export function SimpleSettings({ uiLanguage, focus, onBack, onRunSetup }: Props)
           {s.meetingSection}
         </h3>
         <ContextFields uiLanguage={uiLanguage} roleWording />
+        <ChecklistSetting uiLanguage={uiLanguage} simple />
       </section>
 
       <section ref={speechRef} aria-labelledby="simple-speech-title">

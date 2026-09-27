@@ -10,6 +10,7 @@ import { SpeechModels } from "./SpeechModels.js";
 import { UsageCounter } from "./UsageCounter.js";
 import { AccessCard } from "./AccessCard.js";
 import { ContextFields } from "./ContextFields.js";
+import { ChecklistSetting } from "./ChecklistSetting.js";
 import { OpacitySlider } from "./OpacitySlider.js";
 
 /**
@@ -129,11 +130,6 @@ export function SettingsPanel({ onRunSetup }: { onRunSetup: () => void }) {
     const next = uiLanguage === "ru" ? "en" : "ru";
     patch({ uiLanguage: next });
     await bridge.settings.setUiLanguage(next);
-  }
-
-  async function setLiveTracker(next: boolean) {
-    patch({ liveTrackerEnabled: next });
-    await bridge.settings.setLiveTracker(next);
   }
 
   const micStatus: PermState = micWorks ? "granted" : ((permissions?.mic as PermState | undefined) ?? "unknown");
@@ -380,18 +376,7 @@ export function SettingsPanel({ onRunSetup }: { onRunSetup: () => void }) {
       </section>
 
       <section className="session-controls">
-        <label className="auto-detect-toggle">
-          <span className="switch">
-            <input
-              type="checkbox"
-              checked={settings.liveTrackerEnabled}
-              onChange={() => void setLiveTracker(!settings.liveTrackerEnabled)}
-              data-testid="live-tracker-toggle"
-            />
-          </span>
-          {t.liveTracker}
-        </label>
-        <p className="hint">{settings.liveTrackerEnabled ? t.liveTrackerOn : t.liveTrackerOff}</p>
+        <ChecklistSetting uiLanguage={uiLanguage} />
         <OpacitySlider uiLanguage={uiLanguage} />
         <p className="state">
           {t.sessionLabel}: {t.sessionStates[session.state]}

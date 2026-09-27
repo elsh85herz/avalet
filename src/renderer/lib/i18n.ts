@@ -60,11 +60,37 @@ export type UiStrings = {
     noOwner: string;
     newCount: string;
   };
+  board: {
+    toggleTitle: string;
+    copy: string;
+    copied: string;
+    hiddenWorkTitle: string;
+    sections: Record<"requirements" | "risks" | "slices" | "separate" | "deviations" | "checks" | "remarks" | "decisions", string>;
+  };
+  locks: {
+    modeBadge: string;
+    modeTitle: string;
+    boardLine: Record<"requirements" | "grooming" | "demo" | "review", string>;
+    planLine: string;
+    includedLine: string;
+    notNow: string;
+    ownKeyHint: string;
+    unlocked: string;
+    useIt: string;
+    checklistTitle: string;
+    checklistBody: string;
+    checklistRow: string;
+    checklistUnlocked: string;
+    turnOn: string;
+    howItWorks: string;
+    imageAlt: string;
+  };
   quickActions: {
     summarize: string;
     risks: string;
     askQuestion: string;
     explainThis: string;
+    hiddenWork: string;
   };
   settings: {
     subtitle: string;
@@ -431,11 +457,52 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       noOwner: "no owner",
       newCount: "new",
     },
+    board: {
+      toggleTitle: "Collected from the suggestions of this meeting",
+      copy: "Copy",
+      copied: "Copied",
+      hiddenWorkTitle: "Risks and hidden work that change the size: migration, flags, monitoring, rollback, access",
+      sections: {
+        requirements: "Requirements",
+        risks: "Risks",
+        slices: "Slices",
+        separate: "Separate tasks",
+        deviations: "Deviations",
+        checks: "Ask to see",
+        remarks: "Remarks",
+        decisions: "Decisions",
+      },
+    },
+    locks: {
+      modeBadge: "{mode} (Pro)",
+      modeTitle: "{mode}: in the Pro plan",
+      boardLine: {
+        requirements: "During the call, candidate requirements and risks are collected in a separate list.",
+        grooming: "During the call, the proposed slices, separate tasks and risks are collected in a separate list.",
+        demo: "During the call, deviations from the requirements and what to ask to see are collected in a separate list.",
+        review: "During the call, remarks and decisions are collected in a separate list.",
+      },
+      planLine: "Included in Pro with every meeting type and the live checklist.",
+      includedLine: "Your plan includes: {modes}.",
+      notNow: "Not now",
+      ownKeyHint: "With your own key all of this is free.",
+      unlocked: "Done: the {mode} mode is available.",
+      useIt: "Use it",
+      checklistTitle: "Live checklist: in the Pro plan",
+      checklistBody:
+        "While the call goes on, agenda items are marked by themselves and tasks with owner and deadline are collected. Marks you set by hand stay as they are.",
+      checklistRow: "Live checklist in Pro",
+      checklistUnlocked: "Done: the live checklist is available.",
+      turnOn: "Turn it on",
+      howItWorks: "How it works",
+      imageAlt: "Screenshot: {name} during a meeting",
+    },
     quickActions: {
       summarize: "Recap",
       risks: "Risks?",
       askQuestion: "Ask a question",
       explainThis: "Explain this",
+      hiddenWork: "Risks?",
     },
     settings: {
       subtitle: "Meeting assistant for systems analysts. Pick a provider, save a key, hit Start.",
@@ -824,11 +891,52 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       noOwner: "без исполнителя",
       newCount: "новых",
     },
+    board: {
+      toggleTitle: "Собрано из подсказок этой встречи",
+      copy: "Копировать",
+      copied: "Скопировано",
+      hiddenWorkTitle: "Риски и скрытая работа, которые меняют размер задачи: миграция, флаги, мониторинг, откат, доступы",
+      sections: {
+        requirements: "Требования",
+        risks: "Риски",
+        slices: "Срезы",
+        separate: "Отдельные задачи",
+        deviations: "Отклонения",
+        checks: "Попросить показать",
+        remarks: "Замечания",
+        decisions: "Решения",
+      },
+    },
+    locks: {
+      modeBadge: "{mode} (в Pro)",
+      modeTitle: "{mode}: в тарифе Pro",
+      boardLine: {
+        requirements: "По ходу встречи требования и риски собираются в отдельный список.",
+        grooming: "По ходу встречи предложенные срезы, отдельные задачи и риски собираются в отдельный список.",
+        demo: "По ходу встречи отклонения от требований и что ещё попросить показать собираются в отдельный список.",
+        review: "По ходу встречи замечания и решения собираются в отдельный список.",
+      },
+      planLine: "Входит в Pro вместе со всеми типами встреч и живым чек-листом.",
+      includedLine: "В вашем тарифе есть: {modes}.",
+      notNow: "Не сейчас",
+      ownKeyHint: "Со своим ключом всё это бесплатно.",
+      unlocked: "Готово: режим \"{mode}\" доступен.",
+      useIt: "Выбрать",
+      checklistTitle: "Живой чек-лист: в тарифе Pro",
+      checklistBody:
+        "Пока идёт встреча, пункты повестки отмечаются сами, а задачи с ответственным и сроком собираются в список. Отметки, которые вы поставили вручную, не меняются.",
+      checklistRow: "Живой чек-лист в Pro",
+      checklistUnlocked: "Готово: живой чек-лист доступен.",
+      turnOn: "Включить",
+      howItWorks: "Как это работает",
+      imageAlt: "Снимок экрана: {name} во время встречи",
+    },
     quickActions: {
       summarize: "Кратко",
       risks: "Риски?",
       askQuestion: "Уточняющий вопрос",
       explainThis: "Объяснить",
+      hiddenWork: "Риски?",
     },
     settings: {
       subtitle: "Ассистент системного аналитика на встречах. Выберите провайдера, сохраните ключ, нажмите Старт.",

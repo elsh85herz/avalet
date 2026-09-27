@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased (after 0.2.0-rc.2)
+
+### Added
+- **A running list per meeting mode in the overlay:** requirements (candidate requirements, risks), grooming (proposed slices, separate tasks, risks), demo (deviations, what to ask to see), review (remarks, decisions). Collected from the suggestions themselves, no extra model call; one click copies it. The mode prompts now put these items on their own lines.
+- In grooming the "Risks?" button also asks about hidden work (migration, flags, monitoring, rollback, access).
+- **Plans of the built-in provider can include different meeting modes and the live checklist.** A mode or the checklist that the plan does not include keeps its place, and choosing it shows what it does with a real screenshot, which plan has it, and the upgrade button; after paying it unlocks in place. None of this applies to your own key, which keeps every mode and the checklist, free, or to a build without a billing server (today's builds). The billing contract gained an optional `features` list in the entitlement token.
+
+### Fixed
+- End-to-end tests account for the how-it-works guide shown once after the setup.
+
 ## 0.2.0-rc.2 (unreleased)
 
 Fixes after the first test on a Mac. Simple is now the same working product as Advanced with fewer settings, not fewer tools.

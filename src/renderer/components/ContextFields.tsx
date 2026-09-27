@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
-import { MEETING_MODES, type MeetingMode } from "../lib/types.js";
+import { MEETING_MODES } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { parseAgendaText } from "../lib/agenda.js";
 import { useAppSettings } from "../lib/settings.js";
 import { IconHelp } from "../icons.js";
+import { ModePicker } from "./ModePicker.js";
 
 type Props = {
   uiLanguage: UiLanguage;
@@ -73,11 +74,6 @@ export function ContextFields({ uiLanguage, roleWording, advanced, hideMode }: P
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  async function changeMode(mode: MeetingMode) {
-    patch({ meetingMode: mode });
-    await bridge.settings.setMeetingMode(mode);
-  }
-
   return (
     <div className="context-fields">
       {hideMode ? null : (
@@ -97,13 +93,7 @@ export function ContextFields({ uiLanguage, roleWording, advanced, hideMode }: P
               </button>
             ) : null}
           </div>
-          <select id="meeting-mode" value={settings.meetingMode} onChange={(e) => void changeMode(e.target.value as MeetingMode)}>
-            {MEETING_MODES.map((mode) => (
-              <option key={mode} value={mode}>
-                {strings.modes[mode]}
-              </option>
-            ))}
-          </select>
+          <ModePicker id="meeting-mode" uiLanguage={uiLanguage} />
           <p className="hint">{strings.modeHelp[settings.meetingMode]}</p>
           {modeHelpOpen ? (
             <dl className="mode-help">

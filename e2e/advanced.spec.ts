@@ -1,21 +1,22 @@
 import { expect, test } from "@playwright/test";
-import { launch, overlayPage, setTheme, shot, startMock } from "./harness";
+import { launch, overlayPage, setTheme, shot, startMock, useOwnKey } from "./harness";
 
-// Advanced level during a meeting: the live checklist in the overlay (on by
-// default in Advanced), the meeting tab and the history list.
+// Advanced level during a meeting with an own key: the live checklist in the
+// overlay (on by default in Advanced), the requirements board, the meeting
+// tab and the history list.
 test("advanced meeting: live checklist, meeting tab, history", async () => {
   const mock = await startMock();
   const run = await launch(mock, { readyModel: true, env: { AVALET_ADVANCED: "1" } });
   const page = run.main;
   try {
     await page.setViewportSize({ width: 480, height: 900 });
+    await useOwnKey(page, mock);
     await page.evaluate(async () => {
       const api = window.avalet!;
-      await api.settings.selectProvider("avalet");
-      await api.billing.activateTrial();
       await api.settings.setAgenda("Какой лимит: дневной или разовый\nКто подтверждает выше порога\nСроки интеграции");
       await api.settings.setMeetingMode("requirements");
       await api.settings.setOnboardingDone(true);
+    await api.settings.setGuideSeen(true);
     });
     await page.reload();
     await page.getByTestId("advanced-settings").waitFor();
@@ -24,7 +25,7 @@ test("advanced meeting: live checklist, meeting tab, history", async () => {
     await overlay.setViewportSize({ width: 380, height: 560 });
     await expect(page.locator(".segment")).toHaveCount(3, { timeout: 20_000 });
 
-    await overlay.locator(".tracker-toggle").click();
+    await overlay.locator(".tracker-toggle").first().click();
     await overlay.getByRole("button", { name: /Обновить сейчас|Update now/ }).click();
     await expect(overlay.locator(".tracker-list li.closed")).toHaveCount(1, { timeout: 20_000 });
     await expect(overlay.locator(".tracker-list li.proposed")).toHaveCount(1);
@@ -32,8 +33,17 @@ test("advanced meeting: live checklist, meeting tab, history", async () => {
     await setTheme(page, "light");
     await shot(overlay, "overlay-advanced-checklist-light");
     await setTheme(page, "dark");
-    await overlay.locator(".tracker-toggle").click();
+    await overlay.locator(".tracker-toggle").first().click();
     await shot(overlay, "overlay-advanced-expanded-dark");
+
+    // Requirements mode: candidate requirements and risks from the suggestions land on the board.
+    const board = overlay.getByTestId("mode-board");
+    await expect(board).toContainText(/Требования 1|Requirements 1/, { timeout: 20_000 });
+    await board.locator(".tracker-toggle").click();
+    await expect(board.locator("[data-section=requirements] li")).toHaveCount(1);
+    await expect(board.locator("[data-section=risks] li")).toHaveCount(1);
+    await shot(overlay, "overlay-requirements-board-dark");
+    await board.locator(".tracker-toggle").click();
     await shot(page, "advanced-meeting-live-dark");
 
     await page.getByRole("button", { name: /^(Настройки|Settings)$/ }).click();

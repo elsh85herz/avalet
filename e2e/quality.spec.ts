@@ -22,7 +22,10 @@ test("contrast: wizard, Simple home and settings, Advanced settings, overlay in 
     await page.getByTestId("wizard-next").click();
     await page.getByTestId("choice-avalet").click();
     await expectReadable(page, "wizard step 2");
-    await page.evaluate(() => window.avalet!.settings.setOnboardingDone(true));
+    await page.evaluate(async () => {
+      await window.avalet!.settings.setOnboardingDone(true);
+      await window.avalet!.settings.setGuideSeen(true);
+    });
     await page.reload();
     await page.getByTestId("simple-home").waitFor();
     await expectReadable(page, "simple home");
@@ -67,6 +70,9 @@ test("keyboard: the wizard can be finished with Tab and Enter only, focus is vis
     await expect(page.getByTestId("wizard")).toHaveAttribute("data-step", "4");
     await focusTo("try-it");
     await focusTo("wizard-next");
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("how-it-works")).toBeVisible();
+    await focusTo("guide-skip");
     await page.keyboard.press("Enter");
     await expect(page.getByTestId("simple-home")).toBeVisible();
     await focusTo("start");

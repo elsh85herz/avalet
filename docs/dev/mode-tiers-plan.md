@@ -129,8 +129,8 @@ Locked mode, preview screen:
 | Trial line | `В пробном доступе есть свободный разговор, интервью, сбор требований и груминг.` | `Your trial includes free conversation, interview, requirements and grooming.` |
 | Primary | `Подключить Pro, {price}` (existing) | `Get Pro, {price}` (existing) |
 | Secondary | `Не сейчас` | `Not now` |
-| Own key hint | `Со своим ключом все режимы бесплатны.` | `With your own key every mode is free.` |
-| After payment | `Готово: {mode} доступен.` + `Выбрать` | `Done: {mode} is available.` + `Use it` |
+| Own key hint | `Со своим ключом всё это бесплатно.` | `With your own key all of this is free.` |
+| After payment | `Готово: режим "{mode}" доступен.` + `Выбрать` | `Done: the {mode} mode is available.` + `Use it` |
 
 Live checklist, locked:
 

@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
 import type { MeetingMode, SessionState, TrackerState } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
-import { QUICK_ACTIONS } from "../live/quick-actions.js";
+import { quickActionsFor } from "../live/quick-actions.js";
+import { boardText, extractBoard } from "../lib/mode-board.js";
 import { IconCamera, IconChevron, IconCopy, IconNotes, IconPause, IconPlay, IconStop } from "../icons.js";
 import { compactTokens, useUsage } from "./UsageCounter.js";
-import { formatPrice } from "./AccessCard.js";
+import { formatPrice, useAccess } from "./AccessCard.js";
+import { LockedPreview } from "./LockedPreview.js";
+import { checklistLocked } from "../lib/locks.js";
 import type { AccessState } from "../../../electron/shared/ipc-contract.js";
 
 /** Simple level highlights this quick action; every quick action stays one click away in both levels. */
@@ -39,6 +42,9 @@ export function OverlayApp() {
   const [peeking, setPeeking] = useState(false);
   const [tracker, setTracker] = useState<TrackerState>(EMPTY_TRACKER);
   const [trackerOpen, setTrackerOpen] = useState(false);
+  const [boardOpen, setBoardOpen] = useState(false);
+  const [boardCopied, setBoardCopied] = useState(false);
+  const [checklistPreview, setChecklistPreview] = useState(false);
   const [trackerDraft, setTrackerDraft] = useState("");
   const [trackerDraftKind, setTrackerDraftKind] = useState<"question" | "action">("question");
   const [paywall, setPaywall] = useState<AccessState | null>(null);
@@ -52,6 +58,9 @@ export function OverlayApp() {
   const t = UI_STRINGS[uiLanguage];
   const advanced = uiLevel === "advanced";
   const usage = useUsage();
+  const access = useAccess();
+  // Only with the built-in provider on a plan without it (lib/locks.ts); never with an own key.
+  const trackerLocked = checklistLocked(access);
   const meetingTokens = usage?.meeting ? usage.meeting.inputTokens + usage.meeting.outputTokens : 0;
 
   useEffect(() => {
@@ -122,6 +131,7 @@ export function OverlayApp() {
       bridge.events.onTranscriptionRecovered(() => setTranscriptionError(null)),
       bridge.events.onHistoryCleared(() => {
         textById.current = {};
+        setBoardOpen(false);
         setBlocks([]);
         setPageIndex(0);
       }),
@@ -152,6 +162,12 @@ export function OverlayApp() {
   async function copyCurrent() {
     const text = current?.text;
     if (!text) return;
+    await copyText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  }
+
+  async function copyText(text: string) {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
@@ -163,8 +179,6 @@ export function OverlayApp() {
       document.execCommand("copy");
       area.remove();
     }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
   }
 
   function goPrev() {
@@ -418,6 +432,14 @@ export function OverlayApp() {
       </button>
       {trackerOpen ? (
         <div className="tracker-body">
+          {trackerLocked ? (
+            <p className="tracker-hint locked-hint">
+              {t.locks.checklistRow}{" "}
+              <button type="button" className="link-btn" onClick={() => setChecklistPreview(true)}>
+                {t.locks.howItWorks}
+              </button>
+            </p>
+          ) : null}
           <h4>{t.tracker.agenda}</h4>
           {tracker.agendaStatus.length === 0 ? (
             <p className="tracker-hint">{t.tracker.agendaEmpty}</p>
@@ -522,6 +544,80 @@ export function OverlayApp() {
     </div>
   );
 
+  // The mode's running lists (requirements, slices, remarks, ...), read from
+  // the finished suggestions of this meeting; history is cleared on End.
+  const board = useMemo(
+    () => extractBoard(meetingMode, blocks.filter((b) => b.status === "done").map((b) => b.text)),
+    [meetingMode, blocks],
+  );
+  const boardFilled = board.filter((section) => section.items.length > 0);
+
+  async function copyBoard() {
+    await copyText(boardText(board, t.board.sections));
+    setBoardCopied(true);
+    setTimeout(() => setBoardCopied(false), 1200);
+  }
+
+  const boardPanel =
+    boardFilled.length > 0 ? (
+      <div className="tracker board" data-testid="mode-board">
+        <button
+          type="button"
+          className="tracker-toggle"
+          aria-expanded={boardOpen}
+          title={t.board.toggleTitle}
+          onClick={() => setBoardOpen((open) => !open)}
+        >
+          <span className={`chevron ${boardOpen ? "open" : ""}`}>
+            <IconChevron />
+          </span>
+          <span className="board-label">{boardFilled.map((section) => `${t.board.sections[section.key]} ${section.items.length}`).join(" · ")}</span>
+        </button>
+        {boardOpen ? (
+          <div className="tracker-body">
+            {boardFilled.map((section) => (
+              <div key={section.key} data-section={section.key}>
+                <h4>{t.board.sections[section.key]}</h4>
+                <ul className="tracker-list board-list">
+                  {section.items.map((item) => (
+                    <li key={item}>
+                      <span className="tracker-text">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            <button type="button" className="tracker-refresh" onClick={() => void copyBoard()}>
+              {boardCopied ? t.board.copied : t.board.copy}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+
+  // The plan lacks the live checklist and there is no agenda to show: one line that opens its preview.
+  const lockedTrackerRow = (
+    <div className="tracker locked" data-testid="checklist-locked">
+      <button type="button" className="tracker-toggle" onClick={() => setChecklistPreview(true)}>
+        <span className="board-label">{t.locks.checklistRow}</span>
+        <span className="tracker-count">{t.locks.howItWorks}</span>
+      </button>
+    </div>
+  );
+
+  const checklistPreviewCard = checklistPreview ? (
+    <LockedPreview
+      uiLanguage={uiLanguage}
+      feature={{ kind: "checklist" }}
+      compact
+      onClose={() => setChecklistPreview(false)}
+      onUse={() => {
+        void bridge.settings.setLiveTracker(true);
+        setChecklistPreview(false);
+      }}
+    />
+  ) : null;
+
   if (collapsed) {
     return (
       <div className="overlay overlay-collapsed">
@@ -610,7 +706,11 @@ export function OverlayApp() {
 
       {meetingMode !== "interview" && (tracker.enabled || tracker.agendaStatus.length > 0 || visibleActions.length > 0)
         ? trackerPanel
-        : null}
+        : meetingMode !== "interview" && trackerLocked
+          ? lockedTrackerRow
+          : null}
+
+      {boardPanel}
 
       <div className="overlay-body-content">
         {current ? (
@@ -632,20 +732,21 @@ export function OverlayApp() {
             {t.processNowLabel}
           </button>
         ) : null}
-        {meetingMode !== "interview"
-          ? QUICK_ACTIONS.map((qa) => (
-              <button
-                key={qa.key}
-                type="button"
-                className={qa.key === PRIMARY_ACTION && !advanced ? "primary" : ""}
-                onClick={() => void ask(qa.prompt)}
-                disabled={asking}
-              >
-                {t.quickActions[qa.key]}
-              </button>
-            ))
-          : null}
+        {quickActionsFor(meetingMode).map((qa) => (
+          <button
+            key={qa.key}
+            type="button"
+            className={qa.key === PRIMARY_ACTION && !advanced ? "primary" : ""}
+            onClick={() => void ask(qa.prompt)}
+            disabled={asking}
+            title={qa.key === "hiddenWork" ? t.board.hiddenWorkTitle : undefined}
+          >
+            {t.quickActions[qa.key]}
+          </button>
+        ))}
       </div>
+
+      {checklistPreviewCard}
 
       <div className="ask-row">
         <input

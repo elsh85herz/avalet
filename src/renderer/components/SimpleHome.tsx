@@ -6,8 +6,8 @@ import { useSession } from "../lib/session.js";
 import { useAppSettings } from "../lib/settings.js";
 import { useAccess } from "./AccessCard.js";
 import { ContextFields } from "./ContextFields.js";
+import { ModePicker } from "./ModePicker.js";
 import { MeetingView } from "./MeetingView.js";
-import { MEETING_MODES, type MeetingMode } from "../lib/types.js";
 import { IconChevron } from "../icons.js";
 import { useSpeechModels } from "./SpeechModels.js";
 import { problemText, readinessOf, topProblem, type Problem, type ProblemInput, type Readiness } from "../lib/problems.js";
@@ -51,11 +51,6 @@ export function SimpleHome({ uiLanguage, meeting, openSettings }: Props) {
   }, []);
 
   const listening = session.state === "listening";
-
-  async function changeMode(mode: MeetingMode) {
-    patch({ meetingMode: mode });
-    await bridge.settings.setMeetingMode(mode);
-  }
 
   // One problem at a time, most blocking first (lib/problems.ts), and a
   // one-line summary of what is ready.
@@ -187,13 +182,7 @@ export function SimpleHome({ uiLanguage, meeting, openSettings }: Props) {
 
       <section className="field">
         <label htmlFor="simple-mode">{t.modeLabel}</label>
-        <select id="simple-mode" value={settings.meetingMode} onChange={(e) => void changeMode(e.target.value as MeetingMode)}>
-          {MEETING_MODES.map((mode) => (
-            <option key={mode} value={mode}>
-              {t.modes[mode]}
-            </option>
-          ))}
-        </select>
+        <ModePicker id="simple-mode" uiLanguage={uiLanguage} />
       </section>
 
       <section className="collapsible">

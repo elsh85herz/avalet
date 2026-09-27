@@ -91,8 +91,8 @@ test("advanced level: switch from Simple settings and back", async () => {
     await shot(page, "simple-settings-dark");
     await page.getByTestId("to-advanced").click();
     await expect(page.getByTestId("advanced-settings")).toBeVisible();
-    // The live checklist is on by default in Advanced.
-    await expect(page.getByTestId("live-tracker-toggle")).toBeChecked();
+    // The live checklist is on by default in Advanced, but this trial plan does not include it (e2e/tiers.spec.ts).
+    await expect(page.getByTestId("live-tracker-locked")).toBeVisible();
     await shot(page, "advanced-settings-dark");
     await setTheme(page, "light");
     await shot(page, "advanced-settings-light");
@@ -111,7 +111,10 @@ test("AVALET_ADVANCED=1 opens the Advanced level for this launch", async () => {
   const run = await launch(mock, { env: { AVALET_ADVANCED: "1" } });
   const page = run.main;
   try {
-    await page.evaluate(() => window.avalet!.settings.setOnboardingDone(true));
+    await page.evaluate(async () => {
+      await window.avalet!.settings.setOnboardingDone(true);
+      await window.avalet!.settings.setGuideSeen(true);
+    });
     await page.reload();
     await expect(page.getByTestId("advanced-settings")).toBeVisible();
     await expect(page.getByTestId("to-simple")).toBeDisabled();
@@ -138,17 +141,24 @@ test("no billing server: Avalet is 'coming soon', own key works, nothing about t
     await expect(page.getByTestId("own-key")).toBeVisible();
     await shot(page, "wizard-2-access-coming-soon-dark");
 
-    await page.evaluate(() => window.avalet!.settings.setOnboardingDone(true));
+    await page.evaluate(async () => {
+      await window.avalet!.settings.setOnboardingDone(true);
+      await window.avalet!.settings.setGuideSeen(true);
+    });
     await page.reload();
     await page.getByTestId("simple-home").waitFor();
     await page.getByTestId("open-settings").click();
     await expect(page.getByTestId("avalet-coming-soon")).toBeVisible();
     await expect(page.getByRole("button", { name: /Начать бесплатно|Start free trial|Использовать Avalet|Use Avalet/ })).toHaveCount(0);
     await expect(page.evaluate(() => window.avalet!.settings.selectProvider("avalet"))).rejects.toThrow(/not available/);
+    // Without a billing server nothing is ever shown as locked.
+    await expect(page.locator("option[data-locked]")).toHaveCount(0);
+    await expect(page.getByTestId("live-tracker-locked")).toHaveCount(0);
     await shot(page, "simple-settings-own-key-dark");
     await page.getByTestId("to-advanced").click();
     await page.getByTestId("advanced-settings").waitFor();
     await expect(page.locator(".provider-row", { hasText: /^Avalet$/ })).toHaveCount(0);
+    await expect(page.getByTestId("live-tracker-toggle")).toBeChecked();
   } finally {
     await run.close();
     await mock.close();

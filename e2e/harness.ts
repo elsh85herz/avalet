@@ -128,6 +128,7 @@ export async function skipWizardWithTrial(page: Page): Promise<void> {
     await api.settings.selectProvider("avalet");
     await api.billing.activateTrial();
     await api.settings.setOnboardingDone(true);
+    await api.settings.setGuideSeen(true);
   });
   await page.reload();
   await page.getByTestId("simple-home").waitFor();
@@ -136,4 +137,13 @@ export async function skipWizardWithTrial(page: Page): Promise<void> {
 export function openedUrls(run: Launched): string[] {
   const file = path.join(run.dirs.exports, "opened-urls.txt");
   return fs.existsSync(file) ? fs.readFileSync(file, "utf8").split("\n").filter(Boolean) : [];
+}
+
+/** Own-key mode against the mock's plain model (no key needed for a local server). */
+export async function useOwnKey(page: Page, mock: MockServer): Promise<void> {
+  await page.evaluate(async (baseUrl) => {
+    const api = window.avalet!;
+    await api.settings.selectProvider("custom");
+    await api.settings.updateProvider("custom", { baseUrl, model: "local-model" });
+  }, `${mock.url}/openai/v1`);
 }

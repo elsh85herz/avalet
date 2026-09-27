@@ -2,6 +2,8 @@ import { useState } from "react";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import overlayExpanded from "../assets/guide/overlay-expanded.png";
 import overlayChecklist from "../assets/guide/overlay-checklist.png";
+import { useAccess } from "./AccessCard.js";
+import { checklistLocked } from "../lib/locks.js";
 
 type Props = {
   uiLanguage: UiLanguage;
@@ -29,6 +31,8 @@ export function HowItWorks({ uiLanguage, mode, onClose }: Props) {
   const w = t.wizard;
   const qa = t.quickActions;
   const [step, setStep] = useState(1);
+  // On an Avalet plan without the checklist, its page says which plan has it.
+  const trackerLocked = checklistLocked(useAccess());
 
   // Boxes measured directly off the screenshots (pixel border-color scan,
   // not eyeballed) — see docs/dev for how to regenerate the screenshots if
@@ -41,7 +45,7 @@ export function HowItWorks({ uiLanguage, mode, onClose }: Props) {
     { image: overlayExpanded, spot: { x: 70, y: 482, w: 58, h: 29, radius: 14 }, title: qa.risks, body: g.actionRisks },
     { image: overlayExpanded, spot: { x: 127, y: 482, w: 151, h: 29, radius: 16 }, title: qa.askQuestion, body: g.actionAskQuestion },
     { image: overlayExpanded, spot: { x: 277, y: 482, w: 81, h: 29, radius: 14 }, title: qa.explainThis, body: g.actionExplain },
-    { image: overlayChecklist, spot: { x: 2, y: 110, w: 376, h: 37, radius: 12 }, title: g.trackerTitle, body: g.trackerBody },
+    { image: overlayChecklist, spot: { x: 2, y: 110, w: 376, h: 37, radius: 12 }, title: trackerLocked ? t.locks.checklistTitle : g.trackerTitle, body: trackerLocked ? t.locks.checklistBody : g.trackerBody },
   ];
   const total = pages.length;
   const page = pages[step - 1]!;

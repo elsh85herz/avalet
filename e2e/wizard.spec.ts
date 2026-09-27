@@ -63,6 +63,9 @@ test("first-run wizard: permissions, trial, model download, context and try it",
     await setTheme(page, "dark");
 
     await page.getByTestId("wizard-next").click();
+    // The how-it-works guide comes once, right after the wizard.
+    await expect(page.getByTestId("how-it-works")).toBeVisible();
+    await page.getByTestId("guide-skip").click();
     await expect(page.getByTestId("simple-home")).toBeVisible();
     await shot(page, "simple-home-empty-dark");
   } finally {
