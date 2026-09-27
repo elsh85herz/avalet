@@ -46,7 +46,6 @@ import {
   getOverlayOpacity,
   getPreferredMicDeviceId,
   getPreferredScreenSourceId,
-  getScreenshotTextEnabled,
   getSelectedProviderId,
   getSessionContext,
   getSpeechLanguage,
@@ -66,7 +65,6 @@ import {
   setOnboardingDone,
   setPreferredMicDeviceId,
   setPreferredScreenSourceId,
-  setScreenshotTextEnabled,
   setSelectedProviderId,
   setSessionContext,
   setSpeechLanguage,
@@ -286,7 +284,6 @@ export class AppCore {
       guideSeen: getGuideSeen(),
       meetingMode: getMeetingMode(),
       mainPinned: getMainPinned(),
-      screenshotText: getScreenshotTextEnabled(),
       ocrAvailable: await this.deps.isOcrAvailable(),
       speechLanguage: getSpeechLanguage(),
       speechModel: getSpeechModel(),
@@ -449,7 +446,6 @@ export class AppCore {
       models.remove(model);
     };
 
-    h["avalet:screenshot-text-set"] = (enabled) => setScreenshotTextEnabled(Boolean(enabled));
     h["avalet:live-tracker-set"] = (enabled) => {
       setLiveTrackerEnabled(Boolean(enabled));
       emit("avalet:event:tracker-update", this.liveTracker.getState());

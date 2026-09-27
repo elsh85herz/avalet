@@ -131,11 +131,9 @@ export function SettingsPanel({ onRunSetup }: { onRunSetup: () => void }) {
     await bridge.settings.setUiLanguage(next);
   }
 
-  async function setBool(key: "autoDetectEnabled" | "screenshotText" | "liveTrackerEnabled", next: boolean) {
-    patch({ [key]: next });
-    if (key === "autoDetectEnabled") await bridge.settings.setAutoDetect(next);
-    else if (key === "screenshotText") await bridge.settings.setScreenshotText(next);
-    else await bridge.settings.setLiveTracker(next);
+  async function setLiveTracker(next: boolean) {
+    patch({ liveTrackerEnabled: next });
+    await bridge.settings.setLiveTracker(next);
   }
 
   const micStatus: PermState = micWorks ? "granted" : ((permissions?.mic as PermState | undefined) ?? "unknown");
@@ -384,37 +382,16 @@ export function SettingsPanel({ onRunSetup }: { onRunSetup: () => void }) {
       <section className="session-controls">
         <label className="auto-detect-toggle">
           <span className="switch">
-            <input type="checkbox" checked={settings.autoDetectEnabled} onChange={() => void setBool("autoDetectEnabled", !settings.autoDetectEnabled)} />
-          </span>
-          {t.autoSuggest}
-        </label>
-        <p className="hint">{settings.autoDetectEnabled ? t.autoSuggestOnHint : t.autoSuggestOffHint}</p>
-        <label className="auto-detect-toggle">
-          <span className="switch">
             <input
               type="checkbox"
               checked={settings.liveTrackerEnabled}
-              onChange={() => void setBool("liveTrackerEnabled", !settings.liveTrackerEnabled)}
+              onChange={() => void setLiveTracker(!settings.liveTrackerEnabled)}
               data-testid="live-tracker-toggle"
             />
           </span>
           {t.liveTracker}
         </label>
         <p className="hint">{settings.liveTrackerEnabled ? t.liveTrackerOn : t.liveTrackerOff}</p>
-        <label className="auto-detect-toggle">
-          <span className="switch">
-            <input
-              type="checkbox"
-              checked={settings.screenshotText && settings.ocrAvailable}
-              disabled={!settings.ocrAvailable}
-              onChange={() => void setBool("screenshotText", !settings.screenshotText)}
-            />
-          </span>
-          {t.screenshotText}
-        </label>
-        <p className="hint">
-          {!settings.ocrAvailable ? t.screenshotTextUnavailable : settings.screenshotText ? t.screenshotTextOn : t.screenshotTextOff}
-        </p>
         <OpacitySlider uiLanguage={uiLanguage} />
         <p className="state">
           {t.sessionLabel}: {t.sessionStates[session.state]}

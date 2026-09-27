@@ -8,7 +8,6 @@ import { EchoFilter } from "./echo-filter.js";
 import {
   getAutoDetectEnabled,
   getMeetingMode,
-  getScreenshotTextEnabled,
   getSpeechLanguage,
   getSpeechModel,
   getProviderSettings,
@@ -402,7 +401,10 @@ export class LiveSession {
         ocrImage = shot.ocrImage;
         const sees = Boolean(preset?.supportsVision);
         if (sees) screenshot = shot.image;
-        if (!sees || getScreenshotTextEnabled()) {
+        // DeepSeek's vision reads dense text (code, tables) less reliably than
+        // Claude's or OpenAI's, so it gets OCR text alongside the image too;
+        // other vision providers manage on the image alone, no setting needed.
+        if (!sees || providerId === "deepseek") {
           const recognition = this.recognizeText(shot.ocrImage).catch(() => null);
           // A model that cannot see the image has nothing else to go on, so it
           // waits for the text; one that can does not wait long.

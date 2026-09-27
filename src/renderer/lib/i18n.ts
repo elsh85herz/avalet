@@ -101,9 +101,6 @@ export type UiStrings = {
     agendaLoadFile: string;
     agendaSave: string;
     agendaSaved: string;
-    autoSuggest: string;
-    autoSuggestOnHint: string;
-    autoSuggestOffHint: string;
     sessionLabel: string;
     start: string;
     resume: string;
@@ -118,10 +115,6 @@ export type UiStrings = {
     pinTitle: string;
     unpinTitle: string;
     modeHelpTitle: string;
-    screenshotText: string;
-    screenshotTextOn: string;
-    screenshotTextOff: string;
-    screenshotTextUnavailable: string;
     speechTitle: string;
     speechLanguage: string;
     speechLanguages: Record<"ru" | "en" | "auto", string>;
@@ -479,9 +472,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       agendaLoadFile: "Load from file",
       agendaSave: "Save agenda",
       agendaSaved: "Saved",
-      autoSuggest: "Auto-suggest during the call",
-      autoSuggestOnHint: "Blocks appear automatically as the conversation goes. Turn off to only respond to typed or quick-action questions.",
-      autoSuggestOffHint: "Auto-suggest is off: ask questions manually in the overlay or use a quick action.",
       sessionLabel: "Session",
       start: "Start",
       resume: "Resume",
@@ -496,10 +486,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       pinTitle: "This window floats above others. Click to make it an ordinary window.",
       unpinTitle: "Keep this window above other windows during the call.",
       modeHelpTitle: "What each mode does",
-      screenshotText: "Exact text on screenshots (slower)",
-      screenshotTextOn: "Screenshots also carry the text recognized on your Mac, for exact names, numbers and code. Adds up to about a second to each answer.",
-      screenshotTextOff: "Fastest: screenshots go to models that see images as a picture only. Models that cannot see images always get the recognized text.",
-      screenshotTextUnavailable: "Text recognition is not available in this build (it needs the Xcode Command Line Tools when building from source). Models that see images still work.",
       speechTitle: "Speech recognition",
       speechLanguage: "Spoken language",
       speechLanguages: { ru: "Russian", en: "English", auto: "Detect automatically" },
@@ -879,9 +865,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       agendaLoadFile: "Загрузить из файла",
       agendaSave: "Сохранить повестку",
       agendaSaved: "Сохранено",
-      autoSuggest: "Авто-подсказки во время встречи",
-      autoSuggestOnHint: "Подсказки появляются сами по ходу разговора. Выключите, чтобы отвечать только на ваши вопросы и быстрые кнопки.",
-      autoSuggestOffHint: "Авто-подсказки выключены: задавайте вопросы в оверлее или используйте быстрые кнопки.",
       sessionLabel: "Сессия",
       start: "Старт",
       resume: "Продолжить",
@@ -896,10 +879,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       pinTitle: "Окно закреплено поверх других. Нажмите, чтобы сделать его обычным.",
       unpinTitle: "Держать окно поверх других во время звонка.",
       modeHelpTitle: "Что делает каждый режим",
-      screenshotText: "Точный текст на скриншотах (медленнее)",
-      screenshotTextOn: "К скриншоту добавляется текст, распознанный на вашем Mac, для точных имён, чисел и кода. Добавляет до секунды к каждому ответу.",
-      screenshotTextOff: "Быстрее всего: моделям с картинками скриншот уходит только изображением. Моделям без картинок распознанный текст отправляется всегда.",
-      screenshotTextUnavailable: "Распознавание текста в этой сборке недоступно (при сборке из исходников нужны Xcode Command Line Tools). Модели с картинками работают как раньше.",
       speechTitle: "Распознавание речи",
       speechLanguage: "Язык речи",
       speechLanguages: { ru: "Русский", en: "English", auto: "Определять автоматически" },

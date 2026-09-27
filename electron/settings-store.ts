@@ -58,8 +58,6 @@ export type SettingsShape = {
   meetingMode: MeetingMode;
   /** Keep the main (notes) window above other windows. */
   mainPinned: boolean;
-  /** Also send locally recognized text with screenshots to models that see images. */
-  screenshotText: boolean;
   speechLanguage: SpeechLanguage;
   speechModel: SpeechModel;
   /** Live checklist on/off as chosen by the user; null = the default for the UI level. */
@@ -102,7 +100,6 @@ export function defaultSettings(): SettingsShape {
     guideSeen: false,
     meetingMode: "free",
     mainPinned: true,
-    screenshotText: false,
     speechLanguage: "ru",
     speechModel: "small",
     liveTrackerEnabled: null,
@@ -411,14 +408,6 @@ export function getMainPinned(): boolean {
 
 export function setMainPinned(pinned: boolean): void {
   write("mainPinned", pinned);
-}
-
-export function getScreenshotTextEnabled(): boolean {
-  return read("screenshotText") ?? false;
-}
-
-export function setScreenshotTextEnabled(enabled: boolean): void {
-  write("screenshotText", enabled);
 }
 
 export function getSpeechLanguage(): SpeechLanguage {

@@ -23,7 +23,6 @@ const api: AvaletApi = {
   settings: {
     getAll: () => invoke("avalet:settings-get-all"),
     setSpeech: (patch) => invoke("avalet:speech-set", patch),
-    setScreenshotText: (enabled) => invoke("avalet:screenshot-text-set", enabled),
     setLiveTracker: (enabled) => invoke("avalet:live-tracker-set", enabled),
     setUiLevel: (level) => invoke("avalet:ui-level-set", level),
     setOnboardingDone: (done) => invoke("avalet:onboarding-set", done),

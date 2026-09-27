@@ -46,7 +46,6 @@ export type SettingsSnapshot = {
   guideSeen: boolean;
   meetingMode: MeetingMode;
   mainPinned: boolean;
-  screenshotText: boolean;
   ocrAvailable: boolean;
   speechLanguage: SpeechLanguage;
   speechModel: SpeechModelName;
@@ -278,7 +277,6 @@ export type InvokeMap = {
   "avalet:speech-model-download": [[model: SpeechModelName], void];
   "avalet:speech-model-cancel": [[model: SpeechModelName], void];
   "avalet:speech-model-delete": [[model: SpeechModelName], void];
-  "avalet:screenshot-text-set": [[enabled: boolean], void];
   "avalet:live-tracker-set": [[enabled: boolean], void];
   "avalet:ui-level-set": [[level: UiLevel], void];
   "avalet:onboarding-set": [[done: boolean], void];
@@ -400,7 +398,6 @@ export type AvaletApi = {
   settings: {
     getAll: () => Promise<SettingsSnapshot>;
     setSpeech: (patch: { language?: SpeechLanguage; model?: SpeechModelName }) => Promise<void>;
-    setScreenshotText: (enabled: boolean) => Promise<void>;
     setLiveTracker: (enabled: boolean) => Promise<void>;
     setUiLevel: (level: UiLevel) => Promise<void>;
     setOnboardingDone: (done: boolean) => Promise<void>;
@@ -571,7 +568,6 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:speech-model-download": true,
   "avalet:speech-model-cancel": true,
   "avalet:speech-model-delete": true,
-  "avalet:screenshot-text-set": true,
   "avalet:live-tracker-set": true,
   "avalet:ui-level-set": true,
   "avalet:onboarding-set": true,
