@@ -119,3 +119,63 @@ Vision OCR, `.dmg`).
 1. Run `MAC_VERIFY.md` (new steps 4, 7a to 7c, 8a first) on the rc.2 `.dmg`.
 2. A week of real meetings in Simple with an own key; then decide the checklist default.
 3. Billing server and Robokassa integration as a separate task; replacing the two config constants turns the built-in provider on.
+
+---
+
+# Mode tiers (2026-09-27, CLOUD_TASK_3.md)
+
+Branch `release/v0.2-autopilot`, version still `0.2.0-rc.2` (changes are in
+CHANGELOG "Unreleased"), not tagged. Plan: `docs/dev/mode-tiers-plan.md`,
+research: `docs/dev/mode-tiers-research.md` (both private, in CLEANUP).
+Details in `PROGRESS.md` ("Mode tiers") and `DECISIONS.md` ("Mode tiers").
+
+## What changed
+
+1. **Commercial plan (private docs).** Per-mode findings, how comparable products structure tiers, a tier table, where `free` sits, the checklist rule, three options for "three tiers vs two plans", upgrade copy in RU and EN.
+2. **One gate for plan limits.** `electron/shared/tiers.ts`: `PLAN_FEATURES` (Trial: free, interview, requirements, grooming; Pro: everything) and `featureGate()`, which returns "everything unlocked" first for an own key and for a build without a billing server. Optional `features` list in the entitlement token (additive, `billing-api.md`); mock server `POST /mock/features`.
+3. **Main process enforces it.** A locked mode cannot be set over IPC; a stored locked mode starts as `free` and the pickers are told; the live checklist makes no background call when the plan lacks it.
+4. **Per-mode UI.** Requirements, grooming, demo and review keep a running list in the overlay (requirements and risks; slices, separate tasks and risks; deviations and checks; remarks and decisions), read from marker lines the prompts now ask for, no extra model call, with Copy. Grooming's "Risks?" button also asks about hidden work. Interview unchanged (already customized); free has no list.
+5. **Locked but discoverable.** Trial: "Document review (Pro)" and "Demo / acceptance (Pro)" stay in the picker; choosing one opens a card with a real overlay screenshot of that mode, what it does, the plan line, the modes the plan has, "Get Pro", "Not now" and the own-key hint; after the (mock) payment it turns into "Done" and "Use it". The live checklist: a locked row in Advanced and Simple Settings (Simple only in Avalet mode) and in the overlay, the same kind of card. The preview images come from the screenshot mode under Xvfb.
+6. **E2E back to green.** The CI test job was already red on the base commits (`0e8e177`, `76459cd`); the first local run here had 13 of the 14 older E2E tests stopping on the how-it-works guide added in rc.2 steps 8 to 11 (the tests never marked it seen). Fixed, plus a new `e2e/tiers.spec.ts`.
+
+## Verified here (Linux container, commands run)
+
+| Command | Result |
+|---|---|
+| `npm run check` (typecheck, `check-i18n`, unit + integration) | ok; 394 strings per language; 168/168 tests (was 147) |
+| `npm run build` then `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` | 17/17 (14 older + 3 new) |
+| `electron/shared/tiers.test.ts` | own key (every tier, status, server features, built-in available or not) and no billing server: gate open; the same through the real `deriveAccess` for every token; trial/pro/none tables; server features |
+| `test/locks.test.ts` | renderer: 768 own-key / no-server states in RU and EN, no option marked, no "Pro" in labels, no locked checklist, no plan UI |
+| `electron/integration.test.ts` (3 new) | trial refuses review, demo and the checklist, a stored locked mode starts as free, a mock payment unlocks all; the owner's three-tier split via `/mock/features`; own key with a trial token on the install is never limited |
+| `e2e/tiers.spec.ts` | preview then mock payment unlocks review in place; checklist locked in Simple Settings, overlay and Advanced with previews; own key: no lock anywhere, the review list fills |
+| Screenshots | new in `docs/screens/`: `tier-preview-review-dark`, `tier-preview-unlocked-dark`, `tier-preview-checklist-dark`, `tier-simple-settings-trial-dark`, `overlay-checklist-locked-dark`, `overlay-checklist-preview-dark`, `overlay-requirements-board-dark`, `overlay-review-board-dark`; others regenerated |
+
+## Needs a Mac
+
+`MAC_VERIFY.md` step 8b (plans and modes against the mock server); the
+overlay's list panel and the preview card with macOS fonts at 380 px; that a
+real model actually writes the marker lines in each mode (checked here only
+with the mock model and the prompt text).
+
+## Known gaps
+
+- Mode gating is a soft gate: the client is open source, the server enforces only the budget. Written in the plan; no prompt inspection on the proxy.
+- The running lists live only in the overlay during the meeting (not saved to the meeting record or exports; the summary has the same headings).
+- Whether real models keep to the markers is unverified; a missed marker only means an item is not listed, the suggestion text is unchanged.
+- Opening a locked mode's preview needs a click on a native select option; on macOS the native menu shows "(в Pro)" text only, no icon.
+- The how-it-works guide images (`overlay-expanded.png`, `overlay-checklist.png`) were not regenerated, so they do not show the running lists; their highlight rings are measured on those files.
+
+## Decisions needing the owner
+
+1. **Three tiers vs two plans (the main one).** Implemented: two plans, Trial = free, interview, requirements, grooming; Pro = everything incl. review, demo, the live checklist; plus an optional server `features` list so a third plan can come later without a client redesign. Your proposal put only interview in Base and Trial. *Recommended: keep the analyst modes in the Trial (a trial must show analysts the analyst modes) and add a third paid plan only with usage data. To switch to your split, change the `trial` row in `electron/shared/tiers.ts` (one line) or send `features` from the server.*
+2. **Live checklist in Pro only**, separate from where requirements unlocks. *Recommended: yes (continuous token cost, clearest Pro argument); manual agenda marks stay free.*
+3. **`free` mode in every plan** and as the fallback for a locked stored mode. *Recommended: yes.*
+4. **Simple/Advanced must not depend on the subscription.** Not implemented, on purpose. `uiLevel` is a workspace-complexity switch, not a product edition: Simple's design rule is "the same working product with fewer settings, not fewer working tools" (CLOUD_TASK_2), so gating Advanced would turn a comfort setting into a paywall for things like provider URLs and the log folder; own-key users must keep full Advanced access by the existing policy (CLOUD_TASK section 3), so the gate would bite only Avalet users and be bypassed by the free own-key path anyway; and gating the workspace itself means re-deciding every control's place by plan instead of by frequency of use, a much bigger product change than gating a meeting mode. Research did not show a reason to reconsider: comparable products gate volume, live features and team/admin features, not the settings screen. *Recommended: keep the two axes independent.*
+5. **Own-key hint in the upgrade card** ("With your own key all of this is free"). *Recommended: keep; it is true and matches the product's open stance, and people who would use a key were never going to buy the plan.*
+6. **Running lists for all access modes, own key included.** *Recommended: keep; they are product improvements, not a plan feature.*
+
+## Next steps
+
+1. Decide item 1 above, then MAC_VERIFY step 8b.
+2. Try the running lists in two real requirements or grooming meetings; tune the markers if the model skips them.
+3. When the billing server is built: send `features` in the token from day one, so the table can change without a client release.

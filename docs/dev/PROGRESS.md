@@ -164,13 +164,15 @@ Baseline: `npm ci` ok, `npm run check` ok (147/147).
 - Docs: CHANGELOG (Unreleased), READMEs (mode boards; tiers not named: unsigned pricing), MAC_VERIFY 8b (EN/RU), billing-api `features`.
 - Verified: `npm run check` 168/168, i18n 394 strings; `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 17/17.
 
+- REPORT.md section "Mode tiers" (decisions for the owner: tier resolution first, the Simple/Advanced paragraph); sensitive rescan recorded in CLEANUP.
+
 ### In progress
 
-- REPORT section.
+(nothing: all phases of CLOUD_TASK_3.md done)
 
 ### Next
 
-1. REPORT.md dated section (what changed, verified, needs a Mac, gaps, decisions incl. the tier resolution and the uiLevel paragraph, next steps); final sensitive scan; CI check on GitHub.
+- Owner: decisions in REPORT.md "Mode tiers" (item 1 first), then MAC_VERIFY step 8b.
 
 ### Blockers
 
