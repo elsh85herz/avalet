@@ -43,6 +43,7 @@ export type SettingsSnapshot = {
   /** True when AVALET_ADVANCED=1 forces the Advanced level for this launch. */
   uiLevelForced: boolean;
   onboardingDone: boolean;
+  guideSeen: boolean;
   meetingMode: MeetingMode;
   mainPinned: boolean;
   screenshotText: boolean;
@@ -281,6 +282,7 @@ export type InvokeMap = {
   "avalet:live-tracker-set": [[enabled: boolean], void];
   "avalet:ui-level-set": [[level: UiLevel], void];
   "avalet:onboarding-set": [[done: boolean], void];
+  "avalet:guide-set": [[seen: boolean], void];
   "avalet:main-set-pinned": [[pinned: boolean], void];
   "avalet:export-dir-choose": [[], string | null];
   "avalet:main-toggle": [[], void];
@@ -400,6 +402,7 @@ export type AvaletApi = {
     setLiveTracker: (enabled: boolean) => Promise<void>;
     setUiLevel: (level: UiLevel) => Promise<void>;
     setOnboardingDone: (done: boolean) => Promise<void>;
+    setGuideSeen: (seen: boolean) => Promise<void>;
     setMainPinned: (pinned: boolean) => Promise<void>;
     /** Folder picker; returns the new export folder, or null when cancelled. */
     chooseExportDir: () => Promise<string | null>;
@@ -569,6 +572,7 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:live-tracker-set": true,
   "avalet:ui-level-set": true,
   "avalet:onboarding-set": true,
+  "avalet:guide-set": true,
   "avalet:main-set-pinned": true,
   "avalet:export-dir-choose": true,
   "avalet:main-toggle": true,

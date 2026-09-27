@@ -1805,6 +1805,14 @@ a {
   font-size: 14px;
 }
 
+.guide-actions {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .sample {
   display: flex;
   flex-direction: column;

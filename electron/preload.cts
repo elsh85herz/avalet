@@ -27,6 +27,7 @@ const api: AvaletApi = {
     setLiveTracker: (enabled) => invoke("avalet:live-tracker-set", enabled),
     setUiLevel: (level) => invoke("avalet:ui-level-set", level),
     setOnboardingDone: (done) => invoke("avalet:onboarding-set", done),
+    setGuideSeen: (seen) => invoke("avalet:guide-set", seen),
     setMainPinned: (pinned) => invoke("avalet:main-set-pinned", pinned),
     chooseExportDir: () => invoke("avalet:export-dir-choose"),
     setMeetingMode: (mode) => invoke("avalet:meeting-mode-set", mode),

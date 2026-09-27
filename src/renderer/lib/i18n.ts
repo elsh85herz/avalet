@@ -234,6 +234,26 @@ export type UiStrings = {
     saveTo: string;
     chooseFolder: string;
     modelInUse: string;
+    help: string;
+  };
+  guide: {
+    title: string;
+    intro: string;
+    overlayTitle: string;
+    overlayBody: string;
+    actionsTitle: string;
+    actionSummarize: string;
+    actionRisks: string;
+    actionAskQuestion: string;
+    actionExplain: string;
+    autoTitle: string;
+    autoBody: string;
+    endTitle: string;
+    endBody: string;
+    trackerTitle: string;
+    trackerBody: string;
+    done: string;
+    close: string;
   };
   access: {
     title: string;
@@ -420,7 +440,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       newCount: "new",
     },
     quickActions: {
-      summarize: "Summarize",
+      summarize: "Recap",
       risks: "Risks?",
       askQuestion: "Ask a question",
       explainThis: "Explain this",
@@ -604,6 +624,28 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       saveTo: "Protocols and transcripts are saved to this folder:",
       chooseFolder: "Choose folder",
       modelInUse: "Answers come from {provider}, model {model}. The model is changed in Advanced mode.",
+      help: "How it works",
+    },
+    guide: {
+      title: "How Avalet works",
+      intro: "A short read before your first real call, so nothing here is a surprise mid-meeting.",
+      overlayTitle: "The overlay",
+      overlayBody:
+        "A small floating panel that stays on top of other windows and is excluded from your own screen share. Suggestions stream into it in blocks as the call goes; use the arrows to page through earlier ones.",
+      actionsTitle: "The four buttons",
+      actionSummarize: "Recap: the last couple of minutes in 2-3 bullets. For catching up if you looked away.",
+      actionRisks: "Risks?: what in the requirement just discussed looks shaky or incomplete right now.",
+      actionAskQuestion: "Ask a question: one sharp clarifying question to ask next, when you are not sure what to ask.",
+      actionExplain: "Explain: what was just said or shown on screen, in plain terms.",
+      autoTitle: "Auto",
+      autoBody:
+        "On by default: a suggestion appears by itself after the other side pauses. Turn it off to only get one when you press a button or type a question, useful in a quiet or very fast-moving call.",
+      endTitle: "Pause and End",
+      endBody: "Pause stops listening without closing the meeting; press it again to continue. End closes the meeting for good and saves it, with a summary, to History.",
+      trackerTitle: "Live checklist (Advanced)",
+      trackerBody: "Turn it on in Advanced settings to have agenda items and action points tracked as the call goes, not only when you ask for a summary.",
+      done: "Got it, start",
+      close: "Close",
     },
     access: {
       title: "Access",
@@ -799,7 +841,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       newCount: "новых",
     },
     quickActions: {
-      summarize: "Итог",
+      summarize: "Кратко",
       risks: "Риски?",
       askQuestion: "Уточняющий вопрос",
       explainThis: "Объяснить",
@@ -983,6 +1025,28 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       saveTo: "Протоколы и расшифровки сохраняются в эту папку:",
       chooseFolder: "Выбрать папку",
       modelInUse: "Отвечает {provider}, модель {model}. Сменить модель можно в расширенном режиме.",
+      help: "Как это работает",
+    },
+    guide: {
+      title: "Как работает Avalet",
+      intro: "Коротко прочитать до первого настоящего звонка, чтобы ничего здесь не стало сюрпризом прямо на встрече.",
+      overlayTitle: "Оверлей",
+      overlayBody:
+        "Маленькая плавающая панель поверх других окон, которая не попадает в вашу же трансляцию экрана. Подсказки приходят в неё живыми блоками по ходу звонка; стрелками можно пролистать более ранние.",
+      actionsTitle: "Четыре кнопки",
+      actionSummarize: "Кратко: последние пару минут в 2-3 тезисах. Если отвлеклись и хотите догнать разговор.",
+      actionRisks: "Риски?: что в только что обсуждённом требовании выглядит шатко или неполно прямо сейчас.",
+      actionAskQuestion: "Уточняющий вопрос: одна острая мысль, что спросить дальше, если не знаете сами.",
+      actionExplain: "Объяснить: что только что сказали или показали на экране, простыми словами.",
+      autoTitle: "Авто",
+      autoBody:
+        "Включено по умолчанию: подсказка появляется сама после паузы собеседника. Выключите, чтобы получать её только по кнопке или вопросу, пригодится на тихом или очень быстром звонке.",
+      endTitle: "Пауза и Завершить",
+      endBody: "Пауза останавливает прослушивание, не закрывая встречу; нажмите ещё раз, чтобы продолжить. Завершить закрывает встречу окончательно и сохраняет её с итогом в Историю.",
+      trackerTitle: "Живой чек-лист (расширенный режим)",
+      trackerBody: "Включите в расширенных настройках, чтобы пункты повестки и задачи отмечались по ходу звонка, а не только когда вы запросите итог.",
+      done: "Понятно, начать",
+      close: "Закрыть",
     },
     access: {
       title: "Доступ",

@@ -37,6 +37,7 @@ import {
   getAllProviderSettings,
   getAutoDetectEnabled,
   getExportDir,
+  getGuideSeen,
   getKeyCheck,
   getLiveTrackerEnabled,
   getMainPinned,
@@ -58,6 +59,7 @@ import {
   setAgendaText,
   setApiKey,
   setAutoDetectEnabled,
+  setGuideSeen,
   setKeyCheck,
   setLiveTrackerEnabled,
   setMeetingMode,
@@ -280,6 +282,7 @@ export class AppCore {
       uiLevel: getUiLevel(),
       uiLevelForced: isUiLevelForced(),
       onboardingDone: getOnboardingDone(),
+      guideSeen: getGuideSeen(),
       meetingMode: getMeetingMode(),
       mainPinned: getMainPinned(),
       screenshotText: getScreenshotTextEnabled(),
@@ -457,6 +460,7 @@ export class AppCore {
       emit("avalet:event:tracker-update", this.liveTracker.getState());
     };
     h["avalet:onboarding-set"] = (done) => setOnboardingDone(Boolean(done));
+    h["avalet:guide-set"] = (seen) => setGuideSeen(Boolean(seen));
 
     // Clears only the suggestion blocks in the overlay; the meeting record and its transcript are untouched.
     h["avalet:history-clear"] = () => {

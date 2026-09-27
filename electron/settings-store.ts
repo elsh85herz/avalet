@@ -52,6 +52,8 @@ export type SettingsShape = {
   uiLevel: UiLevel;
   /** First-run wizard finished or skipped. */
   onboardingDone: boolean;
+  /** "How it works" guide shown once already (reachable again from Simple home). */
+  guideSeen: boolean;
   /** Prompt preset for the kind of meeting; see electron/modes.ts. */
   meetingMode: MeetingMode;
   /** Keep the main (notes) window above other windows. */
@@ -97,6 +99,7 @@ export function defaultSettings(): SettingsShape {
     uiLanguage: "ru",
     uiLevel: "simple",
     onboardingDone: false,
+    guideSeen: false,
     meetingMode: "free",
     mainPinned: true,
     screenshotText: false,
@@ -250,6 +253,14 @@ export function setUiLevel(level: UiLevel): void {
 
 export function getOnboardingDone(): boolean {
   return read("onboardingDone") === true;
+}
+
+export function getGuideSeen(): boolean {
+  return read("guideSeen") === true;
+}
+
+export function setGuideSeen(seen: boolean): void {
+  write("guideSeen", seen);
 }
 
 export function setOnboardingDone(done: boolean): void {

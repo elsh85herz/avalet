@@ -8,9 +8,10 @@ import { SettingsPanel } from "./SettingsPanel.js";
 import { MeetingView } from "./MeetingView.js";
 import { MeetingsList } from "./MeetingsList.js";
 import { FirstRunWizard } from "./FirstRunWizard.js";
+import { HowItWorks } from "./HowItWorks.js";
 import { SimpleHome } from "./SimpleHome.js";
 import { SimpleSettings } from "./SimpleSettings.js";
-import { IconGear, IconPause, IconPin, IconPlay } from "../icons.js";
+import { IconGear, IconHelp, IconPause, IconPin, IconPlay } from "../icons.js";
 
 export function MainApp() {
   return (
@@ -42,7 +43,29 @@ function Shell() {
   const [advancedTab, setAdvancedTab] = useState<AdvancedTab>("settings");
   const [simpleView, setSimpleView] = useState<SimpleView>("home");
   const [settingsFocus, setSettingsFocus] = useState<"access" | "speech" | undefined>(undefined);
+  const [guideOpen, setGuideOpen] = useState(false);
   const session = useSession();
+
+  async function closeGuide() {
+    setGuideOpen(false);
+    if (!settings.guideSeen) {
+      patch({ guideSeen: true });
+      await bridge.settings.setGuideSeen(true);
+    }
+  }
+
+  const helpButton = (
+    <button
+      type="button"
+      className="pin-btn"
+      onClick={() => setGuideOpen(true)}
+      title={t.simple.help}
+      aria-label={t.simple.help}
+      data-testid="open-guide"
+    >
+      <IconHelp />
+    </button>
+  );
 
   useEffect(() => {
     void bridge.meetings.current().then(setCurrent);
@@ -79,6 +102,11 @@ function Shell() {
   }
 
   if (wizard) return <FirstRunWizard onDone={() => setWizard(false)} />;
+  if (guideOpen || !settings.guideSeen) {
+    return (
+      <HowItWorks uiLanguage={settings.uiLanguage} mode={settings.guideSeen ? "reopened" : "first-run"} onClose={() => void closeGuide()} />
+    );
+  }
 
   const pinButton = (
     <button
@@ -143,6 +171,7 @@ function Shell() {
             >
               <IconGear />
             </button>
+            {helpButton}
             {simpleView !== "home" ? sessionChip : null}
             {pinButton}
           </nav>
@@ -188,6 +217,7 @@ function Shell() {
               {t.tabs[id]}
             </button>
           ))}
+          {helpButton}
           {sessionChip}
           {pinButton}
         </nav>
