@@ -187,11 +187,14 @@ export function OverlayApp() {
   }
 
   // Same as "End meeting" in the main window: stop, close the record. The
-  // main window hears meeting-ended and releases the microphone.
+  // main window hears meeting-ended and releases the microphone. It also
+  // gets brought to front here — otherwise a minimized main window leaves
+  // the user with no visible window at all once the overlay closes.
   async function endMeeting() {
     setPeeking(false);
     await bridge.session.stop();
     await bridge.session.reset();
+    await bridge.app.focusMain();
   }
 
   async function processNow() {

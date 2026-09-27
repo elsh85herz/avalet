@@ -98,6 +98,7 @@ const api: AvaletApi = {
   app: {
     toggleMainWindow: () => invoke("avalet:main-toggle"),
     showAccess: () => invoke("avalet:main-show-access"),
+    focusMain: () => invoke("avalet:main-focus"),
     openLogs: () => invoke("avalet:open-logs"),
     quit: () => invoke("avalet:app-quit"),
   },

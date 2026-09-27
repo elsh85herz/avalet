@@ -355,6 +355,11 @@ function registerIpc(appCore: AppCore): void {
       mainWindow?.focus();
       emit("avalet:event:navigate", "access", "main");
     },
+    "avalet:main-focus": () => {
+      if (!mainWindow || mainWindow.isDestroyed()) createMainWindow();
+      mainWindow?.show();
+      mainWindow?.focus();
+    },
     "avalet:app-quit": () => app.quit(),
     "avalet:open-logs": () => {
       void shell.openPath(app.getPath("logs"));
