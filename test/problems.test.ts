@@ -29,6 +29,7 @@ function access(over: Partial<AccessState> = {}): AccessState {
     syncError: null,
     builtInAvailable: false,
     keyCheck: "ok",
+    features: null,
     ...over,
   };
 }

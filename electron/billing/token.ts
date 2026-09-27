@@ -27,6 +27,12 @@ export type EntitlementPayload = {
   iat: number;
   /** Token expiry, ms: issuance + 72 h. Past it the client must refresh (offline grace ends). */
   exp: number;
+  /**
+   * Optional: what the plan includes ("mode:<mode>", "live-checklist"). When
+   * present it replaces the client's default table (electron/shared/tiers.ts);
+   * unknown values are ignored, so the server can add features first.
+   */
+  features?: string[];
 };
 
 const PREFIX = "v1";
@@ -58,7 +64,8 @@ function isPayload(value: unknown): value is EntitlementPayload {
     (p.periodEnd === null || Number.isFinite(p.periodEnd)) &&
     typeof p.renews === "boolean" &&
     Number.isFinite(p.iat) &&
-    Number.isFinite(p.exp)
+    Number.isFinite(p.exp) &&
+    (p.features === undefined || (Array.isArray(p.features) && p.features.every((f) => typeof f === "string")))
   );
 }
 

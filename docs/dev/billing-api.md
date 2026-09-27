@@ -75,6 +75,15 @@ Payload:
 | `renews` | boolean | Pro renews at `periodEnd` unless cancelled |
 | `iat` | ms | issued at |
 | `exp` | ms | `iat` + 72 h. The proxy refuses expired tokens; the client stops using it (offline grace ends) |
+| `features` | string[], optional | What the plan includes: `mode:free`, `mode:requirements`, `mode:grooming`, `mode:demo`, `mode:review`, `mode:interview`, `live-checklist`. Omitted: the client's default table applies (`electron/shared/tiers.ts`: trial = free, interview, requirements, grooming; pro = everything). Present: it replaces the table; unknown values are ignored, `mode:free` is always included. Additive: `v` stays 1, older clients ignore it |
+
+Features never apply to own-key mode or to a client without a billing
+server: there everything is unlocked. Mode gating is done by the client and
+is a soft gate (the client is open source); the proxy enforces only the
+budget. A server that wants a third plan (for example a cheaper plan between
+trial and pro) sends that plan's features in the token; the client's `plan`
+values stay `trial` / `pro` / `none` until a client release adds a name for
+it.
 
 The client adds its own weighted usage since `iat` to `used` for display, and
 takes the server's number again on every refresh.

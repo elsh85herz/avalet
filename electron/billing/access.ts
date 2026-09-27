@@ -1,6 +1,7 @@
 import type { AccessState } from "../shared/ipc-contract.js";
 import { DEFAULT_PRICING, PRO_BUDGET, TRIAL_BUDGET } from "./config.js";
 import type { EntitlementPayload } from "./token.js";
+import { isFeature } from "../shared/tiers.js";
 
 export const AVALET_PROVIDER_ID = "avalet";
 
@@ -61,6 +62,7 @@ export function deriveAccess(input: AccessInput): AccessState {
     syncError: input.syncFailing ? (input.syncError ?? "error") : null,
     builtInAvailable: input.builtInAvailable ?? true,
     keyCheck: null,
+    features: token?.features ? token.features.filter(isFeature) : null,
   };
 
   if (mode === "own") {

@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import { LiveSession, type LiveBlock } from "./live-session.js";
 import { LiveTracker } from "./live-tracker.js";
+import { featureGate, type FeatureGate } from "./shared/tiers.js";
+import { logLine } from "./log.js";
 import { isMeetingMode, MODE_SUMMARY } from "./modes.js";
 import type { PythonRuntime } from "./python-runtime.js";
 import type { SpeechModelManager } from "./model-manager.js";
@@ -177,7 +179,8 @@ export class AppCore {
     const { emit } = deps;
     this.liveTracker = new LiveTracker({
       onUpdate: (state) => emit("avalet:event:tracker-update", state),
-      isEnabled: getLiveTrackerEnabled,
+      // The setting, and (built-in provider only) whether the plan includes it.
+      isEnabled: () => getLiveTrackerEnabled() && this.gate().unlocked("live-checklist"),
       onAccessProblem: (problem) => this.handleAccessProblem(problem, false),
     });
     this.liveSession = new LiveSession(
@@ -227,6 +230,11 @@ export class AppCore {
       }
     });
     this.handlers = this.buildHandlers();
+  }
+
+  /** What the current plan includes; everything for an own key or without a billing server. */
+  gate(): FeatureGate {
+    return featureGate(this.deps.billing?.access() ?? null);
   }
 
   /** The running meeting, or the last one it ran for (a summary after End still belongs to it). */
@@ -474,6 +482,8 @@ export class AppCore {
 
     h["avalet:meeting-mode-set"] = (mode) => {
       if (!isMeetingMode(mode)) throw new Error("unknown meeting mode");
+      // The renderer shows a preview instead of selecting a locked mode; this is the backstop.
+      if (this.gate().modeLocked(mode)) throw new Error("this meeting mode is not in the current plan");
       setMeetingMode(mode);
       setCurrentMode(mode);
       emit("avalet:event:meeting-mode-changed", mode);
@@ -589,6 +599,13 @@ export class AppCore {
         await sidecar.start().catch((error) => {
           console.error("[core] python-sidecar failed to start:", error);
         });
+      }
+      // A mode the plan no longer includes (Pro ended, a switch to the built-in
+      // provider) runs as "free", and the pickers are told so.
+      if (this.gate().modeLocked(getMeetingMode())) {
+        logLine(`[tiers] meeting mode ${getMeetingMode()} is not in the current plan: starting as free`);
+        setMeetingMode("free");
+        emit("avalet:event:meeting-mode-changed", "free");
       }
       const meeting = startMeeting({
         titlePrefix: getUiLanguage() === "ru" ? "Встреча" : "Meeting",

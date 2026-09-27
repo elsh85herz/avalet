@@ -10,7 +10,15 @@ import { UsageLedger } from "./metering/ledger.js";
 import { BillingService } from "./billing/service.js";
 import { HttpBillingProvider } from "./billing/http-provider.js";
 import { MemoryKV, fakeSecretBox } from "./platform/kv.js";
-import { getSelectedProviderId, setSelectedProviderId, updateProviderSettings } from "./settings-store.js";
+import {
+  getMeetingMode,
+  getSelectedProviderId,
+  setLiveTrackerEnabled,
+  setMeetingMode,
+  setSelectedProviderId,
+  updateProviderSettings,
+} from "./settings-store.js";
+import { MEETING_MODES } from "./shared/ipc-contract.js";
 import { fixturePath, mockPost, setupStores, startMockServer, tempDir, type MockServer } from "./testing/stores.js";
 import type { EventChannel, EventMap, InvokeChannel, InvokeResult } from "./shared/ipc-contract.js";
 
@@ -35,6 +43,7 @@ function harness() {
   const exports = path.join(dir, "exports");
   fs.mkdirSync(exports, { recursive: true });
   const events: Recorded[] = [];
+  const opened: string[] = [];
   const emit: Emit = (channel, payload) => {
     events.push({ channel, payload });
   };
@@ -57,7 +66,7 @@ function harness() {
     selectedProviderId: getSelectedProviderId,
     ownKeyReady: () => AppCore.ownKeyReady(getSelectedProviderId()),
     onChange: (state) => emit("avalet:event:access-changed", state),
-    openExternal: () => {},
+    openExternal: (url) => opened.push(url),
   });
   const core = new AppCore({
     sidecar,
@@ -90,7 +99,7 @@ function harness() {
       endedAt: Date.now(),
       endedBySilence: true,
     });
-  return { core, call, of, until, say, exports, events };
+  return { core, call, of, until, say, exports, events, opened };
 }
 
 test("full meeting on an own-key provider: start, transcript, suggestion, stop, summary, export .md and .txt", async () => {
@@ -204,6 +213,78 @@ test("built-in provider: trial suggestions through the proxy, then the budget ru
     const callsBefore = mock.llmCalls.length;
     await h.call("avalet:session-ask", "Что спросить?");
     assert.equal(mock.llmCalls.length, callsBefore);
+  } finally {
+    await h.core.shutdown();
+  }
+});
+
+// Mode tiers (CLOUD_TASK_3): only the built-in provider has plans; the main
+// process refuses what the plan lacks, whatever the renderer does.
+test("mode tiers: trial refuses review, demo and the live checklist; a mock payment unlocks them", async () => {
+  const h = harness();
+  try {
+    setLiveTrackerEnabled(true);
+    await h.call("avalet:settings-select-provider", "avalet");
+    assert.equal((await h.call("avalet:billing-activate-trial")).tier, "trial");
+    for (const mode of ["free", "interview", "requirements", "grooming"] as const) await h.call("avalet:meeting-mode-set", mode);
+    for (const mode of ["review", "demo"] as const) {
+      await assert.rejects(Promise.resolve(h.call("avalet:meeting-mode-set", mode)), /not in the current plan/);
+    }
+    assert.equal(getMeetingMode(), "grooming");
+    assert.equal(h.core.liveTracker.getState().enabled, false, "the checklist makes no background calls on the trial");
+
+    // A mode stored before (Pro ended, or chosen with an own key) starts as "free".
+    setMeetingMode("review");
+    await h.call("avalet:speech-model-download", "small");
+    await h.until(() => h.of("avalet:event:models-changed").some((rows) => rows.find((r) => r.name === "small")?.state === "ready"));
+    assert.deepEqual(await h.call("avalet:session-start"), { ok: true });
+    assert.equal(h.of("avalet:event:meeting-started")[0].mode, "free");
+    assert.equal(h.of("avalet:event:meeting-mode-changed").at(-1), "free");
+    await h.call("avalet:session-reset");
+
+    await h.call("avalet:billing-checkout", "pro");
+    const session = h.opened.at(-1)!.split("/").pop();
+    await mockPost(mock, `/mock/checkout/${session}/succeed`, {});
+    assert.equal((await h.call("avalet:billing-refresh")).tier, "pro");
+    for (const mode of MEETING_MODES) await h.call("avalet:meeting-mode-set", mode);
+    assert.equal(h.core.liveTracker.getState().enabled, true);
+  } finally {
+    await h.core.shutdown();
+  }
+});
+
+test("mode tiers: the server's features list replaces the default table (the owner's three-tier split)", async () => {
+  const h = harness();
+  try {
+    await h.call("avalet:settings-select-provider", "avalet");
+    await h.call("avalet:billing-activate-trial");
+    const installId = [...mock.installs.keys()].at(-1)!;
+    await mockPost(mock, "/mock/features", { installId, features: ["mode:interview", "mode:someday-new"] });
+    const access = await h.call("avalet:billing-refresh");
+    assert.deepEqual(access.features, ["mode:interview"], "unknown values are dropped");
+    await h.call("avalet:meeting-mode-set", "interview");
+    await h.call("avalet:meeting-mode-set", "free");
+    await assert.rejects(Promise.resolve(h.call("avalet:meeting-mode-set", "requirements")), /not in the current plan/);
+  } finally {
+    await h.core.shutdown();
+  }
+});
+
+test("mode tiers: an own key is never limited, even with a trial token on this install", async () => {
+  const h = harness();
+  try {
+    setLiveTrackerEnabled(true);
+    await h.call("avalet:settings-select-provider", "avalet");
+    await h.call("avalet:billing-activate-trial");
+    const installId = [...mock.installs.keys()].at(-1)!;
+    await mockPost(mock, "/mock/features", { installId, features: [] });
+    await h.call("avalet:billing-refresh");
+    setSelectedProviderId("custom");
+    updateProviderSettings("custom", { baseUrl: `${mock.url}/openai/v1`, model: "local-model" });
+    assert.equal((await h.call("avalet:access-get")).mode, "own");
+    for (const mode of MEETING_MODES) await h.call("avalet:meeting-mode-set", mode);
+    assert.equal(h.core.liveTracker.getState().enabled, true);
+    assert.equal(h.core.gate().gated, false);
   } finally {
     await h.core.shutdown();
   }

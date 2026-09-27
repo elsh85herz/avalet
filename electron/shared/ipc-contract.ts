@@ -9,6 +9,12 @@
 export type MeetingMode = "free" | "requirements" | "grooming" | "demo" | "review" | "interview";
 export const MEETING_MODES: MeetingMode[] = ["free", "requirements", "grooming", "demo", "review", "interview"];
 
+/**
+ * What a plan of the built-in provider can include (see electron/shared/tiers.ts).
+ * Never limits own-key mode.
+ */
+export type Feature = `mode:${MeetingMode}` | "live-checklist";
+
 export type SpeechLanguage = "ru" | "en" | "auto";
 export const SPEECH_LANGUAGES: SpeechLanguage[] = ["ru", "en", "auto"];
 export type SpeechModelName = "small" | "medium" | "turbo";
@@ -253,6 +259,11 @@ export type AccessState = {
    * call). null in Avalet mode, without a key, or for a local server without one.
    */
   keyCheck: "unchecked" | "ok" | "failed" | null;
+  /**
+   * Features the server listed in the entitlement token, or null when it
+   * listed none (the client's default table for the plan applies then).
+   */
+  features: Feature[] | null;
 };
 
 export type CancelInfoPublic = { active: boolean; renews: boolean; periodEnd: number | null; manageUrl: string | null };

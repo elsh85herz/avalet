@@ -156,16 +156,17 @@ Baseline: `npm ci` ok, `npm run check` ok (147/147).
 
 - Phase 0 and 1: `docs/dev/mode-tiers-research.md` (per-mode findings, tier structure research, sources) and `docs/dev/mode-tiers-plan.md` (table, `free`, checklist, two plans + optional token features, copy spec). Both private, in CLEANUP.
 
+- Gating core: `electron/shared/tiers.ts` (`PLAN_FEATURES`, `featureGate()`: own key and no billing server return "open" first), `Feature` and `AccessState.features` in the IPC contract, optional token `features` (validated, unknown values dropped), mock server `POST /mock/features`, `billing-api.md` updated. AppCore: `gate()`, the live tracker is enabled only when the plan includes it, `meeting-mode-set` refuses a locked mode, Start with a locked stored mode starts as `free` and tells the pickers. Tests: `electron/shared/tiers.test.ts` (invariants over every tier/status/features combination and through `deriveAccess`, table per plan, server features), integration (trial refuses review/demo/checklist, mock payment unlocks; owner's three-tier split through `/mock/features`; own key never limited), token features validation. `npm run check` 159/159.
+
 ### In progress
 
-- Phase 3 core: `electron/shared/tiers.ts`, token `features`, main-process enforcement, invariant tests.
+- Mode boards (next step).
 
 ### Next
 
-1. Gating core and tests (tiers.ts, AccessState.features, tracker gated, mode set/start enforcement, mock `/mock/features`).
-2. Mode boards (prompt markers, `src/renderer/lib/mode-board.ts`, overlay panel, grooming "Hidden work?").
-3. Locked preview UX (ModePicker, LockedPreview, checklist rows in Settings and overlay), guide images, E2E preview then upgrade, screenshots.
-4. Docs: billing-api `features`, REPORT section, CHANGELOG, MAC_VERIFY step.
+1. Mode boards (prompt markers, `src/renderer/lib/mode-board.ts`, overlay panel, grooming "Hidden work?").
+2. Locked preview UX (ModePicker, LockedPreview, checklist rows in Settings and overlay), guide images, E2E preview then upgrade, screenshots.
+3. Docs: REPORT section, CHANGELOG, MAC_VERIFY step.
 
 ### Blockers
 

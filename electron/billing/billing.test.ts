@@ -50,6 +50,16 @@ test("a signed token verifies; a tampered one does not", () => {
   assert.deepEqual(verifyToken(`v1.${body}`, [keys.publicKeyPem]), { ok: false, reason: "malformed" });
 });
 
+test("token features: an optional list of strings; anything else fails the payload check", () => {
+  const keys = generateSigningKeys();
+  const withFeatures = verifyToken(encodeToken(payload({ features: ["mode:review", "live-checklist"] }), keys.privateKey), [keys.publicKeyPem]);
+  assert.equal(withFeatures.ok && withFeatures.payload.features?.length, 2);
+  const bad = { ...payload(), features: "mode:review" } as unknown as EntitlementPayload;
+  assert.deepEqual(verifyToken(encodeToken(bad, keys.privateKey), [keys.publicKeyPem]), { ok: false, reason: "payload" });
+  const mixed = { ...payload(), features: ["mode:review", 7] } as unknown as EntitlementPayload;
+  assert.deepEqual(verifyToken(encodeToken(mixed, keys.privateKey), [keys.publicKeyPem]), { ok: false, reason: "payload" });
+});
+
 // --- pure state ---
 
 function input(over: Partial<AccessInput> = {}): AccessInput {

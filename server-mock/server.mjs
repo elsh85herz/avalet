@@ -15,6 +15,7 @@
 //   POST /mock/usage        {"installId", "weighted"} spends budget
 //   POST /mock/cancel       {"installId"}     stops renewal (like the user cancelling)
 //   POST /mock/offline      {"offline": true} every contract endpoint answers 503
+//   POST /mock/features     {"installId", "features": [...] | null} puts a features list in the tokens
 //   GET  /mock/state                          all installs, for assertions
 //
 // Also serves a plain OpenAI-compatible fake model at /openai/v1/chat/completions
@@ -129,6 +130,7 @@ export function createMockBillingServer(options = {}) {
       renews: install.renews,
       iat,
       exp: iat + TOKEN_TTL_MS,
+      ...(Array.isArray(install.features) ? { features: install.features } : {}),
     };
     const body = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
     const signed = `v1.${body}`;
@@ -263,6 +265,12 @@ export function createMockBillingServer(options = {}) {
         if (!install) return fail(res, 404, "unknown_install", "no installs");
         install.renews = false;
         return send(res, 200, { renews: false });
+      }
+      if (req.method === "POST" && path === "/mock/features") {
+        const install = installs.get(body.installId) ?? [...installs.values()][0];
+        if (!install) return fail(res, 404, "unknown_install", "no installs");
+        install.features = Array.isArray(body.features) ? body.features.map(String) : undefined;
+        return send(res, 200, { features: install.features ?? null });
       }
       if (req.method === "POST" && path === "/mock/offline") {
         offline = Boolean(body.offline);
