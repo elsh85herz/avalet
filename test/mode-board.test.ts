@@ -77,12 +77,14 @@ test("every Russian board marker is asked for by that mode's prompt or its quick
   }
 });
 
-test("quick actions: requirements keeps Risks; in grooming the Risks button also asks about hidden work; interview has none", () => {
-  assert.ok(quickActionsFor("requirements").some((a) => a.key === "risks"));
-  assert.deepEqual(
-    quickActionsFor("grooming").map((a) => a.key),
-    ["summarize", "hiddenWork", "askQuestion", "explainThis"],
-  );
-  assert.deepEqual(quickActionsFor("interview"), []);
+test("quick actions: Risks? only in free (every other mode's board or prompt already surfaces risks on its own); interview has none", () => {
   assert.deepEqual(quickActionsFor("free"), QUICK_ACTIONS);
+  for (const mode of ["requirements", "grooming", "demo", "review"] as const) {
+    assert.deepEqual(
+      quickActionsFor(mode).map((a) => a.key),
+      ["summarize", "askQuestion", "explainThis"],
+      mode,
+    );
+  }
+  assert.deepEqual(quickActionsFor("interview"), []);
 });

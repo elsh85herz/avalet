@@ -1883,6 +1883,24 @@ a {
   color: var(--text);
 }
 
+.guide-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.guide-list li {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.guide-shot figcaption .link-btn {
+  margin-top: 12px;
+}
+
 .sample {
   display: flex;
   flex-direction: column;

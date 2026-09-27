@@ -6,7 +6,7 @@
 // the overlay's own uiLanguage independently.
 import type { MeetingMode } from "../../../electron/shared/ipc-contract.js";
 
-export type QuickActionKey = "summarize" | "risks" | "askQuestion" | "explainThis" | "hiddenWork";
+export type QuickActionKey = "summarize" | "risks" | "askQuestion" | "explainThis";
 
 export type QuickAction = {
   key: QuickActionKey;
@@ -24,16 +24,18 @@ export const QUICK_ACTIONS: QuickAction[] = [
   { key: "explainThis", prompt: "Explain, in plain terms, what was just said or shown on screen." },
 ];
 
-/** Grooming asks about hidden work in place of the general risks question (it covers the risks that change the size). */
-const HIDDEN_WORK: QuickAction = {
-  key: "hiddenWork",
-  prompt:
-    "What hidden work or size-changing risks is the team missing for the task being discussed: data migration or backfill, feature flags, monitoring and alerts, rollback plan, access rights, documentation, load testing? Only what applies here, each on its own line starting with 'Риск:'.",
-};
-
-/** The quick actions a meeting mode shows. Interview has none: it gets a permanent "Process now" instead. */
+/**
+ * The quick actions a meeting mode shows. Interview has none: it gets a
+ * permanent "Process now" instead. "Risks?" is dropped everywhere except
+ * `free`: every other mode's own prompt (electron/modes.ts) already tells
+ * the model to put a risk on its own line whenever it notices one, and a
+ * mode with a board (lib/mode-board.ts) collects those lines automatically
+ * as the call goes — asking the same question on a click adds nothing.
+ * `free` has no such standing instruction and no board, so it is the one
+ * mode where the button still does real work.
+ */
 export function quickActionsFor(mode: MeetingMode): QuickAction[] {
   if (mode === "interview") return [];
-  if (mode === "grooming") return QUICK_ACTIONS.map((action) => (action.key === "risks" ? HIDDEN_WORK : action));
-  return QUICK_ACTIONS;
+  if (mode === "free") return QUICK_ACTIONS;
+  return QUICK_ACTIONS.filter((action) => action.key !== "risks");
 }

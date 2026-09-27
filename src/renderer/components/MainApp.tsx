@@ -113,7 +113,12 @@ function Shell() {
   if (wizard) return <FirstRunWizard onDone={() => setWizard(false)} />;
   if (guideOpen || !settings.guideSeen) {
     return (
-      <HowItWorks uiLanguage={settings.uiLanguage} mode={settings.guideSeen ? "reopened" : "first-run"} onClose={() => void closeGuide()} />
+      <HowItWorks
+        uiLanguage={settings.uiLanguage}
+        mode={settings.guideSeen ? "reopened" : "first-run"}
+        meetingMode={settings.meetingMode}
+        onClose={() => void closeGuide()}
+      />
     );
   }
 

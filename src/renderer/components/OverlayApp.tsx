@@ -739,7 +739,6 @@ export function OverlayApp() {
             className={qa.key === PRIMARY_ACTION && !advanced ? "primary" : ""}
             onClick={() => void ask(qa.prompt)}
             disabled={asking}
-            title={qa.key === "hiddenWork" ? t.board.hiddenWorkTitle : undefined}
           >
             {t.quickActions[qa.key]}
           </button>

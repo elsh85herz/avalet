@@ -64,7 +64,6 @@ export type UiStrings = {
     toggleTitle: string;
     copy: string;
     copied: string;
-    hiddenWorkTitle: string;
     sections: Record<"requirements" | "risks" | "slices" | "separate" | "deviations" | "checks" | "remarks" | "decisions", string>;
   };
   locks: {
@@ -90,7 +89,6 @@ export type UiStrings = {
     risks: string;
     askQuestion: string;
     explainThis: string;
-    hiddenWork: string;
   };
   settings: {
     subtitle: string;
@@ -270,6 +268,14 @@ export type UiStrings = {
     endBody: string;
     trackerTitle: string;
     trackerBody: string;
+    chooseModeTitle: string;
+    chooseModeHint: string;
+    changeMode: string;
+    actionsTitle: string;
+    actionsIntro: string;
+    interviewTitle: string;
+    interviewBody: string;
+    boardTitle: string;
     done: string;
     close: string;
   };
@@ -461,7 +467,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       toggleTitle: "Collected from the suggestions of this meeting",
       copy: "Copy",
       copied: "Copied",
-      hiddenWorkTitle: "Risks and hidden work that change the size: migration, flags, monitoring, rollback, access",
       sections: {
         requirements: "Requirements",
         risks: "Risks",
@@ -502,7 +507,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       risks: "Risks?",
       askQuestion: "Ask a question",
       explainThis: "Explain this",
-      hiddenWork: "Risks?",
     },
     settings: {
       subtitle: "Meeting assistant for systems analysts. Pick a provider, save a key, hit Start.",
@@ -695,6 +699,15 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       endBody: "Pause stops listening without closing the meeting; press it again to continue. End closes the meeting for good and saves it, with a summary, to History.",
       trackerTitle: "Live checklist (Advanced)",
       trackerBody: "Turn it on in Advanced settings to have agenda items and action points tracked as the call goes, not only when you ask for a summary.",
+      chooseModeTitle: "Your meeting type",
+      chooseModeHint: "The overlay's buttons and running list depend on the meeting mode. Pick the one you will actually use.",
+      changeMode: "Different meeting type",
+      actionsTitle: "Buttons in this mode",
+      actionsIntro: "This mode's buttons, in addition to the suggestions that arrive on their own:",
+      interviewTitle: "One button: Process now",
+      interviewBody:
+        "Interview mode has no quick-action buttons: listening runs the whole time, and Process now asks for a suggestion right away instead of waiting for a pause. The main window hides itself so only the overlay shows.",
+      boardTitle: "Running list",
       done: "Got it, start",
       close: "Close",
     },
@@ -895,7 +908,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       toggleTitle: "Собрано из подсказок этой встречи",
       copy: "Копировать",
       copied: "Скопировано",
-      hiddenWorkTitle: "Риски и скрытая работа, которые меняют размер задачи: миграция, флаги, мониторинг, откат, доступы",
       sections: {
         requirements: "Требования",
         risks: "Риски",
@@ -936,7 +948,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       risks: "Риски?",
       askQuestion: "Уточняющий вопрос",
       explainThis: "Объяснить",
-      hiddenWork: "Риски?",
     },
     settings: {
       subtitle: "Ассистент системного аналитика на встречах. Выберите провайдера, сохраните ключ, нажмите Старт.",
@@ -1129,6 +1140,15 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       endBody: "Пауза останавливает прослушивание, не закрывая встречу; нажмите ещё раз, чтобы продолжить. Завершить закрывает встречу окончательно и сохраняет её с итогом в Историю.",
       trackerTitle: "Живой чек-лист (расширенный режим)",
       trackerBody: "Включите в расширенных настройках, чтобы пункты повестки и задачи отмечались по ходу звонка, а не только когда вы запросите итог.",
+      chooseModeTitle: "Ваш режим встречи",
+      chooseModeHint: "Кнопки оверлея и список по ходу встречи зависят от режима. Выберите тот, который будете использовать.",
+      changeMode: "Другой режим встречи",
+      actionsTitle: "Кнопки в этом режиме",
+      actionsIntro: "Кнопки этого режима, в дополнение к подсказкам, которые приходят сами:",
+      interviewTitle: "Одна кнопка: Обработать сейчас",
+      interviewBody:
+        "В режиме интервью нет быстрых кнопок: прослушивание идёт всё время, а «Обработать сейчас» запрашивает подсказку сразу, не дожидаясь паузы. Главное окно само прячется, остаётся только оверлей.",
+      boardTitle: "Список по ходу встречи",
       done: "Понятно, начать",
       close: "Закрыть",
     },

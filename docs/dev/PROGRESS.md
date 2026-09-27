@@ -178,3 +178,11 @@ Baseline: `npm ci` ok, `npm run check` ok (147/147).
 ### Blockers
 
 (none)
+
+## Guide: per-mode menu, "Risks?" button dropped where it is now redundant (2026-09-27, interactive session)
+
+- The owner asked, while looking at the how-it-works guide: it showed generic "Risks?"-style buttons even for interview mode, where the overlay has no such buttons at all; also asked to reconsider whether those buttons are still needed anywhere, requirements included, and to decide and apply.
+- Decision (see DECISIONS.md for the reasoning): the guide now asks which meeting mode to read about (step 4, a menu) and only shows that mode's real buttons and running list; the "Risks?" quick action is dropped from every mode except `free`, since every other mode's own prompt already asks the model to flag a risk on its own line and the CLOUD_TASK_3 board already collects those lines live.
+- Changed: `src/renderer/live/quick-actions.ts` (`quickActionsFor`, `HIDDEN_WORK` removed), `src/renderer/components/HowItWorks.tsx` (mode menu, per-mode actions/board pages), `src/renderer/components/OverlayApp.tsx` (dead `hiddenWork` title lookup removed), `src/renderer/lib/i18n.ts` (`hiddenWork` dropped, new guide strings), `src/renderer/components/MainApp.tsx` (passes `meetingMode` to the guide), `test/mode-board.test.ts`, new `e2e/wizard.spec.ts` test.
+- Verified: `npm run check` (168/168, was 168 — same count, one test rewritten not added; i18n 400 strings per language, was 394); `npm run build` + `xvfb-run ... npx playwright test` 18/18 (17 existing + 1 new guide test), including own-key and trial paths.
+- Not done: the guide's mode-specific pages reuse the existing overlay screenshot with one wide highlight box over the whole button row (not a per-button circle) rather than new screenshots per button count — regenerating pixel-perfect per-mode button screenshots under Xvfb was judged not worth it for a once-read help screen.

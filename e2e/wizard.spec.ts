@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { launch, shot, startMock, setTheme } from "./harness";
+import { launch, shot, startMock, setTheme, skipWizardWithTrial } from "./harness";
 
 // First run: all four wizard screens, the trial path, the model download with
 // progress, the self-test, then the Simple main window.
@@ -68,6 +68,59 @@ test("first-run wizard: permissions, trial, model download, context and try it",
     await page.getByTestId("guide-skip").click();
     await expect(page.getByTestId("simple-home")).toBeVisible();
     await shot(page, "simple-home-empty-dark");
+  } finally {
+    await run.close();
+    await mock.close();
+  }
+});
+
+// The guide's mode menu: what it shows depends on the meeting mode picked
+// there, not the app's actual setting (see src/renderer/components/HowItWorks.tsx).
+test("how-it-works guide: the mode menu changes which buttons and running list the guide shows", async () => {
+  const mock = await startMock();
+  const run = await launch(mock, { readyModel: true });
+  const page = run.main;
+  try {
+    await page.setViewportSize({ width: 480, height: 900 });
+    await skipWizardWithTrial(page);
+    await page.getByTestId("open-guide").click();
+    const guide = page.getByTestId("how-it-works");
+    await expect(guide).toBeVisible();
+
+    // Overlay, Pause/End, Auto: three mode-independent pages, then the menu.
+    await page.getByTestId("guide-next").click();
+    await page.getByTestId("guide-next").click();
+    await page.getByTestId("guide-next").click();
+    await expect(guide).toHaveAttribute("data-step", "4");
+    await expect(page.getByTestId("guide-mode-free")).toHaveAttribute("aria-checked", "true");
+    await shot(page, "guide-mode-menu-dark");
+
+    // Requirements: three buttons (no "Risks?", the mode's own prompt and board cover it), then a board page.
+    await page.getByTestId("guide-mode-requirements").click();
+    await page.getByTestId("guide-next").click();
+    await expect(guide).toContainText("Уточняющий вопрос");
+    await expect(guide).not.toContainText("Риски?");
+    await shot(page, "guide-actions-requirements-dark");
+    await page.getByTestId("guide-next").click();
+    await expect(guide).toContainText(/требования и риски/i);
+    await shot(page, "guide-board-requirements-dark");
+
+    // Back to the menu, then interview: no button list at all, Process now instead, no board page.
+    await page.getByTestId("guide-change-mode").click();
+    await expect(guide).toHaveAttribute("data-step", "4");
+    await page.getByTestId("guide-mode-interview").click();
+    await page.getByTestId("guide-next").click();
+    await expect(guide).toContainText("Обработать сейчас");
+    await expect(guide).not.toContainText("Уточняющий вопрос");
+    await expect(guide.getByTestId("guide-change-mode")).toBeVisible();
+    // No board page for interview: the very next page is the live checklist, not a mode board.
+    await page.getByTestId("guide-next").click();
+    await expect(guide).toContainText(/Живой чек-лист/i);
+    await expect(guide).toHaveAttribute("data-step", "6"); // no board page for interview: one less than requirements' 7
+
+    // Last page: no Skip button any more, Next itself closes the guide.
+    await page.getByTestId("guide-next").click();
+    await expect(page.getByTestId("simple-home")).toBeVisible();
   } finally {
     await run.close();
     await mock.close();
