@@ -1,6 +1,6 @@
 # Progress (task scaffolding, delete before going public)
 
-Resume rule: read `CLOUD_TASK_2.md` (current task, 0.2.0-rc.2) and `CLOUD_TASK.md` sections 0-3, then this file, then `DECISIONS.md`. Work continues from "rc.2: Next" at the bottom.
+Resume rule: read `CLOUD_TASK_3.md` (current task, mode tiers), `CLOUD_TASK.md` sections 0-3 and `CLOUD_TASK_2.md` (house style), then this file, then `DECISIONS.md`, then `mode-tiers-plan.md`. Work continues from "Mode tiers: Next" at the bottom.
 
 ## Environment facts (cloud container, 2026-09-26)
 
@@ -145,5 +145,28 @@ Resume rule: read `CLOUD_TASK_2.md` (current task, 0.2.0-rc.2) and `CLOUD_TASK.m
 - Owner: MAC_VERIFY on the rc.2 build (new steps first); decisions in REPORT.md "0.2.0-rc.2".
 
 ## rc.2: Blockers
+
+(none)
+
+## Mode tiers (CLOUD_TASK_3.md), started 2026-09-27
+
+Baseline: `npm ci` ok, `npm run check` ok (147/147).
+
+### Done
+
+- Phase 0 and 1: `docs/dev/mode-tiers-research.md` (per-mode findings, tier structure research, sources) and `docs/dev/mode-tiers-plan.md` (table, `free`, checklist, two plans + optional token features, copy spec). Both private, in CLEANUP.
+
+### In progress
+
+- Phase 3 core: `electron/shared/tiers.ts`, token `features`, main-process enforcement, invariant tests.
+
+### Next
+
+1. Gating core and tests (tiers.ts, AccessState.features, tracker gated, mode set/start enforcement, mock `/mock/features`).
+2. Mode boards (prompt markers, `src/renderer/lib/mode-board.ts`, overlay panel, grooming "Hidden work?").
+3. Locked preview UX (ModePicker, LockedPreview, checklist rows in Settings and overlay), guide images, E2E preview then upgrade, screenshots.
+4. Docs: billing-api `features`, REPORT section, CHANGELOG, MAC_VERIFY step.
+
+### Blockers
 
 (none)
