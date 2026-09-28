@@ -203,9 +203,11 @@ Baseline on `abfbb72`: `npm ci` ok, `npm run check` ok (i18n 398 strings, 168/16
 
 - Phase 4: overlay RU/EN button and its strings removed (listener kept); E2E checks no language button, "Explain" present, language switched from Simple Settings; guide images regenerated, Auto ring re-measured; README EN/RU, MAC_VERIFY 7a (EN/RU) and new 9a (checklist quotes, fold, jump, pace). Verified: `npm run check` 187/187 (i18n 393); `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 19/19.
 
+- REPORT section "Checklist UX, one speech model, quieter hints, overlay cleanup" (verified, needs a Mac, gaps, decisions, token estimate); CLEANUP lists the three private plan files and `CLOUD_TASK_4*.md`.
+
 ### In progress
 
-- REPORT section, CI run check.
+- CI run check on the pushed head.
 
 ### Next
 

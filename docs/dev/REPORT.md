@@ -180,3 +180,70 @@ with the mock model and the prompt text).
 1. Decide item 1 above, then MAC_VERIFY step 8b.
 2. Try the running lists in two real requirements or grooming meetings; tune the markers if the model skips them.
 3. When the billing server is built: send `features` in the token from day one, so the table can change without a client release.
+
+---
+
+# Checklist UX, one speech model, quieter hints, overlay cleanup (2026-09-28, CLOUD_TASK_4.md)
+
+Branch `release/v0.2-autopilot`, version still `0.2.0-rc.2` (CHANGELOG
+"Unreleased"), not tagged. Research and plans (private, in CLEANUP):
+`checklist-ux-research.md`, `checklist-ux-plan.md`, `auto-hints-plan.md`.
+Tier and billing gating not touched. Details in `PROGRESS.md` ("CLOUD_TASK_4")
+and `DECISIONS.md` ("CLOUD_TASK_4").
+
+## What changed
+
+1. **Checklist keeps what was said (the review-mode bug, as a class).** The single `note` slot was doing three jobs: verdict, evidence, location. Agenda items and action points now carry an optional verbatim `quote`, `speaker` and `at` next to the 12-word verdict. The tracker prompt asks for the exact words, with one line per mode on which sentence counts as evidence. Quotes are checked locally against the excerpt the model saw (word stems in 1 to 3 consecutive segments, 60%): an unbacked quote is dropped, and time and speaker come from the matched segment, not from the model. The summary merge keeps live quotes. No third "decisions" list, no topic grouping (reasons in the plan).
+2. **Checklist stays secondary in the overlay.** The folded row stays where it was. Open, it takes at most about a third of the overlay (`32vh`, was 240 px = 43%), one line per item, detail (verdict, quote, who, m:ss) on a click, add and "Update now" behind one link. It folds itself when a new suggestion starts unless the pointer or focus is in it; the mode board does the same. The main window shows each quote with a time button that jumps to that moment in the transcript and highlights it; the protocol export quotes under the item and under the task table.
+3. **One speech model.** `small` only; the picker is one readiness row (status, progress, Cancel, Continue, Retry, Delete) in both Settings and the wizard. The download starts in the background when a new user leaves the first wizard screen or when the first-run guide opens, once per window, only if the model is absent (partial resumes); Start still waits for a ready model.
+4. **Quieter automatic suggestions, per mode.** Interview keeps the live pace (6 s, any pause). Free is balanced (15 s, a pause after 120 new characters). Requirements, grooming, demo and review are quiet (25 s, a pause after 300 new characters, or a question). Manual paths are untouched.
+5. **No RU/EN button on the overlay.** Language is set in Settings (both levels) and the first-run setup; the overlay follows it. "Explain" and its reasoning comment untouched.
+
+## Token cost before and after (estimate, `auto-hints-plan.md`)
+
+Simulated 10-minute call, automatic calls: old pace 57-65 (every mode); free 33; board modes 20-22; interview unchanged. At about 2,500 input and 150 output tokens per call: **about 950k tokens per hour of talk before, about 530k in free (-45%), about 330k in the board modes (-65%)**. From a synthetic call and prompt sizes, not measured; the ledger after a week of real use is the check.
+
+## Verified here (Linux container, commands run)
+
+| Command | Result |
+|---|---|
+| `npm run check` (typecheck, `check-i18n`, unit + integration) | ok; 393 strings per language; 187/187 tests (was 168) |
+| `npm run build` then `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` | 19/19 (was 18) |
+| `electron/live-tracker-logic.test.ts` | quote parsed and optional; grounding across segments, tolerant of small wording changes, drops unsaid quotes; forward-only, manual, closed and `sameTask` rules unchanged with quotes; merge keeps quotes; every mode's prompt asks for verbatim quotes |
+| `electron/live-tracker.test.ts` | a real `LiveTracker` run stores the quote with the segment's time and speaker and drops an unbacked one |
+| `electron/summary-format.test.ts` | protocol quote lines with speaker and `HH:MM:SS` |
+| `test/early-download.test.ts` | fires once per window however often called; nothing when ready (relaunch), downloading or failed |
+| `electron/model-manager.test.ts` | the state machine on one model (progress, retry, error, cancel/continue, delete) |
+| `electron/live-session-triggers.test.ts` | pace table per mode, quiet and balanced rules, 25 s in a requirements session with direct asks instant, simulation: quiet at most 40% of the old pace |
+| E2E | overlay item detail with quote; list folds on a new suggestion; main-window jump highlights the segment; wizard sees the download start after step 1, cancel/continue on step 3; the first-run guide starts the download; Settings show one model row; no language button on the overlay, "Explain" present, language switched from Settings |
+| Screenshots | `docs/screens/overlay-checklist-with-suggestion-dark.png` (checklist open next to a suggestion), overlay and wizard shots regenerated; guide images regenerated, the Auto ring re-measured by pixel scan |
+
+## Needs a Mac
+
+`MAC_VERIFY.md` step 5 (early download on the real Hugging Face hub), 7a
+(overlay without the language button) and new 9a: whether a real model gives
+verbatim quotes the grounding accepts (checked here only with the mock model),
+the tray and fold with macOS fonts at 380 px, the real pace of automatic
+suggestions in a live call.
+
+## Known gaps
+
+- Quote quality depends on the real model copying words; a model that paraphrases more than about 40% loses the quote (by design: nothing unbacked is shown). Unverified on real meetings.
+- Quotes are not in the summary JSON; an item the live checklist never saw gets no quote.
+- Files of a medium or turbo model downloaded earlier stay on disk (about 1.5 GB each); nothing deletes them silently and the app no longer offers them. Removing them needs Finder (`~/.cache/huggingface/hub`).
+- The early download uses the network without a separate prompt (the owner asked for it); on a blocked Hugging Face it fails into the usual error row with Retry and the VPN hint.
+- The token saving is a simulation estimate; interview is unchanged on purpose.
+
+## Decisions needing the owner
+
+1. **Auto-suggestion paces** (free 15 s / 120 chars, board modes 25 s / 300 chars, interview unchanged). *Recommended: keep for a week, then compare the ledger's suggestion calls per meeting with the estimate; if the board modes feel too quiet, lower `pauseMinChars` to 200 first.*
+2. **Auto stays on by default** instead of "mostly on request". *Recommended: keep; turning it off would leave the running lists of four modes empty.*
+3. **Early download from the first wizard screen** (not only from the guide, which comes after the wizard in the app). *Recommended: keep; the guide alone would start after wizard step 3.*
+4. **Checklist folds itself on a new suggestion.** *Recommended: keep; revisit if it annoys during a real review meeting.*
+5. **Language set only before the call** (Settings and first-run setup; the Simple home has no language control, none added). *Recommended: keep.*
+
+## Next steps
+
+1. MAC_VERIFY steps 5, 7a and 9a on a build from this branch.
+2. Two real requirements or review meetings with the checklist on: are quotes present and right, does the fold feel right.
+3. After a week, compare the ledger with the token estimate and tune `AUTO_PACING` if needed.
