@@ -90,7 +90,7 @@ export function HowItWorks({ uiLanguage, mode, meetingMode, onClose }: Props) {
   const pages: Page[] = [
     { image: overlayExpanded, title: g.overlayTitle, body: g.overlayBody },
     { image: overlayExpanded, spot: { x: 30, y: 9, w: 188, h: 31, radius: 18 }, title: g.endTitle, body: g.endBody },
-    { image: overlayExpanded, spot: { x: 279, y: 44, w: 51, h: 33, radius: 16 }, title: g.autoTitle, body: g.autoBody },
+    { image: overlayExpanded, spot: { x: 323, y: 43, w: 51, h: 33, radius: 16 }, title: g.autoTitle, body: g.autoBody },
     // Rendered as the mode menu below, not through the image+caption layout; image/body are unused.
     { image: overlayExpanded, title: g.chooseModeTitle, body: "" },
     actionsOrProcessPage,

@@ -19,7 +19,6 @@ export type UiStrings = {
     endTitle: string;
     auto: string;
     autoName: string;
-    languageName: string;
     screenshotName: string;
     notesName: string;
   };
@@ -405,7 +404,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
   en: {
     autoOnTitle: "Auto-suggest is on: click to only respond to typed/quick-action questions",
     autoOffTitle: "Auto-suggest is off: click to resume automatic suggestions",
-    uiLangTitle: "Interface language (this overlay's own labels/tooltips, not the AI's answers): click to switch",
+    uiLangTitle: "Interface language of the app (labels and tips, not the AI's answers): click to switch",
     screenshotTitle:
       "Take a fresh screenshot right now and prioritize it in the next answer, alongside the audio transcript",
     overlay: {
@@ -417,7 +416,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       endTitle: "End the meeting: stop listening and keep it in History",
       auto: "Auto",
       autoName: "Automatic suggestions",
-      languageName: "Interface language",
       screenshotName: "Screenshot for the next answer",
       notesName: "Notes window",
     },
@@ -838,7 +836,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
   ru: {
     autoOnTitle: "Авто-подсказки включены: клик, чтобы реагировать только на вопросы и быстрые кнопки",
     autoOffTitle: "Авто-подсказки выключены: клик, чтобы снова включить",
-    uiLangTitle: "Язык интерфейса (подписи и подсказки самого оверлея, не ответов ИИ): клик переключает",
+    uiLangTitle: "Язык интерфейса приложения (подписи и подсказки, не ответы ИИ): клик переключает",
     screenshotTitle:
       "Сделать свежий скриншот прямо сейчас и учесть его в следующем ответе вместе с аудио-транскриптом",
     overlay: {
@@ -850,7 +848,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       endTitle: "Завершить встречу: остановить запись, встреча сохранится в Истории",
       auto: "Авто",
       autoName: "Автоподсказки",
-      languageName: "Язык интерфейса",
       screenshotName: "Снимок экрана для следующего ответа",
       notesName: "Окно конспекта",
     },

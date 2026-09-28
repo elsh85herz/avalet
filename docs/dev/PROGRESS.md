@@ -201,13 +201,15 @@ Baseline on `abfbb72`: `npm ci` ok, `npm run check` ok (i18n 398 strings, 168/16
 
 - Phase 3: `AUTO_PACING` per mode (live/balanced/quiet) + pure `shouldAutoSuggest` in `live-session.ts`; `docs/dev/auto-hints-plan.md` (options, table, simulated calls per 10 min: old 57-65, free 33, board modes 20-22; tokens/hour about -45% and -65%). Tests: 5 new in `live-session-triggers.test.ts` (table, quiet, balanced, session in requirements, simulation), old trigger tests run in interview; integration trial test sets interview. README EN/RU trigger line, CHANGELOG. Verified: `npm run check` 187/187; meeting/advanced/tiers/quality E2E 11/11.
 
+- Phase 4: overlay RU/EN button and its strings removed (listener kept); E2E checks no language button, "Explain" present, language switched from Simple Settings; guide images regenerated, Auto ring re-measured; README EN/RU, MAC_VERIFY 7a (EN/RU) and new 9a (checklist quotes, fold, jump, pace). Verified: `npm run check` 187/187 (i18n 393); `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 19/19.
+
 ### In progress
 
-- Phase 4: overlay RU/EN removal.
+- REPORT section, CI run check.
 
 ### Next
 
-- Guide screenshots re-measured, REPORT section, full E2E, CI check.
+- Owner: decisions in REPORT "CLOUD_TASK_4".
 
 ### Blockers
 

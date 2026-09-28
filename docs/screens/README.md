@@ -10,6 +10,7 @@ Made by the E2E suite (`npm run e2e:xvfb`) on Linux under Xvfb: real app, fake c
 - [`overlay-advanced-checklist-light.png`](overlay-advanced-checklist-light.png)
 - [`overlay-advanced-expanded-dark.png`](overlay-advanced-expanded-dark.png)
 - [`overlay-checklist-locked-dark.png`](overlay-checklist-locked-dark.png)
+- [`overlay-checklist-with-suggestion-dark.png`](overlay-checklist-with-suggestion-dark.png) (screenshot mode, `AVALET_SCREENSHOT_DIR`: the checklist open next to a live suggestion, one item showing what was said; same image as the guide page)
 - [`overlay-checklist-preview-dark.png`](overlay-checklist-preview-dark.png)
 - [`overlay-paywall-dark.png`](overlay-paywall-dark.png)
 - [`overlay-requirements-board-dark.png`](overlay-requirements-board-dark.png)

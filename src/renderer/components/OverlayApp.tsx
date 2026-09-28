@@ -298,26 +298,10 @@ export function OverlayApp() {
     }
   }
 
-  async function toggleUiLanguage() {
-    const next = uiLanguage === "ru" ? "en" : "ru";
-    setUiLanguage(next);
-    await bridge.settings.setUiLanguage(next);
-  }
-
   // Every control has a visible label or an accessible name plus a tooltip;
   // the same buttons are shown in Simple and Advanced (only tuning differs).
-  const uiLangButton = (
-    <button
-      type="button"
-      className="lang-btn"
-      onClick={() => void toggleUiLanguage()}
-      title={t.uiLangTitle}
-      aria-label={t.overlay.languageName}
-      data-testid="overlay-language"
-    >
-      {uiLanguage === "ru" ? "RU" : "EN"}
-    </button>
-  );
+  // The interface language is not switchable here: it is set in the main
+  // window (Settings, first-run setup) before the call and followed live.
 
   const autoButton = (
     <button
@@ -413,7 +397,6 @@ export function OverlayApp() {
         </span>
       ) : null}
       {autoButton}
-      {uiLangButton}
     </div>
   );
 

@@ -136,7 +136,7 @@ test("own key saved but not checked: says so with a Check button, never a limit 
 
 // Simple is the same working product with fewer settings: every control used
 // during a meeting is in the Simple overlay and works.
-test("simple overlay: auto, language, opacity, pause, end are there and work", async () => {
+test("simple overlay: auto, opacity, pause, end are there and work; language is set in the main window", async () => {
   const mock = await startMock();
   const run = await launch(mock, { readyModel: true });
   const page = run.main;
@@ -148,11 +148,14 @@ test("simple overlay: auto, language, opacity, pause, end are there and work", a
     await page.getByTestId("start").click();
     const overlay = await overlayPage(run.app);
     await overlay.setViewportSize({ width: 380, height: 560 });
-    for (const id of ["overlay-auto", "overlay-language", "overlay-opacity", "overlay-pause", "overlay-end", "overlay-screenshot", "overlay-notes"]) {
+    for (const id of ["overlay-auto", "overlay-opacity", "overlay-pause", "overlay-end", "overlay-screenshot", "overlay-notes"]) {
       await expect(overlay.getByTestId(id), id).toBeVisible();
     }
+    // No language switch during the call (CLOUD_TASK_4); the "Explain" quick action stays.
+    await expect(overlay.getByTestId("overlay-language")).toHaveCount(0);
+    await expect(overlay.getByRole("button", { name: /^(Объяснить|Explain this)$/ })).toBeVisible();
     // Icon-only controls still have a name for screen readers and a tooltip.
-    for (const id of ["overlay-screenshot", "overlay-notes", "overlay-language", "overlay-auto"]) {
+    for (const id of ["overlay-screenshot", "overlay-notes", "overlay-auto"]) {
       await expect(overlay.getByTestId(id)).toHaveAttribute("aria-label", /\S/);
       await expect(overlay.getByTestId(id)).toHaveAttribute("title", /\S/);
     }
@@ -174,11 +177,13 @@ test("simple overlay: auto, language, opacity, pause, end are there and work", a
     // Opacity from the overlay drives the saved setting.
     await overlay.getByTestId("overlay-opacity").fill("0.6");
     await expect.poll(() => page.evaluate(async () => (await window.avalet!.settings.getAll()).overlayOpacity)).toBeCloseTo(0.6);
-    // Language button switches the interface.
-    await overlay.getByTestId("overlay-language").click();
+    // The interface language is chosen in the main window's Settings; the overlay follows it.
+    await page.getByTestId("open-settings").click();
+    await page.locator("#simple-ui-language").selectOption("en");
     await expect(overlay.getByTestId("overlay-pause")).toHaveText("Pause");
-    await overlay.getByTestId("overlay-language").click();
+    await page.locator("#simple-ui-language").selectOption("ru");
     await expect(overlay.getByTestId("overlay-pause")).toHaveText("Пауза");
+    await page.getByTestId("settings-back").click();
     await overlay.getByTestId("overlay-opacity").fill("1");
     await shot(overlay, "overlay-simple-controls-dark");
 
