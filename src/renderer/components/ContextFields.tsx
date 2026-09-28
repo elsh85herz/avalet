@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
 import { MEETING_MODES } from "../lib/types.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
@@ -34,7 +34,6 @@ export function ContextFields({ uiLanguage, roleWording, advanced, hideMode }: P
   const [modeHelpOpen, setModeHelpOpen] = useState(false);
   // "Saved" only makes sense after the user typed something.
   const [edited, setEdited] = useState({ context: false, agenda: false });
-  const fileRef = useRef<HTMLInputElement | null>(null);
 
   // A meeting start re-reads the stored briefing; never overwrite unsaved typing.
   useEffect(() => {
@@ -65,13 +64,6 @@ export function ContextFields({ uiLanguage, roleWording, advanced, hideMode }: P
     await bridge.settings.setAgenda(normalized);
     setAgendaSaved(true);
     patch({ agendaText: normalized });
-  }
-
-  async function loadFile(file: File | undefined) {
-    if (!file) return;
-    const text = await file.text();
-    await saveAgenda(agenda ? `${agenda}\n${text}` : text);
-    if (fileRef.current) fileRef.current.value = "";
   }
 
   return (
@@ -146,14 +138,6 @@ export function ContextFields({ uiLanguage, roleWording, advanced, hideMode }: P
           <span className="hint save-state" aria-live="polite">
             {!edited.agenda ? "" : agendaSaved ? t.agendaSaved : "…"}
           </span>
-          {advanced ? (
-            <>
-              <button type="button" onClick={() => fileRef.current?.click()}>
-                {t.agendaLoadFile}
-              </button>
-              <input ref={fileRef} type="file" accept=".txt,.md,text/plain" hidden onChange={(e) => void loadFile(e.target.files?.[0])} />
-            </>
-          ) : null}
         </div>
       </div>
     </div>

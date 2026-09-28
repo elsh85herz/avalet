@@ -37,7 +37,6 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
   const [notice, setNotice] = useState<string | null>(null);
   const [agendaOpen, setAgendaOpen] = useState(false);
   const [agendaDraft, setAgendaDraft] = useState((initial.agenda ?? []).join("\n"));
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const followRef = useRef(true);
 
@@ -173,13 +172,6 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     }
   }
 
-  async function loadAgendaFile(file: File | undefined) {
-    if (!file) return;
-    const text = await file.text();
-    await saveAgenda(agendaDraft ? `${agendaDraft}\n${text}` : text);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }
-
   async function copyText() {
     const text = await bridge.meetings.toText(meeting.id, labels, t.modes[meeting.mode]);
     await navigator.clipboard.writeText(text);
@@ -303,18 +295,6 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
               <button type="button" onClick={() => void saveAgenda(agendaDraft)}>
                 {t.meeting.agendaSaveList}
               </button>
-              {simple ? null : (
-                <button type="button" onClick={() => fileInputRef.current?.click()}>
-                  {t.meeting.agendaLoadFile}
-                </button>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".txt,.md,text/plain"
-                hidden
-                onChange={(e) => void loadAgendaFile(e.target.files?.[0])}
-              />
             </div>
 
             <h3>{t.meeting.actionsTitle}</h3>

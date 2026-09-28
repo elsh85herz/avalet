@@ -122,7 +122,6 @@ export type UiStrings = {
     agendaLabel: string;
     agendaOptional: string;
     agendaPlaceholder: string;
-    agendaLoadFile: string;
     agendaSave: string;
     agendaSaved: string;
     sessionLabel: string;
@@ -384,7 +383,6 @@ export type UiStrings = {
     agendaTitle: string;
     agendaEditLabel: string;
     agendaPlaceholder: string;
-    agendaLoadFile: string;
     agendaSaveList: string;
     agendaEmpty: string;
     agendaNotChecked: string;
@@ -540,7 +538,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       agendaLabel: "Agenda",
       agendaOptional: "(optional: one question per line)",
       agendaPlaceholder: "Which questions must get an answer on this call, one per line…",
-      agendaLoadFile: "Load from file",
       agendaSave: "Save agenda",
       agendaSaved: "Saved",
       sessionLabel: "Session",
@@ -831,7 +828,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       agendaTitle: "Agenda",
       agendaEditLabel: "Agenda, one question per line",
       agendaPlaceholder: "Which questions must get an answer on this call…",
-      agendaLoadFile: "Load from file",
       agendaSaveList: "Save list",
       agendaEmpty: "No agenda. Add questions above: after \"Summary\" each one gets a checkmark or stays open.",
       agendaNotChecked: "Not checked yet: press \"Summary\".",
@@ -981,7 +977,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       agendaLabel: "Повестка",
       agendaOptional: "(по желанию: по вопросу на строку)",
       agendaPlaceholder: "На какие вопросы нужно получить ответ на этой встрече, по одному на строку…",
-      agendaLoadFile: "Загрузить из файла",
       agendaSave: "Сохранить повестку",
       agendaSaved: "Сохранено",
       sessionLabel: "Сессия",
@@ -1272,7 +1267,6 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       agendaTitle: "Повестка",
       agendaEditLabel: "Повестка, по вопросу на строку",
       agendaPlaceholder: "На какие вопросы нужно получить ответ на этой встрече…",
-      agendaLoadFile: "Загрузить из файла",
       agendaSaveList: "Сохранить список",
       agendaEmpty: "Повестки нет. Добавьте вопросы выше: после \"Итога\" у каждого встанет галочка или останется пусто.",
       agendaNotChecked: "Ещё не проверено: нажмите \"Итог встречи\".",
