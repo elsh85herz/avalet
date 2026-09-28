@@ -50,9 +50,11 @@ test("advanced meeting: live checklist, meeting tab, history", async () => {
     await board.locator(".tracker-toggle").click();
 
     // A new suggestion folds an open checklist back, so the answer is not covered.
+    // The header keeps focus after the click; that alone must not keep it open.
     await overlay.locator(".tracker-toggle").first().click();
     await expect(overlay.locator(".tracker-body")).toHaveCount(1);
-    await overlay.getByRole("button", { name: /Уточняющий вопрос|Ask a question/ }).click();
+    await overlay.mouse.move(190, 540);
+    await overlay.evaluate(() => window.avalet!.session.ask("Что спросить дальше?"));
     await expect(overlay.locator(".tracker-toggle").first()).toHaveAttribute("aria-expanded", "false", { timeout: 10_000 });
 
     // Main window: the quote with a jump to that moment of the transcript.

@@ -16,10 +16,16 @@ const PRIMARY_ACTION = "askQuestion";
 
 const EMPTY_TRACKER: TrackerState = { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled: false };
 
-/** Someone is working in this panel: pointer over it or keyboard focus inside. */
+/**
+ * Someone is working in this panel: the pointer is over it, or they are typing
+ * in one of its fields. A button keeps focus after a click (the header that
+ * opened the panel), which must not count, or the panel would never fold.
+ */
 function inUse(el: HTMLElement | null): boolean {
   if (!el) return false;
-  return el.matches(":hover") || el.contains(document.activeElement);
+  if (el.matches(":hover")) return true;
+  const active = document.activeElement;
+  return document.hasFocus() && !!active && el.contains(active) && active.matches("input, select, textarea");
 }
 
 /** Minutes and seconds from the meeting start (hours only past the first hour): 12:04, 1:02:09. */
@@ -112,7 +118,7 @@ export function OverlayApp() {
       bridge.events.onBlockStart(({ id }) => {
         // A new suggestion is the main thing to read: an open checklist or
         // board folds back so it cannot cover it, unless someone is working
-        // in it right now (pointer over it or focus inside).
+        // in it right now (pointer over it, or typing in it).
         if (!inUse(trackerRef.current)) setTrackerOpen(false);
         if (!inUse(boardRef.current)) setBoardOpen(false);
         textById.current[id] = "";

@@ -69,8 +69,9 @@ Overlay (380 px wide):
 2. **Bounded tray.** Opened, the list scrolls inside at most about a third of
    the overlay height (`max-height: 32vh`, was a fixed 240 px, which is 43% of
    the default 560 px).
-3. **Folds itself when a new suggestion starts**, unless the pointer or the
-   keyboard focus is inside the tray (someone is working with it). Same for
+3. **Folds itself when a new suggestion starts**, unless the pointer is
+   over the tray or someone is typing in its fields (a button that merely
+   kept focus after a click does not count). Same for
    the mode board. So a new answer is never hidden behind a list the analyst
    opened a minute ago.
 4. **One line per item**; a tap on the text opens that item's detail: the
