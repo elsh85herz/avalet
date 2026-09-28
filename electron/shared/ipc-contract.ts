@@ -83,12 +83,21 @@ export type AgendaStatusItem = {
   active?: boolean;
   /** Set by the analyst by hand: the tracker and the summary leave it alone. */
   manual?: boolean;
-};
+} & QuoteRef;
+/**
+ * What was actually said, kept next to the short verdict: the exact words
+ * (checked against the transcript, never a paraphrase), who said them and
+ * when (same clock as TranscriptSegment.at). Absent on older records, manual
+ * items and items the checklist found no backing sentence for.
+ */
+export type QuoteRef = { quote?: string; speaker?: AudioChannel; at?: number };
 /** proposed = found by the model, waiting for the analyst; a missing state means confirmed (older records). */
 export type ActionState = "proposed" | "confirmed" | "dismissed";
-export type ActionItem = { task: string; owner: string; due: string; id?: string; state?: ActionState };
+export type ActionItem = { task: string; owner: string; due: string; id?: string; state?: ActionState } & QuoteRef;
 export type TrackerState = {
   meetingId: string | null;
+  /** Start of the running meeting, for "said at 12:04" next to a quote. */
+  startedAt?: number;
   agendaStatus: AgendaStatusItem[];
   actions: ActionItem[];
   busy: boolean;

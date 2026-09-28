@@ -29,6 +29,10 @@ test("advanced meeting: live checklist, meeting tab, history", async () => {
     await overlay.getByRole("button", { name: /Обновить сейчас|Update now/ }).click();
     await expect(overlay.locator(".tracker-list li.closed")).toHaveCount(1, { timeout: 20_000 });
     await expect(overlay.locator(".tracker-list li.proposed")).toHaveCount(1);
+    // One line per item; a click shows what was actually said, who and when.
+    await overlay.locator(".tracker-list li.closed .tracker-item").click();
+    await expect(overlay.getByTestId("tracker-detail")).toContainText("дневной лимит по карте прямо в приложении");
+    await expect(overlay.getByTestId("tracker-detail")).toContainText(/Собеседник|Other/);
     await shot(overlay, "overlay-advanced-checklist-dark");
     await setTheme(page, "light");
     await shot(overlay, "overlay-advanced-checklist-light");
@@ -44,6 +48,20 @@ test("advanced meeting: live checklist, meeting tab, history", async () => {
     await expect(board.locator("[data-section=risks] li")).toHaveCount(1);
     await shot(overlay, "overlay-requirements-board-dark");
     await board.locator(".tracker-toggle").click();
+
+    // A new suggestion folds an open checklist back, so the answer is not covered.
+    await overlay.locator(".tracker-toggle").first().click();
+    await expect(overlay.locator(".tracker-body")).toHaveCount(1);
+    await overlay.getByRole("button", { name: /Уточняющий вопрос|Ask a question/ }).click();
+    await expect(overlay.locator(".tracker-toggle").first()).toHaveAttribute("aria-expanded", "false", { timeout: 10_000 });
+
+    // Main window: the quote with a jump to that moment of the transcript.
+    await page.locator(".agenda-toggle").click();
+    const quote = page.getByTestId("meeting-quote").first();
+    await expect(quote).toContainText("дневной лимит по карте");
+    await quote.locator(".segment-jump").click();
+    await expect(page.locator(".segment.highlight")).toHaveCount(1);
+    await expect(page.locator(".segment.highlight")).toContainText("дневной лимит по карте");
     await shot(page, "advanced-meeting-live-dark");
 
     await page.getByRole("button", { name: /^(Настройки|Settings)$/ }).click();

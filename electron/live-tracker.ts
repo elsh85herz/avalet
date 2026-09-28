@@ -13,6 +13,7 @@ import {
   applyTrackerReply,
   buildTrackerSystemPrompt,
   buildTrackerUserPrompt,
+  locateQuote,
   parseTrackerReply,
   reconcileAgenda,
   shouldRunTracker,
@@ -62,6 +63,7 @@ export class LiveTracker {
     if (!meeting || meeting.endedAt) return { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled };
     return {
       meetingId: meeting.id,
+      startedAt: meeting.startedAt,
       agendaStatus: reconcileAgenda(meeting.agenda ?? [], meeting.agendaStatus),
       actions: meeting.actions ?? [],
       busy: this.running,
@@ -132,7 +134,7 @@ export class LiveTracker {
         baseUrl,
         // Background work: the cheaper model when one is set for this provider.
         model: getBackgroundModel(providerId),
-        systemPrompt: buildTrackerSystemPrompt(),
+        systemPrompt: buildTrackerSystemPrompt(meeting.mode),
         transcript: buildTrackerUserPrompt(statuses, actions, excerpt),
         maxTokens: 700,
         // Nothing is shown while it runs: one JSON answer instead of a stream.
@@ -154,6 +156,8 @@ export class LiveTracker {
           live.actions ?? [],
           reply,
           randomUUID,
+          // Quotes are checked against the very segments the model was shown.
+          (quote) => locateQuote(quote, excerptMeeting.transcript),
         );
         setLiveAnalysis(live.id, merged);
         this.cursor = endIndex;

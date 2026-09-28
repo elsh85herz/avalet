@@ -47,8 +47,22 @@ export function fakeCompletion(system, user) {
   if (/single word OK/i.test(system)) return "OK";
   if (/live checklist/i.test(system)) {
     return JSON.stringify({
-      agenda: [{ index: 1, state: "closed", note: "дневной лимит" }],
-      actions: [{ task: "Прислать описание процесса колл-центра", owner: "Собеседник", due: "до пятницы" }],
+      agenda: [
+        {
+          index: 1,
+          state: "closed",
+          note: "дневной лимит",
+          quote: "Нам нужно, чтобы клиент мог менять дневной лимит по карте прямо в приложении.",
+        },
+      ],
+      actions: [
+        {
+          task: "Прислать описание процесса колл-центра",
+          owner: "Я",
+          due: "до пятницы",
+          quote: "Хорошо, тогда я пришлю описание процесса до пятницы.",
+        },
+      ],
     });
   }
   if (/writing the outcome of a meeting/i.test(system)) {

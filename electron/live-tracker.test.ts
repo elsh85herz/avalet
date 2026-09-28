@@ -173,3 +173,22 @@ test("default: on in Advanced, off in Simple, an explicit choice wins", () => {
   setLiveTrackerEnabled(true);
   assert.equal(getLiveTrackerEnabled(), true);
 });
+
+test("a quote from the model is stored with the time and speaker of the segment it came from", async () => {
+  const h = harness();
+  h.say("Кто вообще подтверждает изменение?", false);
+  h.reply.text = JSON.stringify({
+    agenda: [{ index: 2, state: "closed", note: "колл-центр", quote: "выше порога нужен звонок из колл-центра" }],
+    actions: [{ task: "Описать звонок", owner: "не назван", due: "срок не назван", quote: "этого никто не говорил вообще нигде" }],
+  });
+  h.say(LONG, true);
+  await h.settle();
+  assert.match(h.calls[0]!.systemPrompt, /stakeholder's own sentence/, "requirements hint in the prompt");
+  const meeting = getCurrentMeeting()!;
+  const item = meeting.agendaStatus![1]!;
+  assert.equal(item.closed, true);
+  assert.equal(item.quote, "выше порога нужен звонок из колл-центра");
+  assert.equal(item.speaker, "other");
+  assert.equal(item.at, meeting.transcript[1]!.at);
+  assert.equal(meeting.actions![0]!.quote, undefined, "a quote the transcript does not back is dropped");
+});

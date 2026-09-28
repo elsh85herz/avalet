@@ -195,13 +195,15 @@ Baseline on `abfbb72`: `npm ci` ok, `npm run check` ok (i18n 398 strings, 168/16
 
 - Phase 0: `docs/dev/checklist-ux-research.md` (code read, the problem class: verdict vs evidence vs location, per-mode table, overlay weight, UI structure research). Phase 1 plan: `docs/dev/checklist-ux-plan.md`. Both private, in CLEANUP (with `CLOUD_TASK_4*.md` and the coming `auto-hints-plan.md`).
 
+- Phase 1: `QuoteRef` (`quote`, `speaker`, `at`) on `AgendaStatusItem`/`ActionItem`; tracker prompt per mode asks for verbatim quotes; parser tolerant; `locateQuote` grounding; `applyTrackerReply` and `mergeSummaryAnalysis` keep old rules and quotes; overlay tray (bounded, one line per item, detail on click, add/refresh behind a link, folds on a new suggestion); MeetingView quote + jump to transcript; protocol quote lines; mock server tracker answers with quotes; screenshot mode shows the checklist next to a suggestion; guide image `overlay-checklist.png` regenerated, guide text updated. Tests: 10 new unit tests (parser, grounding, apply, merge, prompt, protocol, real LiveTracker run); E2E advanced extended (detail, fold on new suggestion, jump). Verified: `npm run check` 178/178 (i18n 402), `npm run build` + `xvfb-run ... npx playwright test` 18/18.
+
 ### In progress
 
-- Phase 1 implementation: quote/speaker/at fields, prompt, parser, grounding, overlay tray, MeetingView jump, protocol line.
+- Phase 2: single `small` model, download from the first-run guide.
 
 ### Next
 
-- Phase 2 (single `small` model, download from the first-run guide), phase 3 (quieter auto-suggestions), phase 4 (overlay RU/EN removal), REPORT section.
+- Phase 3 (quieter auto-suggestions), phase 4 (overlay RU/EN removal, guide screenshots re-measured), REPORT section.
 
 ### Blockers
 

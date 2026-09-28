@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ANALYSIS_MARKER, VisibleTextStream, parseAgendaText, splitSummary } from "./summary-format.js";
+import { ANALYSIS_MARKER, VisibleTextStream, buildProtocolMarkdown, meetingClock, parseAgendaText, splitSummary } from "./summary-format.js";
+import type { Meeting } from "./meetings-store.js";
 
 test("parseAgendaText strips bullets and numbering, drops blanks", () => {
   assert.deepEqual(parseAgendaText("1. Где лежит JSON?\n- Что в Альфа Метрике\n\n  * Лимит времени  "), [
@@ -37,4 +38,32 @@ test("VisibleTextStream releases held-back characters that were not the marker",
   const stream = new VisibleTextStream();
   const shown = [stream.push("цена @@"), stream.push("AB конец")].join("");
   assert.equal(shown, "цена @@AB конец");
+});
+
+test("the protocol shows each quote under its agenda item and action, with speaker and time", () => {
+  const startedAt = 1_700_000_000_000;
+  const meeting: Meeting = {
+    id: "m",
+    title: "Лимиты",
+    startedAt,
+    mode: "review",
+    context: "",
+    transcript: [],
+    summary: "Обсуждения\n- лимиты",
+    agenda: ["Кто подтверждает", "Сроки"],
+    agendaStatus: [
+      { question: "Кто подтверждает", closed: true, note: "риск-менеджер", quote: "Подтверждает дежурный риск-менеджер", speaker: "other", at: startedAt + 724_000 },
+      { question: "Сроки", closed: false, note: "" },
+    ],
+    actions: [{ id: "1", task: "Прислать описание", owner: "Я", due: "пятница", state: "confirmed", quote: "Я пришлю описание до пятницы", speaker: "me", at: startedAt + 3_600_000 }],
+  };
+  const labels = {
+    date: "Дата", mode: "Режим", participants: "Участники", agenda: "Повестка", discussions: "Обсуждения", actions: "Задачи",
+    actionTask: "Задача", actionOwner: "Кто", actionDue: "Срок", agendaClosed: "закрыт", agendaOpen: "открыт", me: "Я", other: "Собеседник",
+  };
+  const md = buildProtocolMarkdown(meeting, labels, "Ревью", ["Обсуждения"]);
+  assert.match(md, /- \[x\] Кто подтверждает \(риск-менеджер\)\n  > «Подтверждает дежурный риск-менеджер» \(Собеседник, 00:12:04\)/);
+  assert.match(md, /- \[ \] Сроки\n/);
+  assert.match(md, /> \*\*Прислать описание\*\*: «Я пришлю описание до пятницы» \(Я, 01:00:00\)/);
+  assert.equal(meetingClock(startedAt - 5, startedAt), "00:00:00");
 });

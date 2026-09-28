@@ -7,6 +7,11 @@
 - In grooming the "Risks?" button also asks about hidden work (migration, flags, monitoring, rollback, access).
 - **Plans of the built-in provider can include different meeting modes and the live checklist.** A mode or the checklist that the plan does not include keeps its place, and choosing it shows what it does with a real screenshot, which plan has it, and the upgrade button; after paying it unlocks in place. None of this applies to your own key, which keeps every mode and the checklist, free, or to a build without a billing server (today's builds). The billing contract gained an optional `features` list in the entitlement token.
 
+- **The live checklist keeps what was actually said.** Each agenda item and action point can carry the exact words from the call (checked against the transcript, never a paraphrase), who said them and when, next to the short verdict. In the overlay a click on an item shows them; the main window shows them with a button that jumps to that moment in the transcript; the protocol export quotes them under the item.
+
+### Changed
+- **The checklist in the overlay stays secondary to the live suggestion:** one line per item, detail on a click, at most about a third of the overlay height, adding an item and "Update now" behind one link, and the list (and the mode's running list) folds itself when a new suggestion arrives, unless you are working in it.
+
 ### Fixed
 - End-to-end tests account for the how-it-works guide shown once after the setup.
 

@@ -446,23 +446,42 @@ async function runScreenshotMode(dir: string, appCore: AppCore): Promise<void> {
       ? []
       : ["Кто подтверждает изменение лимита", "Какой лимит: дневной или разовый", "Сроки и владелец интеграции"],
   });
+  // A dozen minutes into the call, so quotes show a real time from the start.
+  const base = fake.startedAt + 12 * 60_000;
+  appendSegment({ at: base, speaker: "other", text: "Нам нужно, чтобы клиент мог менять лимит по карте прямо в приложении." });
+  appendSegment({ at: base + 12_000, speaker: "me", text: "Лимит дневной или разовый? И кто подтверждает изменение выше порога?" });
+  appendSegment({ at: base + 30_000, speaker: "other", text: "Дневной. Выше 300 тысяч нужен звонок из колл-центра, это уже есть в другом процессе." });
+  appendSegment({ at: base + 52_000, speaker: "other", text: "Описание процесса колл-центра пришлю до пятницы." });
   if (!process.env.AVALET_SCREENSHOT_NO_TRACKER) {
     setLiveAnalysis(fake.id, {
       agendaStatus: [
-        { question: "Кто подтверждает изменение лимита", closed: false, active: true, note: "выше 300 тыс. звонок из колл-центра" },
+        {
+          question: "Кто подтверждает изменение лимита",
+          closed: false,
+          active: true,
+          note: "выше 300 тыс. звонок из колл-центра",
+          quote: "Выше 300 тысяч нужен звонок из колл-центра, это уже есть в другом процессе.",
+          speaker: "other",
+          at: base + 30_000,
+        },
         { question: "Какой лимит: дневной или разовый", closed: true, note: "дневной" },
         { question: "Сроки и владелец интеграции", closed: false, note: "" },
       ],
       actions: [
-        { id: "demo-1", task: "Прислать описание процесса колл-центра", owner: "Собеседник", due: "до пятницы", state: "proposed" },
+        {
+          id: "demo-1",
+          task: "Прислать описание процесса колл-центра",
+          owner: "Собеседник",
+          due: "до пятницы",
+          state: "proposed",
+          quote: "Описание процесса колл-центра пришлю до пятницы.",
+          speaker: "other",
+          at: base + 52_000,
+        },
         { id: "demo-2", task: "Завести задачу по лимитам", owner: "Я", due: "срок не назван", state: "confirmed" },
       ],
     });
   }
-  const base = Date.now() - 90_000;
-  appendSegment({ at: base, speaker: "other", text: "Нам нужно, чтобы клиент мог менять лимит по карте прямо в приложении." });
-  appendSegment({ at: base + 12_000, speaker: "me", text: "Лимит дневной или разовый? И кто подтверждает изменение выше порога?" });
-  appendSegment({ at: base + 30_000, speaker: "other", text: "Дневной. Выше 300 тысяч нужен звонок из колл-центра, это уже есть в другом процессе." });
   emit("avalet:event:meeting-started", fake, "main");
   for (const theme of ["dark", "light"] as const) {
     applyTheme(theme);
@@ -473,10 +492,20 @@ async function runScreenshotMode(dir: string, appCore: AppCore): Promise<void> {
     overlay.webContents.send("avalet:event:tracker-update", appCore.liveTracker.getState());
     await wait(400);
     await shoot(overlay, `overlay-${theme}-expanded`);
+    // The checklist opened next to a live suggestion, one item showing what was said:
+    // the suggestion must stay the main thing on screen.
+    const id = `shot-suggestion-${theme}`;
+    overlay.webContents.send("avalet:event:block-start", { id });
+    overlay.webContents.send("avalet:event:block-delta", { id, delta: SCREENSHOT_MODE_ANSWERS.requirements ?? "" });
+    overlay.webContents.send("avalet:event:block-done", { id });
+    await wait(300);
     await overlay.webContents.executeJavaScript('document.querySelector(".tracker-toggle")?.click()');
+    await wait(200);
+    await overlay.webContents.executeJavaScript('document.querySelector(".tracker .tracker-item")?.click()');
     await wait(400);
     await shoot(overlay, `overlay-${theme}-checklist`);
     await overlay.webContents.executeJavaScript('document.querySelector(".tracker-toggle")?.click()');
+    overlay.webContents.send("avalet:event:history-cleared", undefined);
     overlay.webContents.send("avalet:event:session-state", "paused");
     await wait(400);
     await shoot(overlay, `overlay-${theme}-collapsed`);

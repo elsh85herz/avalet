@@ -328,6 +328,8 @@ export class AppCore {
         actionDue: pick("actionDue", "Due"),
         agendaClosed: pick("agendaClosed", "closed"),
         agendaOpen: pick("agendaOpen", "open"),
+        me: pick("me", "Me"),
+        other: pick("other", "Other"),
       },
       typeof modeLabel === "string" ? modeLabel : meeting.mode,
       MODE_SUMMARY[meeting.mode].headings,

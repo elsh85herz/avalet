@@ -59,6 +59,9 @@ export type UiStrings = {
     discussing: string;
     noOwner: string;
     newCount: string;
+    addItem: string;
+    itemTitle: string;
+    noQuote: string;
   };
   board: {
     toggleTitle: string;
@@ -396,6 +399,7 @@ export type UiStrings = {
     actionTask: string;
     actionOwner: string;
     actionDue: string;
+    jumpTitle: string;
   };
 };
 
@@ -460,6 +464,9 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       discussing: "being discussed",
       noOwner: "no owner",
       newCount: "new",
+      addItem: "Add item",
+      itemTitle: "Show what was said",
+      noQuote: "No exact words found for this item yet.",
     },
     board: {
       toggleTitle: "Collected from the suggestions of this meeting",
@@ -695,7 +702,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       endTitle: "Pause and End",
       endBody: "Pause stops listening without closing the meeting; press it again to continue. End closes the meeting for good and saves it, with a summary, to History.",
       trackerTitle: "Live checklist (Advanced)",
-      trackerBody: "Turn it on in Advanced settings to have agenda items and action points tracked as the call goes, not only when you ask for a summary.",
+      trackerBody: "Turn it on in Advanced settings to have agenda items and action points tracked as the call goes, not only when you ask for a summary. Click an item to see the exact words that were said, who said them and when. The list folds itself when a new suggestion arrives.",
       chooseModeTitle: "Your meeting type",
       chooseModeHint: "The overlay's buttons and running list depend on the meeting mode. Pick the one you will actually use.",
       changeMode: "Different meeting type",
@@ -841,6 +848,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       actionTask: "Task",
       actionOwner: "Owner",
       actionDue: "Due",
+      jumpTitle: "Show this moment in the transcript",
     },
   },
   ru: {
@@ -899,6 +907,9 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       discussing: "обсуждается",
       noOwner: "без исполнителя",
       newCount: "новых",
+      addItem: "Добавить пункт",
+      itemTitle: "Показать, что сказали",
+      noQuote: "Точных слов для этого пункта пока нет.",
     },
     board: {
       toggleTitle: "Собрано из подсказок этой встречи",
@@ -1134,7 +1145,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       endTitle: "Пауза и Завершить",
       endBody: "Пауза останавливает прослушивание, не закрывая встречу; нажмите ещё раз, чтобы продолжить. Завершить закрывает встречу окончательно и сохраняет её с итогом в Историю.",
       trackerTitle: "Живой чек-лист (расширенный режим)",
-      trackerBody: "Включите в расширенных настройках, чтобы пункты повестки и задачи отмечались по ходу звонка, а не только когда вы запросите итог.",
+      trackerBody: "Включите в расширенных настройках, чтобы пункты повестки и задачи отмечались по ходу звонка, а не только когда вы запросите итог. Нажмите на пункт, чтобы увидеть, что именно сказали, кто и когда. Когда приходит новая подсказка, список сворачивается сам.",
       chooseModeTitle: "Ваш режим встречи",
       chooseModeHint: "Кнопки оверлея и список по ходу встречи зависят от режима. Выберите тот, который будете использовать.",
       changeMode: "Другой режим встречи",
@@ -1280,6 +1291,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       actionTask: "Наименование",
       actionOwner: "Ответственный",
       actionDue: "Срок",
+      jumpTitle: "Показать это место в расшифровке",
     },
   },
 };

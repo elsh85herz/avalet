@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
 import type { ExportLabels, Meeting, TranscriptSegment } from "../lib/types.js";
+import type { AgendaStatusItem, QuoteRef } from "../../../electron/shared/ipc-contract.js";
 import { parseAgendaText } from "../lib/agenda.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { IconChevron, IconCheck } from "../icons.js";
@@ -38,6 +39,8 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
   const [agendaOpen, setAgendaOpen] = useState(false);
   const [agendaDraft, setAgendaDraft] = useState((initial.agenda ?? []).join("\n"));
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
+  const transcriptRef = useRef<HTMLDivElement | null>(null);
+  const [highlightAt, setHighlightAt] = useState<number | null>(null);
   const followRef = useRef(true);
 
   useEffect(() => {
@@ -184,11 +187,39 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
   }
 
   // Agenda checkmarks come from the live checklist and the last summary; before either every question is open.
-  const agendaItems = (meeting.agendaStatus && meeting.agendaStatus.length > 0
+  const agendaItems: AgendaStatusItem[] = (meeting.agendaStatus && meeting.agendaStatus.length > 0
     ? meeting.agendaStatus
     : (meeting.agenda ?? []).map((question) => ({ question, closed: false, note: "" })));
   const agendaTotal = agendaItems.length;
   const agendaClosedCount = agendaItems.filter((item) => item.closed).length;
+
+  // "Jump to transcript": the segment a quote came from, scrolled into view and lit for a moment.
+  function jumpTo(at: number) {
+    followRef.current = false;
+    const index = meeting.transcript.findIndex((seg) => seg.at >= at);
+    const el = transcriptRef.current?.querySelector<HTMLElement>(`[data-segment="${index < 0 ? meeting.transcript.length - 1 : index}"]`);
+    el?.scrollIntoView({ block: "center" });
+    setHighlightAt(at);
+    setTimeout(() => setHighlightAt((current) => (current === at ? null : current)), 2500);
+  }
+
+  // What was actually said for an agenda item or a task: the words, who, and a button to that moment.
+  function quote(item: QuoteRef) {
+    if (!item.quote) return null;
+    const who = item.speaker === "me" ? t.meeting.me : item.speaker === "other" ? t.meeting.other : "";
+    return (
+      <span className="agenda-quote" data-testid="meeting-quote">
+        «{item.quote}»{who ? <span className="agenda-quote-who"> {who}</span> : null}
+        {typeof item.at === "number" ? (
+          <button type="button" className="link-btn segment-jump" title={t.meeting.jumpTitle} aria-label={t.meeting.jumpTitle} onClick={() => jumpTo(item.at!)}>
+            {clock(item.at, meeting.startedAt)}
+          </button>
+        ) : null}
+      </span>
+    );
+  }
+
+  const highlightIndex = highlightAt === null ? -1 : meeting.transcript.findIndex((seg) => seg.at >= highlightAt);
 
   function onTranscriptScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
@@ -276,6 +307,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
                     <span className="agenda-text">
                       {item.question}
                       {item.note ? <span className="agenda-note">{item.note}</span> : null}
+                      {quote(item)}
                     </span>
                   </li>
                 ))}
@@ -308,6 +340,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
                     <span className="action-meta">
                       {action.owner || "-"} · {action.due || "-"}
                     </span>
+                    {quote(action)}
                   </li>
                 ))}
               </ul>
@@ -321,13 +354,17 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
         {summaryDraft ? <pre className="summary-text">{summaryDraft}</pre> : <p className="hint">{t.meeting.summaryEmpty}</p>}
       </div>
 
-      <div className="meeting-transcript" onScroll={onTranscriptScroll}>
+      <div className="meeting-transcript" onScroll={onTranscriptScroll} ref={transcriptRef}>
         <h3>{t.meeting.transcriptTitle}</h3>
         {meeting.transcript.length === 0 ? (
           <p className="hint">{live ? t.meeting.transcriptEmpty : t.meeting.transcriptEmpty}</p>
         ) : (
           meeting.transcript.map((seg, i) => (
-            <div key={`${seg.at}-${i}`} className={`segment ${seg.speaker}`}>
+            <div
+              key={`${seg.at}-${i}`}
+              data-segment={i}
+              className={`segment ${seg.speaker}${i === highlightIndex ? " highlight" : ""}`}
+            >
               <span className="segment-time">{clock(seg.at, meeting.startedAt)}</span>
               <span className="segment-speaker">{seg.speaker === "me" ? t.meeting.me : t.meeting.other}</span>
               <span className="segment-text">{seg.text}</span>

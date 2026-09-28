@@ -1,5 +1,5 @@
 import type { Meeting } from "./meetings-store.js";
-import type { ActionItem, ActionState, AgendaStatusItem } from "./shared/ipc-contract.js";
+import type { ActionItem, ActionState, AgendaStatusItem, QuoteRef } from "./shared/ipc-contract.js";
 
 // The summary call returns the protocol text first and, after this marker, a
 // small JSON block with the machine-readable part: which agenda questions got
@@ -96,7 +96,26 @@ export type ProtocolLabels = {
   actionDue: string;
   agendaClosed: string;
   agendaOpen: string;
+  /** Speaker names for quotes. */
+  me: string;
+  other: string;
 };
+
+/** Time from the meeting start, as in the transcript export: 00:12:04. */
+export function meetingClock(at: number, startedAt: number): string {
+  const s = Math.max(0, Math.floor((at - startedAt) / 1000));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+}
+
+/** «exact words» (Speaker, 00:12:04), or "" when the item has no quote. */
+function quoteLine(item: QuoteRef, meeting: Meeting, labels: ProtocolLabels): string {
+  if (!item.quote) return "";
+  const who = item.speaker === "me" ? labels.me : item.speaker === "other" ? labels.other : "";
+  const when = typeof item.at === "number" ? meetingClock(item.at, meeting.startedAt) : "";
+  const source = [who, when].filter(Boolean).join(", ");
+  return `«${item.quote.replace(/\r?\n/g, " ")}»${source ? ` (${source})` : ""}`;
+}
 
 function escapeCell(text: string): string {
   return text.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
@@ -123,6 +142,8 @@ export function buildProtocolMarkdown(
     lines.push(`## ${labels.agenda}`, "");
     for (const item of status) {
       lines.push(`- [${item.closed ? "x" : " "}] ${item.question}${item.note ? ` (${item.note})` : ""}`);
+      const quote = quoteLine(item, meeting, labels);
+      if (quote) lines.push(`  > ${quote}`);
     }
     lines.push("");
   }
@@ -148,6 +169,11 @@ export function buildProtocolMarkdown(
     lines.push(`| ${labels.actionTask} | ${labels.actionOwner} | ${labels.actionDue} |`, "|---|---|---|");
     for (const a of actions) lines.push(`| ${escapeCell(a.task)} | ${escapeCell(a.owner || "-")} | ${escapeCell(a.due || "-")} |`);
     lines.push("");
+    // What was said when each task was given or accepted, under the table.
+    for (const a of actions) {
+      const quote = quoteLine(a, meeting, labels);
+      if (quote) lines.push(`> **${a.task}**: ${quote}`, "");
+    }
   }
   return lines.join("\n").replace(/\n{3,}/g, "\n\n");
 }

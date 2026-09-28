@@ -9,12 +9,27 @@ import { compactTokens, useUsage } from "./UsageCounter.js";
 import { formatPrice, useAccess } from "./AccessCard.js";
 import { LockedPreview } from "./LockedPreview.js";
 import { checklistLocked } from "../lib/locks.js";
-import type { AccessState } from "../../../electron/shared/ipc-contract.js";
+import type { AccessState, QuoteRef } from "../../../electron/shared/ipc-contract.js";
 
 /** Simple level highlights this quick action; every quick action stays one click away in both levels. */
 const PRIMARY_ACTION = "askQuestion";
 
 const EMPTY_TRACKER: TrackerState = { meetingId: null, agendaStatus: [], actions: [], busy: false, enabled: false };
+
+/** Someone is working in this panel: pointer over it or keyboard focus inside. */
+function inUse(el: HTMLElement | null): boolean {
+  if (!el) return false;
+  return el.matches(":hover") || el.contains(document.activeElement);
+}
+
+/** Minutes and seconds from the meeting start (hours only past the first hour): 12:04, 1:02:09. */
+function shortClock(at: number, startedAt: number): string {
+  const s = Math.max(0, Math.floor((at - startedAt) / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = String(s % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+}
 
 type Block = {
   id: string;
@@ -47,6 +62,12 @@ export function OverlayApp() {
   const [checklistPreview, setChecklistPreview] = useState(false);
   const [trackerDraft, setTrackerDraft] = useState("");
   const [trackerDraftKind, setTrackerDraftKind] = useState<"question" | "action">("question");
+  // Rare controls (add a question or task by hand, refresh) stay behind one link.
+  const [trackerAddOpen, setTrackerAddOpen] = useState(false);
+  // One checklist item shows its detail (verdict, what was said, who, when) at a time.
+  const [openItem, setOpenItem] = useState<string | null>(null);
+  const trackerRef = useRef<HTMLDivElement | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
   const [paywall, setPaywall] = useState<AccessState | null>(null);
   const [uiLevel, setUiLevel] = useState<"simple" | "advanced">("simple");
   const followLive = useRef(true);
@@ -89,6 +110,11 @@ export function OverlayApp() {
 
     const unsubscribers = [
       bridge.events.onBlockStart(({ id }) => {
+        // A new suggestion is the main thing to read: an open checklist or
+        // board folds back so it cannot cover it, unless someone is working
+        // in it right now (pointer over it or focus inside).
+        if (!inUse(trackerRef.current)) setTrackerOpen(false);
+        if (!inUse(boardRef.current)) setBoardOpen(false);
         textById.current[id] = "";
         setBlocks((prev) => [...prev, { id, text: "", status: "streaming" }]);
       }),
@@ -404,8 +430,47 @@ export function OverlayApp() {
     setTracker(await (trackerDraftKind === "question" ? bridge.tracker.addAgenda(text) : bridge.tracker.addAction(text)));
   }
 
+  function quoteSource(item: QuoteRef): string {
+    const who = item.speaker === "me" ? t.meeting.me : item.speaker === "other" ? t.meeting.other : "";
+    const when = typeof item.at === "number" && tracker.startedAt ? shortClock(item.at, tracker.startedAt) : "";
+    return [who, when].filter(Boolean).join(", ");
+  }
+
+  // Detail of one item: the verdict, then the exact words with who said them and when.
+  function itemDetail(note: string, item: QuoteRef, extra?: string) {
+    const source = quoteSource(item);
+    return (
+      <div className="tracker-detail" data-testid="tracker-detail">
+        {extra ? <span className="tracker-note">{extra}</span> : null}
+        {note ? <span className="tracker-note">{note}</span> : null}
+        {item.quote ? (
+          <blockquote className="tracker-quote">
+            «{item.quote}»{source ? <span className="tracker-source"> {source}</span> : null}
+          </blockquote>
+        ) : (
+          <span className="tracker-note">{t.tracker.noQuote}</span>
+        )}
+      </div>
+    );
+  }
+
+  function itemButton(key: string, text: string) {
+    const open = openItem === key;
+    return (
+      <button
+        type="button"
+        className={`tracker-item ${open ? "open" : ""}`}
+        aria-expanded={open}
+        title={t.tracker.itemTitle}
+        onClick={() => setOpenItem(open ? null : key)}
+      >
+        {text}
+      </button>
+    );
+  }
+
   const trackerPanel = (
-    <div className="tracker">
+    <div className="tracker" ref={trackerRef} data-testid="tracker">
       <button
         type="button"
         className="tracker-toggle"
@@ -445,24 +510,26 @@ export function OverlayApp() {
             <p className="tracker-hint">{t.tracker.agendaEmpty}</p>
           ) : (
             <ul className="tracker-list">
-              {tracker.agendaStatus.map((item, index) => (
-                <li key={item.question} className={item.closed ? "closed" : item.active ? "active" : "open"}>
-                  <button
-                    type="button"
-                    className="tracker-check"
-                    title={t.tracker.markTitle}
-                    aria-label={t.tracker.markTitle}
-                    onClick={() => void bridge.tracker.toggleAgenda(index).then(setTracker)}
-                  >
-                    {item.closed ? "✓" : item.active ? "●" : ""}
-                  </button>
-                  <span className="tracker-text">
-                    {item.question}
-                    {item.active && !item.closed ? <span className="tracker-note">{item.note || t.tracker.discussing}</span> : null}
-                    {item.closed && item.note ? <span className="tracker-note">{item.note}</span> : null}
-                  </span>
-                </li>
-              ))}
+              {tracker.agendaStatus.map((item, index) => {
+                const key = `q:${item.question}`;
+                return (
+                  <li key={item.question} className={item.closed ? "closed" : item.active ? "active" : "open"}>
+                    <button
+                      type="button"
+                      className="tracker-check"
+                      title={t.tracker.markTitle}
+                      aria-label={t.tracker.markTitle}
+                      onClick={() => void bridge.tracker.toggleAgenda(index).then(setTracker)}
+                    >
+                      {item.closed ? "✓" : item.active ? "●" : ""}
+                    </button>
+                    <span className="tracker-text">
+                      {itemButton(key, item.question)}
+                      {openItem === key ? itemDetail(item.note || (item.active && !item.closed ? t.tracker.discussing : ""), item) : null}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -471,73 +538,89 @@ export function OverlayApp() {
             <p className="tracker-hint">{t.tracker.actionsEmpty}</p>
           ) : (
             <ul className="tracker-list">
-              {visibleActions.map((action, i) => (
-                <li key={action.id ?? `${i}-${action.task}`} className={action.state === "proposed" ? "proposed" : "confirmed"}>
-                  <span className="tracker-text">
-                    {action.task}
-                    <span className="tracker-note">
-                      {action.owner || t.tracker.noOwner}
-                      {action.due ? ` · ${action.due}` : ""}
+              {visibleActions.map((action, i) => {
+                const key = `a:${action.id ?? `${i}-${action.task}`}`;
+                return (
+                  <li key={key} className={action.state === "proposed" ? "proposed" : "confirmed"}>
+                    <span className="tracker-text">
+                      {itemButton(key, action.task)}
+                      {openItem === key
+                        ? itemDetail("", action, `${action.owner || t.tracker.noOwner}${action.due ? ` · ${action.due}` : ""}`)
+                        : null}
                     </span>
-                  </span>
-                  {action.id ? (
-                    <span className="tracker-action-buttons">
-                      {action.state === "proposed" ? (
+                    {action.id ? (
+                      <span className="tracker-action-buttons">
+                        {action.state === "proposed" ? (
+                          <button
+                            type="button"
+                            title={t.tracker.confirm}
+                            aria-label={t.tracker.confirm}
+                            onClick={() => void bridge.tracker.setAction(action.id!, "confirmed").then(setTracker)}
+                          >
+                            ✓
+                          </button>
+                        ) : null}
                         <button
                           type="button"
-                          title={t.tracker.confirm}
-                          aria-label={t.tracker.confirm}
-                          onClick={() => void bridge.tracker.setAction(action.id!, "confirmed").then(setTracker)}
+                          title={t.tracker.dismiss}
+                          aria-label={t.tracker.dismiss}
+                          onClick={() => void bridge.tracker.setAction(action.id!, "dismissed").then(setTracker)}
                         >
-                          ✓
+                          ✕
                         </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        title={t.tracker.dismiss}
-                        aria-label={t.tracker.dismiss}
-                        onClick={() => void bridge.tracker.setAction(action.id!, "dismissed").then(setTracker)}
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ) : null}
-                </li>
-              ))}
+                      </span>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           )}
 
-          <div className="tracker-add">
-            <select
-              value={trackerDraftKind}
-              onChange={(e) => setTrackerDraftKind(e.target.value === "action" ? "action" : "question")}
-            >
-              <option value="question">{t.tracker.agenda}</option>
-              <option value="action">{t.tracker.actions}</option>
-            </select>
-            <input
-              type="text"
-              value={trackerDraft}
-              placeholder={trackerDraftKind === "question" ? t.tracker.addQuestionPlaceholder : t.tracker.addActionPlaceholder}
-              onChange={(e) => setTrackerDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void submitTrackerDraft();
-              }}
-            />
-            <button type="button" onClick={() => void submitTrackerDraft()} disabled={!trackerDraft.trim()}>
-              {t.tracker.add}
-            </button>
-          </div>
-          {tracker.enabled ? (
+          <div className="tracker-footer">
             <button
               type="button"
-              className="tracker-refresh"
-              title={t.tracker.refreshTitle}
-              disabled={tracker.busy}
-              onClick={() => void bridge.tracker.refresh().then(setTracker)}
+              className="link-btn"
+              aria-expanded={trackerAddOpen}
+              data-testid="tracker-add-toggle"
+              onClick={() => setTrackerAddOpen((open) => !open)}
             >
-              {t.tracker.refresh}
+              {t.tracker.addItem}
             </button>
+            {tracker.enabled ? (
+              <button
+                type="button"
+                className="link-btn"
+                title={t.tracker.refreshTitle}
+                disabled={tracker.busy}
+                onClick={() => void bridge.tracker.refresh().then(setTracker)}
+              >
+                {t.tracker.refresh}
+              </button>
+            ) : null}
+          </div>
+          {trackerAddOpen ? (
+            <div className="tracker-add">
+              <select
+                value={trackerDraftKind}
+                onChange={(e) => setTrackerDraftKind(e.target.value === "action" ? "action" : "question")}
+              >
+                <option value="question">{t.tracker.agenda}</option>
+                <option value="action">{t.tracker.actions}</option>
+              </select>
+              <input
+                type="text"
+                value={trackerDraft}
+                autoFocus
+                placeholder={trackerDraftKind === "question" ? t.tracker.addQuestionPlaceholder : t.tracker.addActionPlaceholder}
+                onChange={(e) => setTrackerDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void submitTrackerDraft();
+                }}
+              />
+              <button type="button" onClick={() => void submitTrackerDraft()} disabled={!trackerDraft.trim()}>
+                {t.tracker.add}
+              </button>
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -560,7 +643,7 @@ export function OverlayApp() {
 
   const boardPanel =
     boardFilled.length > 0 ? (
-      <div className="tracker board" data-testid="mode-board">
+      <div className="tracker board" data-testid="mode-board" ref={boardRef}>
         <button
           type="button"
           className="tracker-toggle"
