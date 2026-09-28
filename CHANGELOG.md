@@ -10,6 +10,8 @@
 - **The live checklist keeps what was actually said.** Each agenda item and action point can carry the exact words from the call (checked against the transcript, never a paraphrase), who said them and when, next to the short verdict. In the overlay a click on an item shows them; the main window shows them with a button that jumps to that moment in the transcript; the protocol export quotes them under the item.
 
 ### Changed
+- **One speech model, no choice.** The app uses faster-whisper small only; the three-way picker is gone from Settings and the wizard, replaced by one row with the model's status, progress, Cancel, Continue and Delete. A stored choice of medium or turbo falls back to small.
+- **The speech model downloads early.** It starts in the background as soon as a new user leaves the first setup screen (or the how-it-works guide opens), so it is usually ready by the first call. Nothing starts when it is already on disk, running or failed, and only once per launch. Start still waits for a ready model.
 - **The checklist in the overlay stays secondary to the live suggestion:** one line per item, detail on a click, at most about a third of the overlay height, adding an item and "Update now" behind one link, and the list (and the mode's running list) folds itself when a new suggestion arrives, unless you are working in it.
 
 ### Fixed

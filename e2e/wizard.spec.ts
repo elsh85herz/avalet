@@ -5,7 +5,8 @@ import { launch, shot, startMock, setTheme, skipWizardWithTrial } from "./harnes
 // progress, the self-test, then the Simple main window.
 test("first-run wizard: permissions, trial, model download, context and try it", async () => {
   const mock = await startMock();
-  const run = await launch(mock);
+  // A slower fake download, so the test can see it start early and still cancel it on step 3.
+  const run = await launch(mock, { env: { FAKE_DOWNLOAD_STEP_MS: "1500" } });
   const page = run.main;
   try {
     await page.setViewportSize({ width: 480, height: 820 });
@@ -15,8 +16,13 @@ test("first-run wizard: permissions, trial, model download, context and try it",
     await shot(page, "wizard-1-permissions-light");
     await setTheme(page, "dark");
 
+    const modelState = () => page.evaluate(async () => (await window.avalet!.speech.models())[0]?.state);
+    expect(await modelState()).toBe("absent");
+
     await page.getByTestId("wizard-next").click();
     await expect(page.getByTestId("wizard")).toHaveAttribute("data-step", "2");
+    // Leaving the first screen started the speech model download in the background.
+    await expect.poll(modelState).toBe("downloading");
     await shot(page, "wizard-2-access-dark");
     await page.getByTestId("choice-avalet").click();
     await expect(page.getByTestId("access-card")).toHaveAttribute("data-tier", "trial");
@@ -29,9 +35,10 @@ test("first-run wizard: permissions, trial, model download, context and try it",
 
     await page.getByTestId("wizard-next").click();
     await expect(page.getByTestId("wizard")).toHaveAttribute("data-step", "3");
-    await shot(page, "wizard-3-model-dark");
-    await page.locator('[data-model="small"] button.primary').click();
+    // Already downloading when the step opens: one model, no choice, no button to press.
+    await expect(page.locator("[data-model]")).toHaveCount(1);
     await expect(page.locator('[data-model="small"]')).toHaveClass(/downloading/);
+    await shot(page, "wizard-3-model-dark");
     await page.waitForTimeout(500);
     await shot(page, "wizard-3-model-downloading-dark");
     // Cancel keeps what was downloaded: the row shows the partial size and Continue.
@@ -46,7 +53,7 @@ test("first-run wizard: permissions, trial, model download, context and try it",
     await expect(small).toHaveClass(/downloading/);
     const resumedPercent = Number((await small.locator(".model-percent").innerText()).match(/(\d+)%/)![1]);
     expect(resumedPercent).toBeGreaterThanOrEqual(partialPercent);
-    await expect(page.locator('[data-model="small"]')).toHaveClass(/ready/, { timeout: 20_000 });
+    await expect(page.locator('[data-model="small"]')).toHaveClass(/ready/, { timeout: 30_000 });
     await shot(page, "wizard-3-model-ready-dark");
 
     await page.getByTestId("wizard-next").click();
@@ -76,6 +83,30 @@ test("first-run wizard: permissions, trial, model download, context and try it",
 
 // The guide's mode menu: what it shows depends on the meeting mode picked
 // there, not the app's actual setting (see src/renderer/components/HowItWorks.tsx).
+
+// The guide read before the first call starts the speech model download when
+// the model is not there yet (a wizard skipped from outside never started it).
+test("first-run guide starts the speech model download in the background", async () => {
+  const mock = await startMock();
+  const run = await launch(mock);
+  const page = run.main;
+  try {
+    await page.getByTestId("wizard").waitFor();
+    await page.evaluate(async () => {
+      await window.avalet!.settings.setOnboardingDone(true);
+    });
+    await page.reload();
+    await expect(page.getByTestId("how-it-works")).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(async () => (await window.avalet!.speech.models())[0]?.state))
+      .toMatch(/downloading|ready/);
+    await page.getByTestId("guide-skip").click();
+    await expect(page.getByTestId("simple-home")).toBeVisible();
+  } finally {
+    await run.close();
+    await mock.close();
+  }
+});
 test("how-it-works guide: the mode menu changes which buttons and running list the guide shows", async () => {
   const mock = await startMock();
   const run = await launch(mock, { readyModel: true });

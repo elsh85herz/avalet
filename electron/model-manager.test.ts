@@ -35,15 +35,11 @@ async function until(check: () => boolean, timeoutMs = 10_000): Promise<void> {
   }
 }
 
-test("fresh cache: every model is 'not downloaded'", () => {
+test("fresh cache: one row, the small model, 'not downloaded'", () => {
   const { m } = manager("ok");
   assert.deepEqual(
     m.rows().map((r) => [r.name, r.state, r.percent]),
-    [
-      ["small", "absent", 0],
-      ["medium", "absent", 0],
-      ["turbo", "absent", 0],
-    ],
+    [["small", "absent", 0]],
   );
 });
 
@@ -62,22 +58,22 @@ test("download reports rising progress and ends ready", async () => {
 
 test("a dropped connection is retried and resumes from the partial file", async () => {
   const { m, row, spawnCount } = manager("fail-once");
-  m.download("medium");
-  await until(() => row("medium").state === "ready");
+  m.download("small");
+  await until(() => row("small").state === "ready");
   assert.equal(spawnCount(), 2);
   m.dispose();
 });
 
 test("after the retries run out the row shows the error; Retry starts again", async () => {
   const { m, row, spawnCount } = manager("fail");
-  m.download("turbo");
-  await until(() => row("turbo").state === "error");
+  m.download("small");
+  await until(() => row("small").state === "error");
   assert.equal(spawnCount(), 3);
-  assert.match(row("turbo").error ?? "", /connection reset/);
-  assert.ok(row("turbo").bytes > 0, "the partial file is kept for resuming");
-  m.download("turbo");
-  assert.equal(row("turbo").state, "downloading");
-  m.cancel("turbo");
+  assert.match(row("small").error ?? "", /connection reset/);
+  assert.ok(row("small").bytes > 0, "the partial file is kept for resuming");
+  m.download("small");
+  assert.equal(row("small").state, "downloading");
+  m.cancel("small");
   m.dispose();
 });
 

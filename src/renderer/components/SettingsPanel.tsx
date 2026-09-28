@@ -356,18 +356,7 @@ export function SettingsPanel({ onRunSetup }: { onRunSetup: () => void }) {
             ))}
           </select>
         </label>
-        <div className="mode-select">
-          <span>{t.speechModel}</span>
-          <SpeechModels
-            uiLanguage={uiLanguage}
-            selected={settings.speechModel}
-            onSelect={(model) => {
-              patch({ speechModel: model });
-              void bridge.settings.setSpeech({ model });
-            }}
-            allowDelete
-          />
-        </div>
+        <SpeechModels uiLanguage={uiLanguage} allowDelete />
         <p className="hint">{t.speechHint}</p>
       </section>
 

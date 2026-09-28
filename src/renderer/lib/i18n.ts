@@ -144,8 +144,6 @@ export type UiStrings = {
     speechTitle: string;
     speechLanguage: string;
     speechLanguages: Record<"ru" | "en" | "auto", string>;
-    speechModel: string;
-    speechModels: Record<"small" | "medium" | "turbo", string>;
     speechHint: string;
     liveTracker: string;
     liveTrackerOn: string;
@@ -178,7 +176,6 @@ export type UiStrings = {
     testOk: string;
     modelTitle: string;
     modelDesc: string;
-    otherModelsLater: string;
     continueInBackground: string;
     contextTitle: string;
     roleLabel: string;
@@ -343,9 +340,6 @@ export type UiStrings = {
     cancel: string;
     remove: string;
     removeConfirm: string;
-    use: string;
-    inUse: string;
-    recommended: string;
     guide: string;
     vpnHint: string;
     vpnLink: string;
@@ -564,14 +558,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       speechTitle: "Speech recognition",
       speechLanguage: "Spoken language",
       speechLanguages: { ru: "Russian", en: "English", auto: "Detect automatically" },
-      speechModel: "Accuracy",
-      speechModels: {
-        small: "Fast (small)",
-        medium: "More accurate (medium)",
-        turbo: "Most accurate (turbo)",
-      },
       speechHint:
-        "Runs on your Mac. A larger model understands speech better but is slower. Download the ones you want once; after that they work without internet. A fixed language is more reliable than detecting it on every phrase.",
+        "Speech is recognized on your Mac by one model, downloaded once; after that it works without internet. A fixed language is more reliable than detecting it on every phrase.",
       liveTracker: "Live checklist (agenda marks and action points during the call)",
       liveTrackerOn: "A small background model call every 30 to 90 seconds keeps the agenda and tasks current. Not yet checked on real meetings.",
       liveTrackerOff: "Off: agenda marks are set by hand; the summary still fills them in after the call.",
@@ -607,9 +595,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       saveAndTest: "Save and test",
       testing: "Testing",
       testOk: "The key works.",
-      modelTitle: "Download the speech model",
-      modelDesc: "Speech is recognized on this Mac, nothing is uploaded. The recommended model is {size}; on a normal connection that takes 2 to 5 minutes, once.",
-      otherModelsLater: "Other models can be chosen later in Settings.",
+      modelTitle: "Speech recognition on this Mac",
+      modelDesc: "Speech is recognized on this Mac, nothing is uploaded. The model is {size} and starts downloading in the background right after the first screen; on a normal connection that takes 2 to 5 minutes, once.",
       continueInBackground: "Continue, it finishes in the background",
       contextTitle: "What is your next meeting about?",
       roleLabel: "What is this project or your role?",
@@ -777,11 +764,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       cancel: "Cancel",
       remove: "Delete",
       removeConfirm: "Delete this model from disk? You can download it again later.",
-      use: "Use",
-      inUse: "In use",
-      recommended: "recommended",
       guide:
-        "The speech model turns the call into text on this Mac. Fast (small) is lighter and quicker; Most accurate (turbo) recognizes better but is heavier and needs more memory; medium is in between. The first download needs internet, from Russia often with a VPN; after that the model works offline.",
+        "The speech model turns the call into text on this Mac, nothing is uploaded. It downloads once, about half a gigabyte; the first download needs internet, from Russia often with a VPN. After that it works offline.",
       vpnHint: "Slow or not downloading: turn on a VPN for the first download.",
       vpnLink: "the VPN we use",
       missingForStart: "The speech model is not downloaded yet, so nothing can be transcribed.",
@@ -1007,14 +991,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       speechTitle: "Распознавание речи",
       speechLanguage: "Язык речи",
       speechLanguages: { ru: "Русский", en: "English", auto: "Определять автоматически" },
-      speechModel: "Точность",
-      speechModels: {
-        small: "Быстро (small)",
-        medium: "Точнее (medium)",
-        turbo: "Максимум (turbo)",
-      },
       speechHint:
-        "Работает на вашем Mac. Большая модель лучше понимает речь, но медленнее. Скачайте нужные один раз, дальше они работают без интернета. Фиксированный язык надёжнее, чем угадывание на каждой фразе.",
+        "Речь распознаёт на вашем Mac одна модель, она скачивается один раз и дальше работает без интернета. Фиксированный язык надёжнее, чем угадывание на каждой фразе.",
       liveTracker: "Живой чек-лист (отметки повестки и задачи по ходу звонка)",
       liveTrackerOn: "Небольшой фоновый запрос к модели раз в 30-90 секунд обновляет повестку и задачи. Пока не проверен на реальных встречах.",
       liveTrackerOff: "Выключен: отметки повестки ставятся вручную, итог встречи всё равно заполнит их после звонка.",
@@ -1050,9 +1028,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       saveAndTest: "Сохранить и проверить",
       testing: "Проверяем",
       testOk: "Ключ работает.",
-      modelTitle: "Скачайте модель распознавания речи",
-      modelDesc: "Речь распознаётся на этом Mac, ничего не отправляется наружу. Рекомендуемая модель весит {size}; при обычном интернете это 2-5 минут, один раз.",
-      otherModelsLater: "Другие модели можно выбрать позже в Настройках.",
+      modelTitle: "Распознавание речи на этом Mac",
+      modelDesc: "Речь распознаётся на этом Mac, ничего не отправляется наружу. Модель весит {size} и начинает скачиваться в фоне сразу после первого экрана; при обычном интернете это 2-5 минут, один раз.",
       continueInBackground: "Дальше, докачается в фоне",
       contextTitle: "О чём ваша следующая встреча?",
       roleLabel: "Что это за проект или какая у вас роль?",
@@ -1220,11 +1197,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       cancel: "Отменить",
       remove: "Удалить",
       removeConfirm: "Удалить эту модель с диска? Её можно будет скачать снова.",
-      use: "Выбрать",
-      inUse: "Используется",
-      recommended: "рекомендуем",
       guide:
-        "Модель речи превращает разговор в текст прямо на этом Mac. «Быстро» (small) легче и быстрее; «Максимум» (turbo) распознаёт точнее, но тяжелее и требует больше памяти; medium посередине. Для первой загрузки нужен интернет, из России часто через VPN; потом модель работает без интернета.",
+        "Модель речи превращает разговор в текст прямо на этом Mac, ничего не отправляется наружу. Она скачивается один раз, около полугигабайта; для первой загрузки нужен интернет, из России часто через VPN. Потом модель работает без интернета.",
       vpnHint: "Медленно или не скачивается: включите VPN на время первой загрузки.",
       vpnLink: "VPN, которым пользуемся мы",
       missingForStart: "Модель распознавания речи ещё не скачана, поэтому расшифровки не будет.",

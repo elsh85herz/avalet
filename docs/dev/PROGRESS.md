@@ -197,13 +197,15 @@ Baseline on `abfbb72`: `npm ci` ok, `npm run check` ok (i18n 398 strings, 168/16
 
 - Phase 1: `QuoteRef` (`quote`, `speaker`, `at`) on `AgendaStatusItem`/`ActionItem`; tracker prompt per mode asks for verbatim quotes; parser tolerant; `locateQuote` grounding; `applyTrackerReply` and `mergeSummaryAnalysis` keep old rules and quotes; overlay tray (bounded, one line per item, detail on click, add/refresh behind a link, folds on a new suggestion); MeetingView quote + jump to transcript; protocol quote lines; mock server tracker answers with quotes; screenshot mode shows the checklist next to a suggestion; guide image `overlay-checklist.png` regenerated, guide text updated. Tests: 10 new unit tests (parser, grounding, apply, merge, prompt, protocol, real LiveTracker run); E2E advanced extended (detail, fold on new suggestion, jump). Verified: `npm run check` 178/178 (i18n 402), `npm run build` + `xvfb-run ... npx playwright test` 18/18.
 
+- Phase 2: `SPEECH_MODELS = ["small"]` (type kept), `SpeechModels` is one readiness row everywhere (Simple/Advanced Settings, wizard), `lib/early-download.ts` + `useEarlyModelDownload` (wizard: leaving step 1; guide: first-run mount; once per window; only `absent`). i18n: model list strings removed, guide/hint texts for one model. README EN/RU and MAC_VERIFY step 5 (EN/RU) updated. Tests: `test/early-download.test.ts` (4), model-manager tests on one model; E2E: wizard sees the download start after step 1 and cancel/continue on step 3, new "first-run guide starts the download", Settings shows one row. Verified: `npm run check` 182/182 (i18n 394); wizard/access/meeting/quality E2E 15/15.
+
 ### In progress
 
-- Phase 2: single `small` model, download from the first-run guide.
+- Phase 3: quieter auto-suggestions.
 
 ### Next
 
-- Phase 3 (quieter auto-suggestions), phase 4 (overlay RU/EN removal, guide screenshots re-measured), REPORT section.
+- Phase 4 (overlay RU/EN removal, guide screenshots re-measured), REPORT section, full E2E.
 
 ### Blockers
 

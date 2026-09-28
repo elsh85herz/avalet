@@ -115,15 +115,7 @@ export function SimpleSettings({ uiLanguage, focus, onBack, onRunSetup }: Props)
             ))}
           </select>
         </div>
-        <SpeechModels
-          uiLanguage={uiLanguage}
-          selected={settings.speechModel}
-          onSelect={(model) => {
-            patch({ speechModel: model });
-            void bridge.settings.setSpeech({ model });
-          }}
-          allowDelete
-        />
+        <SpeechModels uiLanguage={uiLanguage} allowDelete showGuide />
       </section>
 
       <section aria-labelledby="simple-files-title">

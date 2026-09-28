@@ -6,7 +6,7 @@ import { useAppSettings } from "../lib/settings.js";
 import { PermissionRows } from "./PermissionRows.js";
 import { AccessCard, formatPrice, useAccess } from "./AccessCard.js";
 import { OwnKeySetup } from "./OwnKeySetup.js";
-import { RECOMMENDED_MODEL, SpeechModels, useSpeechModels } from "./SpeechModels.js";
+import { SpeechModels, useEarlyModelDownload, useSpeechModel } from "./SpeechModels.js";
 import { ContextFields } from "./ContextFields.js";
 import { MicLevel } from "./MicLevel.js";
 import { compactTokens } from "./UsageCounter.js";
@@ -19,8 +19,10 @@ type Access = "avalet" | "own" | null;
 
 /**
  * First run: permissions, access, speech model, minimal context with a short
- * self-test. Every screen can be skipped; nothing is downloaded or sent
- * without a button press.
+ * self-test. Every screen can be skipped. The one exception to "nothing
+ * without a button press" is the speech model: it starts downloading in the
+ * background once the first screen is left (CLOUD_TASK_4), so it is ready by
+ * the first call; step 3 shows its progress with Cancel.
  */
 export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   const bridge = getBridge();
@@ -31,7 +33,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(1);
   const [choice, setChoice] = useState<Access>(settings.selectedProviderId === "avalet" ? "avalet" : null);
   const access = useAccess();
-  const models = useSpeechModels();
+  const model = useSpeechModel();
   const [trying, setTrying] = useState(false);
   const [micDone, setMicDone] = useState(false);
   const [sample, setSample] = useState<{ state: "loading" } | { state: "ok"; text: string } | { state: "failed"; message: string } | null>(null);
@@ -86,8 +88,10 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
     onDone();
   }
 
-  const recommended = models?.find((m) => m.name === RECOMMENDED_MODEL);
-  const size = recommended ? `${(recommended.sizeBytes / 1e9).toFixed(1).replace(".", uiLanguage === "ru" ? "," : ".")} ${t.models.size}` : "";
+  // Leaving the first screen starts the speech model download in the background,
+  // so it is ready (or close) by step 3 or the first Start (lib/early-download.ts).
+  useEarlyModelDownload(step > 1);
+  const size = model ? `${(model.sizeBytes / 1e9).toFixed(1).replace(".", uiLanguage === "ru" ? "," : ".")} ${t.models.size}` : "";
   const next = () => setStep((s) => Math.min(STEPS, s + 1));
   const back = () => setStep((s) => Math.max(1, s - 1));
 
@@ -146,21 +150,12 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
       </>
     );
   } else if (step === 3) {
-    if (recommended?.state === "downloading") nextLabel = w.continueInBackground;
+    if (model?.state === "downloading") nextLabel = w.continueInBackground;
     body = (
       <>
         <h1 tabIndex={-1}>{w.modelTitle}</h1>
         <p className="hint">{w.modelDesc.replace("{size}", size)}</p>
-        <p className="hint">{w.otherModelsLater}</p>
-        <SpeechModels
-          uiLanguage={uiLanguage}
-          selected={settings.speechModel}
-          only={[RECOMMENDED_MODEL]}
-          onSelect={(model) => {
-            patch({ speechModel: model });
-            void bridge.settings.setSpeech({ model });
-          }}
-        />
+        <SpeechModels uiLanguage={uiLanguage} />
       </>
     );
   } else {

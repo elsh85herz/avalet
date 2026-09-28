@@ -25,4 +25,4 @@ export type {
   TranscriptSegment,
   UiLevel,
 } from "../../../electron/shared/ipc-contract.js";
-export { MEETING_MODES, SPEECH_LANGUAGES, SPEECH_MODELS } from "../../../electron/shared/ipc-contract.js";
+export { MEETING_MODES, SPEECH_LANGUAGES, SPEECH_MODEL, SPEECH_MODELS } from "../../../electron/shared/ipc-contract.js";

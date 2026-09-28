@@ -17,8 +17,16 @@ export type Feature = `mode:${MeetingMode}` | "live-checklist";
 
 export type SpeechLanguage = "ru" | "en" | "auto";
 export const SPEECH_LANGUAGES: SpeechLanguage[] = ["ru", "en", "auto"];
+/**
+ * The app uses one speech model, `small` (CLOUD_TASK_4: no model choice).
+ * The larger names stay in the type only so the cache code and its tests keep
+ * describing the Hugging Face layouts; nothing offers them, and a stored
+ * choice of one reads back as `small` (settings-store getSpeechModel).
+ */
 export type SpeechModelName = "small" | "medium" | "turbo";
-export const SPEECH_MODELS: SpeechModelName[] = ["small", "medium", "turbo"];
+export const SPEECH_MODELS: SpeechModelName[] = ["small"];
+/** The one model the app downloads and uses. */
+export const SPEECH_MODEL: SpeechModelName = "small";
 
 export type Theme = "dark" | "light";
 export type UiLanguage = "ru" | "en";

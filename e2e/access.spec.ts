@@ -82,7 +82,9 @@ test("advanced level: switch from Simple settings and back", async () => {
     await expect(settings.getByTestId("model-in-use")).toContainText(/avalet-fast/);
     await expect(settings.locator("#meeting-mode")).toBeVisible();
     await expect(settings.locator("#meeting-context")).toBeVisible();
-    await expect(settings.getByTestId("speech-models").locator("[data-model]")).toHaveCount(3);
+    // One speech model, no choice: a single readiness row.
+    await expect(settings.getByTestId("speech-models").locator("[data-model]")).toHaveCount(1);
+    await expect(settings.getByTestId("speech-models").locator('[data-model="small"]')).toHaveClass(/ready/);
     await expect(settings.getByTestId("speech-models-guide")).toContainText(/VPN/);
     await expect(settings.locator("#settings-opacity")).toBeVisible();
     await expect(settings.locator("#simple-ui-language")).toBeVisible();

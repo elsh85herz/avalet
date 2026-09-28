@@ -10,6 +10,7 @@ import { useAccess } from "./AccessCard.js";
 import { checklistLocked } from "../lib/locks.js";
 import { MEETING_MODES, type MeetingMode } from "../lib/types.js";
 import { quickActionsFor, type QuickActionKey } from "../live/quick-actions.js";
+import { useEarlyModelDownload } from "./SpeechModels.js";
 
 type Props = {
   uiLanguage: UiLanguage;
@@ -56,6 +57,9 @@ export function HowItWorks({ uiLanguage, mode, meetingMode, onClose }: Props) {
   const l = t.locks;
   const [step, setStep] = useState(1);
   const [viewMode, setViewMode] = useState<MeetingMode>(meetingMode);
+  // Read before the first call: the speech model downloads meanwhile (a no-op
+  // when it is already there or running, and at most once per window).
+  useEarlyModelDownload(mode === "first-run");
   // On an Avalet plan without the checklist, its page says which plan has it.
   const trackerLocked = checklistLocked(useAccess());
 
