@@ -188,6 +188,8 @@ test("built-in provider: trial suggestions through the proxy, then the budget ru
     assert.equal(access.tier, "trial");
     await h.call("avalet:speech-model-download", "small");
     await h.until(() => h.of("avalet:event:models-changed").some((rows) => rows.find((r) => r.name === "small")?.state === "ready"));
+    // Interview keeps the 6 s pace between automatic suggestions (free waits 15 s, live-session.ts AUTO_PACING).
+    await h.call("avalet:meeting-mode-set", "interview");
     assert.deepEqual(await h.call("avalet:session-start"), { ok: true });
 
     await h.say("Какой лимит нужен клиенту?");
@@ -200,7 +202,7 @@ test("built-in provider: trial suggestions through the proxy, then the budget ru
 
     // The server's budget runs out between refreshes: the proxy answers 402.
     await mockPost(mock, "/mock/usage", { installId, weighted: 500_000 });
-    await new Promise((r) => setTimeout(r, 6_100)); // the 6 s minimum between suggestions
+    await new Promise((r) => setTimeout(r, 6_100)); // the 6 s minimum between suggestions (interview pace)
     await h.say("А кто подтверждает изменение?");
     await h.until(() => h.of("avalet:event:paywall").length > 0);
     const blockErrors = h.of("avalet:event:block-error");

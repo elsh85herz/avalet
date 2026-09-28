@@ -199,13 +199,15 @@ Baseline on `abfbb72`: `npm ci` ok, `npm run check` ok (i18n 398 strings, 168/16
 
 - Phase 2: `SPEECH_MODELS = ["small"]` (type kept), `SpeechModels` is one readiness row everywhere (Simple/Advanced Settings, wizard), `lib/early-download.ts` + `useEarlyModelDownload` (wizard: leaving step 1; guide: first-run mount; once per window; only `absent`). i18n: model list strings removed, guide/hint texts for one model. README EN/RU and MAC_VERIFY step 5 (EN/RU) updated. Tests: `test/early-download.test.ts` (4), model-manager tests on one model; E2E: wizard sees the download start after step 1 and cancel/continue on step 3, new "first-run guide starts the download", Settings shows one row. Verified: `npm run check` 182/182 (i18n 394); wizard/access/meeting/quality E2E 15/15.
 
+- Phase 3: `AUTO_PACING` per mode (live/balanced/quiet) + pure `shouldAutoSuggest` in `live-session.ts`; `docs/dev/auto-hints-plan.md` (options, table, simulated calls per 10 min: old 57-65, free 33, board modes 20-22; tokens/hour about -45% and -65%). Tests: 5 new in `live-session-triggers.test.ts` (table, quiet, balanced, session in requirements, simulation), old trigger tests run in interview; integration trial test sets interview. README EN/RU trigger line, CHANGELOG. Verified: `npm run check` 187/187; meeting/advanced/tiers/quality E2E 11/11.
+
 ### In progress
 
-- Phase 3: quieter auto-suggestions.
+- Phase 4: overlay RU/EN removal.
 
 ### Next
 
-- Phase 4 (overlay RU/EN removal, guide screenshots re-measured), REPORT section, full E2E.
+- Guide screenshots re-measured, REPORT section, full E2E, CI check.
 
 ### Blockers
 

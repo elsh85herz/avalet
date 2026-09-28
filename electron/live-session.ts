@@ -14,7 +14,7 @@ import {
   getSelectedProviderId,
   getSessionContext,
 } from "./settings-store.js";
-import { MODE_INSTRUCTIONS } from "./modes.js";
+import { MODE_INSTRUCTIONS, type MeetingMode } from "./modes.js";
 import type { PythonRuntime } from "./python-runtime.js";
 
 const BASE_SYSTEM_PROMPT = [
@@ -57,16 +57,56 @@ const SCREENSHOT_INSTRUCTION =
 // can't keep up reading it"). QUESTION_CUE/CHANGE_CUE are a cheap regex
 // gate over the freshly-heard transcript segment (no extra model call, no
 // added latency) approximating "did something happen that warrants a new
-// block". MAX_INTERVAL_MS/FALLBACK_CHARS are only a safety net for a real
+// block". maxIntervalMs/fallbackChars (AutoPacing below) are only a safety net for a real
 // question that doesn't match either pattern, so the overlay can't get
 // stuck forever on a stale block.
 const QUESTION_CUE =
   /[?？]|(?:^|[\s,.!;:—-])(что такое|в чём разниц|чем отлича|объясни|поясни|расскажи|как (?:сделать|работает|устроен|реализ)|почему|зачем|подскажи|what'?s|what is|how (?:do|does|can|would|should)|why (?:is|does|would)|can you|could you|explain|difference between)/iu;
 const CHANGE_CUE =
   /(давай|нужно|надо|стоит|можем ли|let'?s|we (?:should|need to)|please)\s+(поменя\w*|измени\w*|обнов\w*|добав\w*|убер\w*|перепиш\w*|change|update|modify|add|remove|revise|rewrite)/iu;
-const MIN_INTERVAL_MS = 6_000;
-const MAX_INTERVAL_MS = 45_000;
-const FALLBACK_CHARS = 260;
+/**
+ * How eagerly automatic suggestions fire, per meeting mode (CLOUD_TASK_4,
+ * `docs/dev/auto-hints-plan.md`). Every automatic call resends the prompt,
+ * briefing and recent transcript, so frequency is most of the token cost.
+ * - minIntervalMs: never two automatic suggestions closer than this.
+ * - pauseMinChars: the other side pausing triggers only after this much new
+ *   speech (0 = any pause).
+ * - maxIntervalMs / fallbackChars: safety net for long talk with no cue.
+ * A question or change cue triggers once minIntervalMs has passed.
+ * Typed questions, quick actions, Screenshot and Process now ignore all this.
+ */
+export type AutoPacing = { minIntervalMs: number; pauseMinChars: number; maxIntervalMs: number; fallbackChars: number };
+
+/** Interview: answering live is the whole point, so it keeps the tuned 0.1 pace. */
+export const LIVE_PACING: AutoPacing = { minIntervalMs: 6_000, pauseMinChars: 0, maxIntervalMs: 45_000, fallbackChars: 260 };
+/** Free: no board and no mode prompt structure, so auto stays the main help, at a calmer pace. */
+export const BALANCED_PACING: AutoPacing = { minIntervalMs: 15_000, pauseMinChars: 120, maxIntervalMs: 60_000, fallbackChars: 400 };
+/** Modes with quick actions and a running board: a suggestion when something substantial was said. */
+export const QUIET_PACING: AutoPacing = { minIntervalMs: 25_000, pauseMinChars: 300, maxIntervalMs: 90_000, fallbackChars: 600 };
+
+export const AUTO_PACING: Record<MeetingMode, AutoPacing> = {
+  interview: LIVE_PACING,
+  free: BALANCED_PACING,
+  requirements: QUIET_PACING,
+  grooming: QUIET_PACING,
+  demo: QUIET_PACING,
+  review: QUIET_PACING,
+};
+
+/** The automatic trigger decision, pure so the pacing can be tested and estimated. */
+export function shouldAutoSuggest(input: {
+  pacing: AutoPacing;
+  sinceLastMs: number;
+  /** Text heard since the last suggestion (automatic or asked). */
+  heard: string;
+  otherJustPaused: boolean;
+}): boolean {
+  const { pacing, sinceLastMs, heard, otherJustPaused } = input;
+  if (heard.length === 0 || sinceLastMs < pacing.minIntervalMs) return false;
+  if (QUESTION_CUE.test(heard) || CHANGE_CUE.test(heard)) return true;
+  if (otherJustPaused && heard.length >= pacing.pauseMinChars) return true;
+  return heard.length >= pacing.fallbackChars && sinceLastMs >= pacing.maxIntervalMs;
+}
 // Smaller than before (was 4000) — a shorter prompt means less for the
 // model to re-process on every call, which is most of what "slow to
 // respond" actually is: latency scales with how much context is sent, not
@@ -288,16 +328,14 @@ export class LiveSession {
 
   private maybeTrigger(otherJustPaused: boolean): void {
     if (this.paused || this.generating || !getAutoDetectEnabled()) return;
-    if (this.transcript.length === 0 || this.segmentSinceTrigger.length === 0) return;
-    const now = this.now();
-    const sinceLast = now - this.lastGenerateAt;
-    if (sinceLast < MIN_INTERVAL_MS) return;
-
-    const hasFreshCue = QUESTION_CUE.test(this.segmentSinceTrigger) || CHANGE_CUE.test(this.segmentSinceTrigger);
-    const staleFallback = this.segmentSinceTrigger.length >= FALLBACK_CHARS && sinceLast >= MAX_INTERVAL_MS;
-    if (!hasFreshCue && !staleFallback && !otherJustPaused) return;
-
-    void this.runGeneration(this.transcript);
+    if (this.transcript.length === 0) return;
+    const fire = shouldAutoSuggest({
+      pacing: AUTO_PACING[getMeetingMode()],
+      sinceLastMs: this.now() - this.lastGenerateAt,
+      heard: this.segmentSinceTrigger,
+      otherJustPaused,
+    });
+    if (fire) void this.runGeneration(this.transcript);
   }
 
   /**

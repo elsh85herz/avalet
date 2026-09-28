@@ -88,7 +88,7 @@ system audio (loopback)               5s WAV chunks, tagged "other"
 - **Providers:** `electron/providers/anthropic.ts` (native Anthropic Messages API) and `electron/providers/openai-compatible.ts` (one adapter for OpenAI, DeepSeek, and anything OpenAI-compatible such as Ollama or LM Studio via a custom base URL).
 - **Keys** are entered once and stored encrypted via the OS keychain (`safeStorage`). They are never sent to the renderer.
 - **Speech to text** is fully local: `faster-whisper` in `python-sidecar/server.py`, talked to over newline-delimited JSON-RPC on stdin/stdout.
-- **Auto-suggest trigger:** a cheap regex over the freshly heard transcript plus a VAD-based "they stopped talking" signal from whisper's own segment timing. No extra model call.
+- **Auto-suggest trigger:** a cheap regex over the freshly heard transcript plus a VAD-based "they stopped talking" signal from whisper's own segment timing. No extra model call. The pace depends on the meeting mode: interview answers at once (at most every 6 s); free waits for at least 15 s and a real sentence; the modes with a running list wait for about 25 s and a substantial statement or a question. Typed questions, quick actions, Screenshot and "Process now" always answer at once.
 
 ## Screens
 
