@@ -1,6 +1,6 @@
 # Progress (task scaffolding, delete before going public)
 
-Resume rule: read `CLOUD_TASK_3.md` (current task, mode tiers), `CLOUD_TASK.md` sections 0-3 and `CLOUD_TASK_2.md` (house style), then this file, then `DECISIONS.md`, then `mode-tiers-plan.md`. Work continues from "Mode tiers: Next" at the bottom.
+Resume rule: read `CLOUD_TASK_4.md` (current task: checklist UX, single speech model, quieter hints, overlay cleanup), `CLOUD_TASK.md` sections 0-3, `CLOUD_TASK_2.md` and `CLOUD_TASK_3.md` (house style), then this file, then `DECISIONS.md`, then `checklist-ux-plan.md`. Work continues from "CLOUD_TASK_4: Next" at the bottom.
 
 ## Environment facts (cloud container, 2026-09-26)
 
@@ -186,3 +186,23 @@ Baseline: `npm ci` ok, `npm run check` ok (147/147).
 - Changed: `src/renderer/live/quick-actions.ts` (`quickActionsFor`, `HIDDEN_WORK` removed), `src/renderer/components/HowItWorks.tsx` (mode menu, per-mode actions/board pages), `src/renderer/components/OverlayApp.tsx` (dead `hiddenWork` title lookup removed), `src/renderer/lib/i18n.ts` (`hiddenWork` dropped, new guide strings), `src/renderer/components/MainApp.tsx` (passes `meetingMode` to the guide), `test/mode-board.test.ts`, new `e2e/wizard.spec.ts` test.
 - Verified: `npm run check` (168/168, was 168 — same count, one test rewritten not added; i18n 400 strings per language, was 394); `npm run build` + `xvfb-run ... npx playwright test` 18/18 (17 existing + 1 new guide test), including own-key and trial paths.
 - Not done: the guide's mode-specific pages reuse the existing overlay screenshot with one wide highlight box over the whole button row (not a per-button circle) rather than new screenshots per button count — regenerating pixel-perfect per-mode button screenshots under Xvfb was judged not worth it for a once-read help screen.
+
+## CLOUD_TASK_4 (checklist UX, single model, quieter hints), started 2026-09-28
+
+Baseline on `abfbb72`: `npm ci` ok, `npm run check` ok (i18n 398 strings, 168/168 tests).
+
+### Done
+
+- Phase 0: `docs/dev/checklist-ux-research.md` (code read, the problem class: verdict vs evidence vs location, per-mode table, overlay weight, UI structure research). Phase 1 plan: `docs/dev/checklist-ux-plan.md`. Both private, in CLEANUP (with `CLOUD_TASK_4*.md` and the coming `auto-hints-plan.md`).
+
+### In progress
+
+- Phase 1 implementation: quote/speaker/at fields, prompt, parser, grounding, overlay tray, MeetingView jump, protocol line.
+
+### Next
+
+- Phase 2 (single `small` model, download from the first-run guide), phase 3 (quieter auto-suggestions), phase 4 (overlay RU/EN removal), REPORT section.
+
+### Blockers
+
+(none)

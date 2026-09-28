@@ -1,7 +1,7 @@
 # Cleanup before going public
 
 Everything that exists only because of the autonomous session lives in
-`docs/dev/`, `CLOUD_TASK.md`, `CLOUD_TASK_2.md`, `CLOUD_TASK_3.md` and `CLOUD_TASK_3_PROMPT.md`. Product files that stay: `docs/screens/`,
+`docs/dev/`, `CLOUD_TASK.md`, `CLOUD_TASK_2.md`, `CLOUD_TASK_3.md`, `CLOUD_TASK_3_PROMPT.md`, `CLOUD_TASK_4.md` and `CLOUD_TASK_4_PROMPT.md`. Product files that stay: `docs/screens/`,
 README updates, `CHANGELOG.md`, `.github/workflows/`, tests (`electron/**/*.test.ts`,
 `electron/testing/`, `test/`, `e2e/`, `playwright.config.ts`), `server-mock/`
 (the tests and E2E need it).
@@ -12,8 +12,13 @@ README updates, `CHANGELOG.md`, `.github/workflows/`, tests (`electron/**/*.test
 - `CLOUD_TASK_2.md` (the task text for the 0.2.0-rc.2 session; mentions the payment gateway choice)
 - `CLOUD_TASK_3.md` (the task text for the mode tiers session; pricing and tier strategy)
 - `CLOUD_TASK_3_PROMPT.md` (the launch prompt for that session)
+- `CLOUD_TASK_4.md` (the task text for the checklist UX / single model / quieter hints session)
+- `CLOUD_TASK_4_PROMPT.md` (the launch prompt for that session)
 - `docs/dev/mode-tiers-research.md` (private: market research, names other products)
 - `docs/dev/mode-tiers-plan.md` (private: the commercial plan and tier proposal)
+- `docs/dev/checklist-ux-research.md` (private: live checklist research, names other products in sources)
+- `docs/dev/checklist-ux-plan.md` (private: live checklist redesign plan)
+- `docs/dev/auto-hints-plan.md` (private: auto-suggestion pacing and token estimate)
 - `docs/dev/PROGRESS.md`
 - `docs/dev/DECISIONS.md`
 - `docs/dev/REPORT.md`
@@ -28,7 +33,7 @@ README updates, `CHANGELOG.md`, `.github/workflows/`, tests (`electron/**/*.test
 ## (c) Commands
 
 ```bash
-git rm CLOUD_TASK.md CLOUD_TASK_2.md CLOUD_TASK_3.md CLOUD_TASK_3_PROMPT.md docs/dev/mode-tiers-research.md docs/dev/mode-tiers-plan.md docs/dev/PROGRESS.md docs/dev/DECISIONS.md docs/dev/REPORT.md docs/dev/CLEANUP.md
+git rm CLOUD_TASK.md CLOUD_TASK_2.md CLOUD_TASK_3.md CLOUD_TASK_3_PROMPT.md CLOUD_TASK_4.md CLOUD_TASK_4_PROMPT.md docs/dev/mode-tiers-research.md docs/dev/mode-tiers-plan.md docs/dev/checklist-ux-research.md docs/dev/checklist-ux-plan.md docs/dev/auto-hints-plan.md docs/dev/PROGRESS.md docs/dev/DECISIONS.md docs/dev/REPORT.md docs/dev/CLEANUP.md
 git commit -m "Remove autonomous-session scaffolding"
 
 # after the squash merge of release/v0.2-autopilot into main:
