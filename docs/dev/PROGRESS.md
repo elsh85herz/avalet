@@ -207,9 +207,11 @@ Baseline on `abfbb72`: `npm ci` ok, `npm run check` ok (i18n 398 strings, 168/16
 
 - Self-review fix: the checklist fold treated a focused button (the header just clicked) as "working in it", so it would never fold in real use; now only the pointer or typing in a field keeps it open. E2E changed to click the header and ask from outside (fails with the old rule). Verified: `npm run check` 187/187; advanced + quality E2E 4/4.
 
+- GitHub Actions CI run 36 on `601926d`: green (typecheck, i18n, unit and integration, coverage, build, E2E under Xvfb); runs 30-33 on the earlier steps green too.
+
 ### In progress
 
-- CI run check on the pushed head.
+(nothing: all phases of CLOUD_TASK_4.md done)
 
 ### Next
 

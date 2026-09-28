@@ -216,6 +216,7 @@ Simulated 10-minute call, automatic calls: old pace 57-65 (every mode); free 33;
 | `electron/model-manager.test.ts` | the state machine on one model (progress, retry, error, cancel/continue, delete) |
 | `electron/live-session-triggers.test.ts` | pace table per mode, quiet and balanced rules, 25 s in a requirements session with direct asks instant, simulation: quiet at most 40% of the old pace |
 | E2E | overlay item detail with quote; list folds on a new suggestion; main-window jump highlights the segment; wizard sees the download start after step 1, cancel/continue on step 3; the first-run guide starts the download; Settings show one model row; no language button on the overlay, "Explain" present, language switched from Settings |
+| GitHub Actions CI run 36 (commit `601926d`) | green: typecheck, i18n, unit and integration tests, coverage, build, E2E under Xvfb |
 | Screenshots | `docs/screens/overlay-checklist-with-suggestion-dark.png` (checklist open next to a suggestion), overlay and wizard shots regenerated; guide images regenerated, the Auto ring re-measured by pixel scan |
 
 ## Needs a Mac
