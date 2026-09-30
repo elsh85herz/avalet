@@ -260,9 +260,11 @@ Baseline on `aa85949`: `npm ci` ok, `npm run check` ok (227/227).
 
 - Phase 3: contradiction and names rules, participants in the JSON tail (`electron/shared/participants.ts`, grounded against the transcript), protocol "Участники" line and meeting screen line, End-screen note for every review summary (`summaryExtraCost`). `npm run check` 251/251.
 
+- Phase 4: `electron/transcript-clean.ts` (echo pass over the saved call, noise marks, quotes moved onto kept lines), `electron/transcript-noise.ts` (credit-line blocklist), sidecar `_confidence` and `confidenceFlags`, segment `end`, exports and summary input skip hidden lines, "(неразборчиво)" tag and rule, weak-quote guard, transcript view "Show hidden lines". `npm run check` 264/264.
+
 ### In progress
 
-- Phase 4: transcript hygiene (echo pass over the saved transcript, credit-line blocklist, recognizer confidence).
+- Phase 5: synthetic "parcel" fixture (fake capture script, mock summary), E2E, log hygiene, README, screenshots, REPORT.
 
 ### Next
 

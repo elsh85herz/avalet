@@ -5,6 +5,8 @@ import { accessProblemOf, isImageRejection, type AccessProblem } from "./provide
 import { resolveCredentials } from "./provider-credentials.js";
 import { logLine } from "./log.js";
 import { EchoFilter } from "./echo-filter.js";
+import { confidenceFlags } from "./transcript-clean.js";
+import type { TranscriptSegment } from "./shared/ipc-contract.js";
 import {
   getAutoDetectEnabled,
   getMeetingMode,
@@ -160,7 +162,7 @@ export type LiveSessionEvents = {
   onTranscriptionRecovered: () => void;
   /** Every non-empty transcribed chunk, in order, for the meeting record. */
   onTranscriptSegment: (
-    segment: { at: number; speaker: AudioChannel; text: string },
+    segment: TranscriptSegment,
     /** The other side just paused: a natural moment for a checklist refresh. */
     meta: { endsWithPause: boolean },
   ) => void;
@@ -311,9 +313,10 @@ export class LiveSession {
     const spoken = { start: meta.startedAt, end: meta.endedAt };
     const transcribeStartedAt = Date.now();
     let text: string;
+    let flags: Pick<TranscriptSegment, "lowConfidence" | "quiet"> = {};
     try {
       const language = getSpeechLanguage();
-      const result = await this.pythonRuntime.call<{ text: string }>(
+      const result = await this.pythonRuntime.call<{ text: string; avg_logprob?: number; no_speech_prob?: number }>(
         "transcribe_chunk",
         {
           audio_base64: audioBase64,
@@ -329,6 +332,7 @@ export class LiveSession {
         logLine(`[timing] slow transcription: ${took}ms for ${spokenSeconds.toFixed(1)}s of speech (${channel})`);
       }
       text = result.text.trim();
+      flags = confidenceFlags(result);
       if (this.consecutiveTranscriptionFailures > 0) {
         this.consecutiveTranscriptionFailures = 0;
         this.events.onTranscriptionRecovered();
@@ -349,15 +353,16 @@ export class LiveSession {
       this.echo.pushOther({ ...spoken, text });
       // The cut happened because the other side paused, which is the moment
       // to respond (unless it was cut only for length).
-      this.commitSegment("other", spoken.start, text, meta.endedBySilence);
+      this.commitSegment({ at: spoken.start, end: spoken.end, speaker: "other", text, ...flags }, meta.endedBySilence);
     } else {
       // The mic may only be hearing the other side through the speakers.
-      this.echo.pushMe({ ...spoken, text }, () => this.commitSegment("me", spoken.start, text, false));
+      this.echo.pushMe({ ...spoken, text }, () => this.commitSegment({ at: spoken.start, end: spoken.end, speaker: "me", text, ...flags }, false));
     }
   }
 
-  private commitSegment(channel: AudioChannel, at: number, text: string, endsWithPause: boolean): void {
-    this.events.onTranscriptSegment({ at, speaker: channel, text }, { endsWithPause });
+  private commitSegment(segment: TranscriptSegment, endsWithPause: boolean): void {
+    const { speaker: channel, text } = segment;
+    this.events.onTranscriptSegment(segment, { endsWithPause });
     const label = channel === "other" ? "Собеседник" : "Я";
     this.transcript = `${this.transcript}\n[${label}]: ${text}`.trim().slice(-TRANSCRIPT_CHAR_BUDGET);
     this.segmentSinceTrigger = `${this.segmentSinceTrigger} ${text}`.trim();

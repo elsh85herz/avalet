@@ -165,3 +165,22 @@ test("the decisions file carries a terms line for every checked decision", async
   assert.match(md, /- Термины: ключ - тип; значение - массив/);
   assert.match(md, /## 2\. Второе[\s\S]*- Термины: нет/);
 });
+
+test("an accepted decision quoted from a low-confidence line is marked and starts unchecked; a hidden echo line is never the source", () => {
+  const unsure = { ...meeting, transcript: meeting.transcript.map((seg, i) => (i === 1 ? { ...seg, lowConfidence: true } : seg)) };
+  const [d] = groundDecisions([raw({})], unsure, id);
+  assert.equal(d!.weakQuote, true);
+  assert.equal(d!.include, false);
+  assert.equal(sanitizeDecisions([d])[0]!.weakQuote, true);
+  // The same words on a hidden echo copy and on the kept line: the kept line is the source.
+  const echoed = {
+    ...meeting,
+    transcript: [
+      { at: T0 + 19_000, speaker: "me" as const, text: "Согласен, поднимаем до 100 записей.", filtered: "echo" as const },
+      { at: T0 + 20_000, speaker: "other" as const, text: "Согласен, поднимаем до 100 записей." },
+    ],
+  };
+  const [e] = groundDecisions([raw({})], echoed, id);
+  assert.equal(e!.at, T0 + 20_000);
+  assert.equal(e!.speaker, "other");
+});

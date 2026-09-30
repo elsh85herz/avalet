@@ -245,3 +245,24 @@ test("check against the quotes: one metered call over the accepted decisions, re
   assert.equal((await h.call("avalet:usage-get")).byPurpose.summary.calls, 2);
   await h.core.shutdown();
 });
+
+// CLOUD_TASK_6 phase 4: the live path keeps when the words ended and how sure the recognizer was.
+test("a saved segment carries its end time and the recognizer's low confidence; the summary tags it", async () => {
+  const h = reviewHarness();
+  assert.deepEqual(await h.call("avalet:session-start"), { ok: true });
+  const chunk = (payload: string, channel: "me" | "other") =>
+    h.call("avalet:capture-audio-chunk", Buffer.from(payload).toString("base64"), channel, { startedAt: Date.now() - 2_000, endedAt: Date.now(), endedBySilence: true });
+  await chunk("TEXT:Давай позиции посылки хранить мапой.", "other");
+  await chunk("UNSURE:Согласен, делаем мапу.", "other");
+  const id = h.of("avalet:event:meeting-started")[0]!.id;
+  await h.call("avalet:session-reset");
+  const meeting = (await h.call("avalet:meetings-get", id))!;
+  assert.equal(meeting.transcript.length, 2);
+  assert.ok(meeting.transcript.every((seg) => typeof seg.end === "number" && seg.end >= seg.at));
+  assert.equal(meeting.transcript[0]!.lowConfidence, undefined);
+  assert.equal(meeting.transcript[1]!.lowConfidence, true);
+  await h.call("avalet:meetings-summarize", id);
+  assert.match(mock.lastPrompt.user, /\[Собеседник\] \(неразборчиво\): Согласен, делаем мапу/);
+  assert.match(mock.lastPrompt.system, /were recognized with low confidence/);
+  await h.core.shutdown();
+});

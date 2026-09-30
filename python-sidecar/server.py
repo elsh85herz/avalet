@@ -7,7 +7,9 @@ Commands:
 - ``ping``: readiness check.
 - ``transcribe_chunk``: local speech-to-text on one ~5s audio chunk via
   faster-whisper. Params: ``audio_base64`` (16-bit PCM mono WAV, base64),
-  optional ``language`` (ISO code, omit for auto-detect). Only uses a model
+  optional ``language`` (ISO code, omit for auto-detect). The result also
+  carries ``avg_logprob`` and ``no_speech_prob`` when the recognizer gave
+  them (see ``_confidence``). Only uses a model
   that is already on disk; a missing one is the error
   ``model_not_downloaded:<name>``, never a silent download.
 
@@ -135,6 +137,32 @@ def _wav_base64_to_float_pcm(audio_base64: str) -> tuple[list[float], int]:
     return floats, sample_rate
 
 
+def _confidence(segments: list) -> dict:
+    """How sure the recognizer was about one chunk, from faster-whisper's own
+    per-segment numbers (no extra pass): ``avg_logprob`` averaged by segment
+    duration, and ``no_speech_prob`` as the lowest over the segments, so a
+    chunk counts as "probably not speech" only when every part of it does.
+    Empty dict when there are no segments or the values are missing."""
+    weighted = 0.0
+    total = 0.0
+    no_speech: list[float] = []
+    for segment in segments:
+        logprob = getattr(segment, "avg_logprob", None)
+        silence = getattr(segment, "no_speech_prob", None)
+        if isinstance(logprob, (int, float)):
+            duration = max(0.0, float(getattr(segment, "end", 0.0)) - float(getattr(segment, "start", 0.0))) or 1.0
+            weighted += float(logprob) * duration
+            total += duration
+        if isinstance(silence, (int, float)):
+            no_speech.append(float(silence))
+    out: dict = {}
+    if total > 0:
+        out["avg_logprob"] = round(weighted / total, 3)
+    if no_speech:
+        out["no_speech_prob"] = round(min(no_speech), 3)
+    return out
+
+
 def _transcribe_chunk(payload: dict) -> dict:
     audio_base64 = payload.get("audio_base64")
     language = payload.get("language")
@@ -152,6 +180,7 @@ def _transcribe_chunk(payload: dict) -> dict:
 
     model = _get_model(model_name if isinstance(model_name, str) else None)
     ends_with_pause = False
+    confidence: dict = {}
     try:
         segments, info = model.transcribe(
             audio,
@@ -166,6 +195,7 @@ def _transcribe_chunk(payload: dict) -> dict:
         detected_language = info.language
         if segments:
             ends_with_pause = (chunk_duration - segments[-1].end) >= PAUSE_THRESHOLD_SECONDS
+        confidence = _confidence(segments)
     except ValueError as error:
         # faster-whisper's VAD path raises this when a chunk has no detected
         # speech at all (silence, a pause, the other side muted) instead of
@@ -181,6 +211,7 @@ def _transcribe_chunk(payload: dict) -> dict:
         "language": detected_language,
         "sample_rate": sample_rate,
         "ends_with_pause": ends_with_pause,
+        **confidence,
     }
 
 

@@ -247,6 +247,8 @@ export function createMockBillingServer(options = {}) {
   const installs = new Map();
   const checkouts = new Map();
   const llmCalls = [];
+  // The whole last request, for in-process tests only (never served over HTTP).
+  const lastPrompt = { system: "", user: "" };
   let baseUrl = "";
 
   function rollPeriod(install) {
@@ -334,6 +336,8 @@ export function createMockBillingServer(options = {}) {
     const text = fakeCompletion(String(system), userContent);
     const usage = { prompt_tokens: tokensOf(system) + tokensOf(userText(userContent)) + (Array.isArray(userContent) ? 1000 : 0), completion_tokens: tokensOf(text) };
     llmCalls.push({ model: body.model, system: String(system).slice(0, 80), usage, metered: Boolean(metered) });
+    lastPrompt.system = String(system);
+    lastPrompt.user = userText(userContent);
     if (metered) {
       metered.used += (usage.prompt_tokens + usage.completion_tokens) * weightOf(String(body.model));
     }
@@ -515,6 +519,7 @@ export function createMockBillingServer(options = {}) {
     publicKeyPem: keys.publicKeyPem,
     installs,
     llmCalls,
+    lastPrompt,
     now,
     listen(port = 0, host = "127.0.0.1") {
       return new Promise((resolve) => {

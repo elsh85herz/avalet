@@ -1,9 +1,10 @@
 import { meteredGenerate } from "./metering/metered.js";
 import { getProviderSettings, getSelectedProviderId } from "./settings-store.js";
 import { resolveCredentials } from "./provider-credentials.js";
-import { readMeeting, setSummary, transcriptToText } from "./meetings-store.js";
+import { readMeeting, setSummary, transcriptToText, updateMeeting } from "./meetings-store.js";
+import { cleanMeeting, visibleSegments } from "./transcript-clean.js";
 import { VisibleTextStream, splitSummary, type MeetingAnalysis } from "./summary-format.js";
-import { buildSummaryPrompt } from "./summary-prompt.js";
+import { UNSURE_TAG, buildSummaryPrompt } from "./summary-prompt.js";
 import { MODE_SUMMARY } from "./modes.js";
 import { mergeSummaryAnalysis } from "./live-tracker-logic.js";
 import { randomUUID } from "node:crypto";
@@ -26,15 +27,20 @@ export async function summarizeMeeting(
   signal: AbortSignal,
   events: SummaryEvents,
 ): Promise<SummaryResult> {
-  const meeting = readMeeting(meetingId);
+  let meeting = readMeeting(meetingId);
   if (!meeting) throw new Error("meeting not found");
   if (meeting.transcript.length === 0) throw new Error("transcript is empty");
+  // Meetings saved before the cleaning pass existed get it now (CLOUD_TASK_6).
+  if (meeting.endedAt) {
+    const cleaned = cleanMeeting(meeting);
+    if (cleaned) meeting = updateMeeting(meetingId, (m) => Object.assign(m, cleaned)) ?? meeting;
+  }
 
   const providerId = getSelectedProviderId();
   const settings = getProviderSettings(providerId);
   const { apiKey, baseUrl } = resolveCredentials(providerId);
 
-  let transcript = transcriptToText(meeting, { me: "[Я]", other: "[Собеседник]" });
+  let transcript = transcriptToText(meeting, { me: "[Я]", other: "[Собеседник]", unsure: UNSURE_TAG });
   if (transcript.length > TRANSCRIPT_CHAR_CAP) transcript = transcript.slice(-TRANSCRIPT_CHAR_CAP);
 
   const spec = MODE_SUMMARY[meeting.mode];
@@ -48,6 +54,7 @@ export async function summarizeMeeting(
     model: settings.model,
     systemPrompt: buildSummaryPrompt(spec.headings, spec.guidance, meeting.context, agenda, meeting.mode === "interview", {
       mode: meeting.mode,
+      unsureLines: visibleSegments(meeting.transcript).some((seg) => seg.lowConfidence),
       // Structured decisions only when there is a document to update: the
       // End screen warned about exactly this extra cost (CLOUD_TASK_5).
       review: meeting.mode === "review" && Boolean(meeting.artifact?.text),
@@ -74,7 +81,7 @@ export async function summarizeMeeting(
       : null;
   // Review: a name the call never said is removed here, whatever the model wrote (CLOUD_TASK_6).
   const participants =
-    meeting.mode === "review" && split.analysis?.participants ? groundParticipants(split.analysis.participants, meeting.transcript) : null;
+    meeting.mode === "review" && split.analysis?.participants ? groundParticipants(split.analysis.participants, visibleSegments(meeting.transcript)) : null;
   setSummary(meetingId, split.protocol, analysis, decisions, participants);
   return { text: split.protocol, analysis, decisions, participants };
 }

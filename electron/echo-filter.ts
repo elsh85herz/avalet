@@ -9,7 +9,7 @@
 // people talk at once.
 
 /** Speech intervals this close (or overlapping) count as the same moment. */
-const OVERLAP_TOLERANCE_MS = 1_500;
+export const OVERLAP_TOLERANCE_MS = 1_500;
 /** How long a mic segment waits for a matching "other" segment (transcription queue included). */
 const DEFAULT_HOLD_MS = 7_000;
 const KEEP_MS = 30_000;

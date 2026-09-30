@@ -191,6 +191,8 @@ export type Decision = {
   ungrounded?: boolean;
   /** An open question asked more than once in the call: how many times. */
   asked?: number;
+  /** Accepted, but its quote sits on a line the recognizer was unsure of: check before including. */
+  weakQuote?: boolean;
   /**
    * What the decision's structure words mean, as pinned in the call ("ключ -
    * название поля; значение - массив"), or "не уточнено: ..."; absent when

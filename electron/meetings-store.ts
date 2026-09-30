@@ -4,6 +4,7 @@ import path from "node:path";
 import type { MeetingMode } from "./modes.js";
 import type { ActionItem, AgendaStatusItem } from "./summary-format.js";
 import type { ArtifactDoc, Decision, Meeting, MeetingListItem, Participant, TranscriptSegment } from "./shared/ipc-contract.js";
+import { cleanMeeting, visibleSegments } from "./transcript-clean.js";
 
 export type { Meeting, MeetingListItem, TranscriptSegment };
 
@@ -88,6 +89,9 @@ export function startMeeting(input: {
 export function endCurrentMeeting(): Meeting | null {
   if (!current) return null;
   if (!current.endedAt) current.endedAt = Date.now();
+  // The whole call is known now: doubled lines and invented credit lines are marked (CLOUD_TASK_6).
+  const cleaned = cleanMeeting(current);
+  if (cleaned) Object.assign(current, cleaned);
   flushNow();
   const ended = current;
   current = null;
@@ -262,27 +266,42 @@ export function formatClock(at: number, startedAt: number): string {
   return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
 }
 
-export function transcriptToText(meeting: Meeting, labels: { me: string; other: string }): string {
-  return meeting.transcript
-    .map((seg) => `[${formatClock(seg.at, meeting.startedAt)}] ${seg.speaker === "me" ? labels.me : labels.other}: ${seg.text}`)
+/**
+ * One line per phrase, the lines marked `filtered` left out. `unsure`, when
+ * given, tags the lines the recognizer was unsure of (the summary is told
+ * they cannot back an accepted decision).
+ */
+export function transcriptToText(meeting: Meeting, labels: { me: string; other: string; unsure?: string }): string {
+  return visibleSegments(meeting.transcript)
+    .map((seg) => {
+      const who = seg.speaker === "me" ? labels.me : labels.other;
+      const tag = labels.unsure && seg.lowConfidence ? ` ${labels.unsure}` : "";
+      return `[${formatClock(seg.at, meeting.startedAt)}] ${who}${tag}: ${seg.text}`;
+    })
     .join("\n");
 }
 
-/** Raw transcript with no summary and no processing: title, date, then one line per phrase. */
-export function transcriptToRawText(meeting: Meeting, labels: { me: string; other: string; date: string }): string {
+/** "Lines left out as noise: 3 ..." under an export, or nothing: a hidden line never disappears silently. */
+function hiddenNote(meeting: Meeting, label: string | undefined): string[] {
+  const hidden = meeting.transcript.length - visibleSegments(meeting.transcript).length;
+  return hidden > 0 && label ? ["", label.replace("{n}", String(hidden))] : [];
+}
+
+/** Transcript with no summary: title, date, then one line per phrase (noise lines left out and counted). */
+export function transcriptToRawText(meeting: Meeting, labels: { me: string; other: string; date: string; hiddenLines?: string }): string {
   const header = [meeting.title, `${labels.date}: ${new Date(meeting.startedAt).toLocaleString()}`, ""];
-  return [...header, transcriptToText(meeting, labels), ""].join("\n");
+  return [...header, transcriptToText(meeting, labels), ...hiddenNote(meeting, labels.hiddenLines), ""].join("\n");
 }
 
 export function meetingToMarkdown(
   meeting: Meeting,
-  labels: { me: string; other: string; summary: string; transcript: string; date: string; mode: string },
+  labels: { me: string; other: string; summary: string; transcript: string; date: string; mode: string; hiddenLines?: string },
   modeLabel: string,
 ): string {
   const lines: string[] = [`# ${meeting.title}`, ""];
   lines.push(`${labels.date}: ${new Date(meeting.startedAt).toLocaleString()}`);
   lines.push(`${labels.mode}: ${modeLabel}`, "");
   if (meeting.summary) lines.push(`## ${labels.summary}`, "", meeting.summary.trim(), "");
-  lines.push(`## ${labels.transcript}`, "", transcriptToText(meeting, labels), "");
+  lines.push(`## ${labels.transcript}`, "", transcriptToText(meeting, labels), ...hiddenNote(meeting, labels.hiddenLines), "");
   return lines.join("\n");
 }

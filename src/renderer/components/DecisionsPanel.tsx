@@ -271,6 +271,11 @@ export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, 
                     {t.ungrounded}
                   </p>
                 ) : null}
+                {d.weakQuote ? (
+                  <p className="hint problem-text" data-testid="decision-weak-quote">
+                    {t.weakQuote}
+                  </p>
+                ) : null}
                 {d.check ? (
                   <p className={`hint${d.check.verdict === "ok" ? "" : " problem-text"}`} data-testid="decision-check" data-verdict={d.check.verdict}>
                     {(d.check.verdict === "ok" ? t.checkOk : d.check.verdict === "not_supported" ? t.checkNotSupported : t.checkTermsUnclear).replace("{reason}", d.check.reason)}

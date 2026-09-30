@@ -388,7 +388,12 @@ export class AppCore {
     const meeting = readMeeting(id);
     if (!meeting) throw new Error("meeting not found");
     const pick = pickLabels(labels);
-    return transcriptToRawText(meeting, { me: pick("me", "Me"), other: pick("other", "Other"), date: pick("date", "Date") });
+    return transcriptToRawText(meeting, {
+      me: pick("me", "Me"),
+      other: pick("other", "Other"),
+      date: pick("date", "Date"),
+      hiddenLines: pick("hiddenLines", "Lines left out as recognition noise: {n}. They are kept in the meeting record."),
+    });
   }
 
   private async saveFile(defaultName: string, filterName: string, extension: string, content: string): Promise<string | null> {

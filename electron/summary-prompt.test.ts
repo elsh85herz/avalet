@@ -158,3 +158,12 @@ test("the review cost note's bound covers what the review rules add to the summa
   const both = reviewPrompt({ review: true, artifact: DOC }).length - plain.length - DOC.length;
   assert.ok(both <= SUMMARY_REVIEW_RULES_CHARS + SUMMARY_ARTIFACT_OVERHEAD_CHARS, `adds ${both} chars`);
 });
+
+test("unsure lines: the rule is added only when the transcript has them, in every mode", () => {
+  for (const mode of ["free", "requirements", "grooming", "demo", "review", "interview"] as const) {
+    const s = MODE_SUMMARY[mode];
+    const interview = mode === "interview";
+    assert.match(buildSummaryPrompt(s.headings, s.guidance, "", [], interview, { mode, unsureLines: true }), /Lines tagged '\(неразборчиво\)'[^\n]*Never use such a line as the evidence or the quote for an accepted decision/, mode);
+    assert.doesNotMatch(buildSummaryPrompt(s.headings, s.guidance, "", [], interview, { mode }), /неразборчиво/, mode);
+  }
+});

@@ -44,6 +44,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const [highlightAt, setHighlightAt] = useState<number | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
   const followRef = useRef(true);
 
   useEffect(() => {
@@ -53,9 +54,22 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     setAgendaDraft((initial.agenda ?? []).join("\n"));
   }, [initial.id]);
 
-  // End arrives as a new copy of the same meeting: take its end time, keep the rest.
+  // End arrives as a new copy of the same meeting: take its end time and its
+  // cleaned transcript (doubled and noise lines marked, quotes moved onto kept
+  // lines, CLOUD_TASK_6); keep the rest.
   useEffect(() => {
-    if (initial.endedAt) setMeeting((prev) => (prev.id === initial.id && !prev.endedAt ? { ...prev, endedAt: initial.endedAt } : prev));
+    if (!initial.endedAt) return;
+    setMeeting((prev) => {
+      if (prev.id !== initial.id || prev.endedAt) return prev;
+      const saved = initial.transcript.length >= prev.transcript.length;
+      return {
+        ...prev,
+        endedAt: initial.endedAt,
+        ...(saved ? { transcript: initial.transcript } : {}),
+        ...(saved && initial.agendaStatus ? { agendaStatus: initial.agendaStatus } : {}),
+        ...(saved && initial.actions ? { actions: initial.actions } : {}),
+      };
+    });
   }, [initial.id, initial.endedAt]);
 
   useEffect(() => {
@@ -206,11 +220,26 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
   const agendaTotal = agendaItems.length;
   const agendaClosedCount = agendaItems.filter((item) => item.closed).length;
 
+  const shown = (seg: TranscriptSegment) => showHidden || !seg.filtered;
+  const hiddenCount = meeting.transcript.filter((seg) => seg.filtered).length;
+
+  /** Index of the first shown line at or after `at` (the last shown one when none is later). */
+  function segmentIndexAt(at: number): number {
+    let last = -1;
+    for (let i = 0; i < meeting.transcript.length; i++) {
+      const seg = meeting.transcript[i]!;
+      if (!shown(seg)) continue;
+      if (seg.at >= at) return i;
+      last = i;
+    }
+    return last;
+  }
+
   // "Jump to transcript": the segment a quote came from, scrolled into view and lit for a moment.
   function jumpTo(at: number) {
     followRef.current = false;
-    const index = meeting.transcript.findIndex((seg) => seg.at >= at);
-    const el = transcriptRef.current?.querySelector<HTMLElement>(`[data-segment="${index < 0 ? meeting.transcript.length - 1 : index}"]`);
+    const index = segmentIndexAt(at);
+    const el = transcriptRef.current?.querySelector<HTMLElement>(`[data-segment="${index}"]`);
     el?.scrollIntoView({ block: "center" });
     setHighlightAt(at);
     setTimeout(() => setHighlightAt((current) => (current === at ? null : current)), 2500);
@@ -242,7 +271,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     onChanged?.(next);
   }
 
-  const highlightIndex = highlightAt === null ? -1 : meeting.transcript.findIndex((seg) => seg.at >= highlightAt);
+  const highlightIndex = highlightAt === null ? -1 : segmentIndexAt(highlightAt);
 
   function onTranscriptScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
@@ -403,17 +432,34 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
         {meeting.transcript.length === 0 ? (
           <p className="hint">{live ? t.meeting.transcriptEmpty : t.meeting.transcriptEmpty}</p>
         ) : (
-          meeting.transcript.map((seg, i) => (
-            <div
-              key={`${seg.at}-${i}`}
-              data-segment={i}
-              className={`segment ${seg.speaker}${i === highlightIndex ? " highlight" : ""}`}
-            >
-              <span className="segment-time">{clock(seg.at, meeting.startedAt)}</span>
-              <span className="segment-speaker">{seg.speaker === "me" ? t.meeting.me : t.meeting.other}</span>
-              <span className="segment-text">{seg.text}</span>
-            </div>
-          ))
+          <>
+            {hiddenCount > 0 ? (
+              <p className="hint hidden-lines" data-testid="hidden-lines">
+                {t.meeting.hiddenLines.replace("{n}", String(hiddenCount))}{" "}
+                <button type="button" className="link-btn" onClick={() => setShowHidden((v) => !v)} data-testid="toggle-hidden">
+                  {showHidden ? t.meeting.hideHidden : t.meeting.showHidden.replace("{n}", String(hiddenCount))}
+                </button>
+              </p>
+            ) : null}
+            {meeting.transcript.map((seg, i) =>
+              shown(seg) ? (
+                <div
+                  key={`${seg.at}-${i}`}
+                  data-segment={i}
+                  data-filtered={seg.filtered ?? undefined}
+                  className={`segment ${seg.speaker}${i === highlightIndex ? " highlight" : ""}${seg.filtered ? " filtered" : ""}${seg.lowConfidence ? " low-confidence" : ""}`}
+                  title={seg.filtered ? (seg.filtered === "echo" ? t.meeting.hiddenEcho : t.meeting.hiddenNoise) : seg.lowConfidence ? t.meeting.lowConfidence : undefined}
+                >
+                  <span className="segment-time">{clock(seg.at, meeting.startedAt)}</span>
+                  <span className="segment-speaker">{seg.speaker === "me" ? t.meeting.me : t.meeting.other}</span>
+                  <span className="segment-text">
+                    {seg.text}
+                    {seg.filtered ? <span className="segment-note"> ({seg.filtered === "echo" ? t.meeting.hiddenEcho : t.meeting.hiddenNoise})</span> : null}
+                  </span>
+                </div>
+              ) : null,
+            )}
+          </>
         )}
         <div ref={transcriptEndRef} />
       </div>

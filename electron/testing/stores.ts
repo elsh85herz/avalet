@@ -43,6 +43,8 @@ export type MockServer = {
   now: () => number;
   installs: Map<string, { installId: string; plan: string; used: number; budget: number; renews: boolean }>;
   llmCalls: Array<{ model: string; system: string; usage: { prompt_tokens: number; completion_tokens: number }; metered: boolean }>;
+  /** The whole last model request (in-process tests only). */
+  lastPrompt: { system: string; user: string };
   listen(port?: number): Promise<string>;
   close(): Promise<void>;
 };

@@ -4,6 +4,7 @@ import { SECTION_UNKNOWN, findSection, parseSections, sectionLabel } from "./sha
 import { locateQuote, sameTask } from "./live-tracker-logic.js";
 import { meetingClock, parseAsked, type RawDecision } from "./summary-format.js";
 import { termsProblem } from "./shared/decision-terms.js";
+import { visibleSegments } from "./transcript-clean.js";
 
 // Review mode decisions (CLOUD_TASK_5): the summary's list checked against
 // what was actually said and against the document, then merged with what the
@@ -28,9 +29,13 @@ export function groundDecisions(
   const artifact = meeting.artifact?.text ?? "";
   const sections = artifact ? parseSections(artifact).filter((s) => s.number) : [];
   const lastAt = meeting.transcript.at(-1)?.at ?? meeting.endedAt ?? meeting.startedAt;
+  // Only the lines a person reads: a quote never lands on a hidden echo copy (CLOUD_TASK_6).
+  const visible = visibleSegments(meeting.transcript);
   return raw.map((item) => {
-    const found = item.quote ? locateQuote(item.quote, meeting.transcript) : null;
+    const found = item.quote ? locateQuote(item.quote, visible) : null;
     const ungrounded = item.quote ? !found : item.status === "accepted";
+    // Acceptance resting on words the recognizer was unsure of is not evidence.
+    const weakQuote = Boolean(found && item.status === "accepted" && visible.find((seg) => seg.at === found.at)?.lowConfidence);
     let at: number | undefined = found?.at;
     // Only a jump target when the words were not found: never beyond the call.
     if (at === undefined && item.atSeconds !== null) {
@@ -52,10 +57,11 @@ export function groundDecisions(
       section,
       before: item.before,
       after: item.after,
-      include: item.status === "accepted" && !ungrounded && !termsProblem(item),
+      include: item.status === "accepted" && !ungrounded && !weakQuote && !termsProblem(item),
       ...(found ? { quote: found.quote, speaker: found.speaker } : {}),
       ...(at !== undefined ? { at } : {}),
       ...(ungrounded ? { ungrounded: true } : {}),
+      ...(weakQuote ? { weakQuote: true } : {}),
       ...(item.asked ? { asked: item.asked } : {}),
       ...(item.terms ? { terms: item.terms } : {}),
     };
@@ -102,6 +108,7 @@ export function sanitizeDecisions(value: unknown): Decision[] {
     if (d.manual === true) out.manual = true;
     if (d.removed === true) out.removed = true;
     if (d.ungrounded === true) out.ungrounded = true;
+    if (d.weakQuote === true) out.weakQuote = true;
     if (typeof d.quote === "string" && d.quote) out.quote = str(d.quote);
     if (d.speaker === "me" || d.speaker === "other") out.speaker = d.speaker;
     if (typeof d.at === "number" && Number.isFinite(d.at)) out.at = d.at;

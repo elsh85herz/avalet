@@ -142,3 +142,21 @@ test("raw transcript text: title, date, one line per phrase with clock and speak
   assert.equal(lines[3], "[00:01:05] Собеседник: Привет");
   assert.equal(lines[4], "[01:02:05] Я: Пока");
 });
+
+test("ending a meeting marks doubled and invented lines on disk, keeps them, and leaves them out of the export (CLOUD_TASK_6)", () => {
+  fresh();
+  const meeting = startMeeting({ titlePrefix: "Встреча", mode: "review", context: "" });
+  const t = meeting.startedAt;
+  const line = "Давай позиции посылки хранить мапой из типа вложения в список количеств.";
+  appendSegment({ at: t + 1_000, end: t + 7_000, speaker: "other", text: line });
+  appendSegment({ at: t + 1_300, end: t + 6_500, speaker: "me", text: "давай позиции посылки хранить мапой из типа вложения в список" });
+  appendSegment({ at: t + 20_000, end: t + 22_000, speaker: "me", text: "Субтитры сделал ник_автора" });
+  const ended = endCurrentMeeting()!;
+  assert.deepEqual(ended.transcript.map((s) => s.filtered ?? null), [null, "echo", "noise"]);
+  const saved = readMeeting(meeting.id)!;
+  assert.equal(saved.transcript.length, 3, "kept in the record");
+  assert.deepEqual(saved.transcript.map((s) => s.filtered ?? null), [null, "echo", "noise"]);
+  const raw = transcriptToRawText(saved, { me: "Я", other: "Собеседник", date: "Дата", hiddenLines: "Скрыто: {n}" });
+  assert.equal(raw.split("\n").filter((l) => /Собеседник:|Я:/.test(l)).length, 1);
+  assert.match(raw, /Скрыто: 2/);
+});

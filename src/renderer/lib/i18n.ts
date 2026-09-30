@@ -439,6 +439,7 @@ export type UiStrings = {
     addRow: string;
     ungrounded: string;
     askedTimes: string;
+    weakQuote: string;
     termsLabel: string;
     termsPlaceholder: string;
     termsMissing: string;
@@ -975,6 +976,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       addRow: "Add decision",
       ungrounded: "The supporting words were not found in the transcript. Check before including.",
       askedTimes: "Asked in the call without an answer, times: {n}",
+      weakQuote: "The supporting words were recognized with low confidence. Check them before including.",
       termsLabel: "Terms",
       termsPlaceholder: "What the key, the value and one entry are, as said in the call",
       termsMissing: "Terms not pinned: the call did not say what the key and the value are here. Pin them before including.",
@@ -1505,6 +1507,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       addRow: "Добавить решение",
       ungrounded: "Подтверждающих слов в расшифровке не нашлось. Проверьте, прежде чем включать.",
       askedTimes: "Спрашивали на встрече без ответа, раз: {n}",
+      weakQuote: "Подтверждающие слова распознаны неуверенно. Проверьте их, прежде чем включать.",
       termsLabel: "Термины",
       termsPlaceholder: "Что здесь ключ, значение и одна запись, как сказали на встрече",
       termsMissing: "Термины не закреплены: на встрече не сказали, что здесь ключ и что значение. Закрепите их, прежде чем включать.",

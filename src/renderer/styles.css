@@ -2495,3 +2495,27 @@ a {
   border-top: 1px solid var(--card-border);
   padding-top: 6px;
 }
+
+/* CLOUD_TASK_6: lines kept in the record but left out of the view and the exports. */
+.hidden-lines {
+  margin: 0 0 6px;
+}
+.segment.filtered {
+  opacity: 0.55;
+}
+.segment.filtered .segment-text {
+  text-decoration: line-through;
+}
+.segment-note {
+  font-size: 11px;
+  color: var(--muted);
+  text-decoration: none;
+  display: inline-block;
+}
+.segment.low-confidence .segment-text {
+  text-decoration: underline dotted var(--muted);
+  text-underline-offset: 3px;
+}
+.participants-line {
+  margin: 0 0 6px;
+}

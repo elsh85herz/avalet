@@ -9,7 +9,12 @@ import type { MeetingMode } from "./shared/ipc-contract.js";
  * the guide for updating the document. `artifact` is the document under
  * review, sent as reference for section names and "before" wording only.
  */
-export type ReviewSummaryOptions = { mode?: MeetingMode; review?: boolean; artifact?: string };
+export type ReviewSummaryOptions = { mode?: MeetingMode; review?: boolean; artifact?: string; unsureLines?: boolean };
+
+// CLOUD_TASK_6, finding 5: lines the recognizer was unsure of carry this tag
+// in the transcript sent to the summary (all modes, only when there are any).
+export const UNSURE_TAG = "(неразборчиво)";
+export const UNSURE_RULE = `Lines tagged '${UNSURE_TAG}' were recognized with low confidence and their words may be wrong. Never use such a line as the evidence or the quote for an accepted decision, an agreement, an owner or a deadline; if it is the only evidence, write 'не подтверждено, уточнить' instead.`;
 
 // CLOUD_TASK_6, finding 1 and 3: a question asked and not answered is the
 // most important thing to carry out of a review call, and it was the thing
@@ -93,6 +98,7 @@ export function buildSummaryPrompt(
   }
   if (reviewMode) parts.push(UNANSWERED_REVIEW_RULES, TERMS_REVIEW_RULES, CONTEXT_REVIEW_RULES);
   else if (!interview && headings.includes("Открытые вопросы")) parts.push(UNANSWERED_OPEN_QUESTIONS_RULE);
+  if (options.unsureLines) parts.push(UNSURE_RULE);
   parts.push(
     "Ground rule: every bullet must rest on a line of the transcript. Never write a decision, requirement, agreement or owner that nobody said in the call. Attribute to a person only what that person said; write 'согласился' only if the transcript has an explicit agreement, otherwise 'не возражал' or 'не прозвучало'. If a claim about a system, integration or process is stated as fact but nothing confirms it, mark it 'не подтверждено, уточнить у <кого>'.",
     "Only include what was actually said or clearly implied; if a section has nothing, write '- нет'. Keep identifiers, table/field/endpoint names in English exactly as spoken. No preamble, no closing remarks, no markdown symbols other than the '- ' bullets.",

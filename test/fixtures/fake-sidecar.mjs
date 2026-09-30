@@ -3,7 +3,8 @@
 // integration tests (plain node) and by E2E (run by Electron as node).
 //
 // transcribe_chunk: when audio_base64 decodes to "TEXT:<phrase>", the phrase is
-// the transcript (tests script exact speech). Anything else (real WAV bytes
+// the transcript (tests script exact speech); "UNSURE:<phrase>" and
+// "QUIET:<phrase>" also report low confidence or "probably not speech". Anything else (real WAV bytes
 // from the fake capture) gets the next line of a canned conversation.
 // FAKE_SIDECAR_FAIL=<n> makes the first n transcriptions fail.
 import readline from "node:readline";
@@ -38,6 +39,9 @@ function transcribe(params) {
   }
   const decoded = Buffer.from(params.audio_base64, "base64").toString("utf8");
   if (decoded.startsWith("TEXT:")) return { text: decoded.slice(5), language: params.language ?? "ru", ends_with_pause: true };
+  // CLOUD_TASK_6: the recognizer's own confidence, as faster-whisper reports it.
+  if (decoded.startsWith("UNSURE:")) return { text: decoded.slice(7), language: params.language ?? "ru", ends_with_pause: true, avg_logprob: -1.45, no_speech_prob: 0.1 };
+  if (decoded.startsWith("QUIET:")) return { text: decoded.slice(6), language: params.language ?? "ru", ends_with_pause: true, avg_logprob: -0.9, no_speech_prob: 0.93 };
   const text = SCRIPT[cannedIndex % SCRIPT.length];
   cannedIndex += 1;
   return { text, language: params.language ?? "ru", ends_with_pause: true };
