@@ -167,3 +167,16 @@ test("the sidecar reports confidence from faster-whisper's segments (duration-we
   assert.deepEqual(none, {});
   assert.deepEqual(bare, {});
 });
+
+test("a two-hour call (2,400 lines) is cleaned fast", () => {
+  const lines: TranscriptSegment[] = [];
+  for (let i = 0; i < 1_200; i++) {
+    lines.push(s(i * 6, 5, "other", `Реплика собеседника номер ${i} про посылку и её позиции, тип ${i % 7}.`));
+    lines.push(s(i * 6 + 2.5, 3, "me", i % 5 === 0 ? `реплика собеседника номер ${i} про посылку и её позиции` : `Мой вопрос ${i}: а что с весом?`));
+  }
+  const started = performance.now();
+  const cleaned = cleanTranscript(lines);
+  const took = performance.now() - started;
+  assert.equal(cleaned.filter((seg) => seg.filtered === "echo").length, 240);
+  assert.ok(took < 2_000, `took ${Math.round(took)} ms`);
+});

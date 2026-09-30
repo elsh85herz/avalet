@@ -1,4 +1,6 @@
-import type { Decision, DecisionLabels, DecisionStatus, Meeting } from "./shared/ipc-contract.js";
+import type { Decision, DecisionCheck, DecisionLabels, DecisionStatus, Meeting } from "./shared/ipc-contract.js";
+
+const CHECK_VERDICTS: DecisionCheck["verdict"][] = ["ok", "not_supported", "terms_unclear"];
 import { DECISION_STATUSES } from "./shared/ipc-contract.js";
 import { SECTION_UNKNOWN, findSection, parseSections, sectionLabel } from "./shared/artifact.js";
 import { locateQuote, sameTask } from "./live-tracker-logic.js";
@@ -113,6 +115,11 @@ export function sanitizeDecisions(value: unknown): Decision[] {
     if (d.speaker === "me" || d.speaker === "other") out.speaker = d.speaker;
     if (typeof d.at === "number" && Number.isFinite(d.at)) out.at = d.at;
     if (typeof d.terms === "string" && d.terms.trim()) out.terms = str(d.terms);
+    // The last check's note survives an edit of the row (it is shown, never acted on again).
+    const check = d.check as Record<string, unknown> | undefined;
+    if (check && typeof check === "object" && CHECK_VERDICTS.includes(check.verdict as DecisionCheck["verdict"]) && typeof check.at === "number" && Number.isFinite(check.at)) {
+      out.check = { verdict: check.verdict as DecisionCheck["verdict"], reason: str(check.reason).slice(0, 500), at: check.at };
+    }
     const asked = parseAsked(d.asked);
     if (asked) out.asked = asked;
     return out;

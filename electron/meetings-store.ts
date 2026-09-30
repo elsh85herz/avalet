@@ -240,7 +240,7 @@ export function listMeetings(): MeetingListItem[] {
       startedAt: meeting.startedAt,
       endedAt: meeting.endedAt,
       mode: meeting.mode,
-      segmentCount: meeting.transcript.length,
+      segmentCount: visibleSegments(meeting.transcript).length,
       hasSummary: Boolean(meeting.summary),
     });
   }

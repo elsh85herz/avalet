@@ -184,3 +184,10 @@ test("an accepted decision quoted from a low-confidence line is marked and start
   assert.equal(e!.at, T0 + 20_000);
   assert.equal(e!.speaker, "other");
 });
+
+test("the check note survives an edit of the row; a forged verdict is dropped", () => {
+  const row = { id: "r-1", text: "x", status: "proposed", include: false, check: { verdict: "not_supported", reason: "нет согласия", at: 5 } };
+  assert.deepEqual(sanitizeDecisions([row])[0]!.check, { verdict: "not_supported", reason: "нет согласия", at: 5 });
+  assert.equal(sanitizeDecisions([{ ...row, check: { verdict: "approved", reason: "", at: 5 } }])[0]!.check, undefined);
+  assert.equal(sanitizeDecisions([{ ...row, check: "ok" }])[0]!.check, undefined);
+});
