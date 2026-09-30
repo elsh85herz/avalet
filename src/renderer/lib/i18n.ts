@@ -450,6 +450,7 @@ export type UiStrings = {
     skippedBy: string;
     fixByHand: string;
     noPatches: string;
+    noChangeFor: string;
     resultTitle: string;
     resultLine: string;
     revert: string;
@@ -466,7 +467,7 @@ export type UiStrings = {
     fileNone: string;
     status: Record<"accepted" | "proposed" | "rejected" | "open", string>;
     ops: Record<"replace" | "insert_after" | "delete", string>;
-    problems: Record<"anchor-missing" | "anchor-ambiguous" | "overlap" | "empty-anchor" | "bad-op", string>;
+    problems: Record<"anchor-missing" | "anchor-ambiguous" | "overlap" | "empty-anchor" | "bad-op" | "unknown-decision", string>;
   };
 };
 
@@ -963,6 +964,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       skippedBy: "The model could not place it: {reason}",
       fixByHand: "Add these by hand to the downloaded document.",
       noPatches: "The model proposed no changes.",
+      noChangeFor: "The model proposed no change for it.",
       resultTitle: "Updated document",
       resultLine: "Changes applied: {count}.",
       revert: "Back to the original",
@@ -979,7 +981,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       fileNone: "none",
       status: { accepted: "Accepted", proposed: "Proposed", rejected: "Rejected", open: "Open" },
       ops: { replace: "Replace", insert_after: "Insert after", delete: "Delete" },
-      problems: { "anchor-missing": "the place it points to is not in the document", "anchor-ambiguous": "the place it points to occurs more than once", overlap: "overlaps another change", "empty-anchor": "no place in the document was given", "bad-op": "unknown kind of change" },
+      problems: { "anchor-missing": "the place it points to is not in the document", "anchor-ambiguous": "the place it points to occurs more than once", overlap: "overlaps another change", "empty-anchor": "no place in the document was given", "bad-op": "unknown kind of change", "unknown-decision": "not asked for by any checked decision" },
     },
   },
   ru: {
@@ -1470,6 +1472,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       skippedBy: "Модель не нашла, куда это внести: {reason}",
       fixByHand: "Эти пункты внесите вручную в скачанный документ.",
       noPatches: "Модель не предложила правок.",
+      noChangeFor: "Модель не предложила для него правки.",
       resultTitle: "Обновлённый документ",
       resultLine: "Применено правок: {count}.",
       revert: "Вернуть исходный",
@@ -1486,7 +1489,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       fileNone: "нет",
       status: { accepted: "Принято", proposed: "Предложено", rejected: "Отклонено", open: "Не решено" },
       ops: { replace: "Заменить", insert_after: "Вставить после", delete: "Удалить" },
-      problems: { "anchor-missing": "указанного места нет в документе", "anchor-ambiguous": "указанное место встречается в документе несколько раз", overlap: "пересекается с другой правкой", "empty-anchor": "место в документе не указано", "bad-op": "непонятный вид правки" },
+      problems: { "anchor-missing": "указанного места нет в документе", "anchor-ambiguous": "указанное место встречается в документе несколько раз", overlap: "пересекается с другой правкой", "empty-anchor": "место в документе не указано", "bad-op": "непонятный вид правки", "unknown-decision": "ни одно отмеченное решение об этом не просит" },
     },
   },
 };

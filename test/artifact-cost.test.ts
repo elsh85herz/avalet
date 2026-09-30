@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { artifactFieldCost, summaryExtraCost } from "../src/renderer/lib/artifact-cost.js";
+import { artifactFieldCost, summaryExtraCost, updateCost } from "../src/renderer/lib/artifact-cost.js";
 import { MEETING_MODES } from "../electron/shared/ipc-contract.js";
 
 // Warnings before a spend appear only when a review document is loaded (CLOUD_TASK_5).
@@ -35,4 +35,20 @@ test("the summary note appears only for a review meeting with a document", () =>
   }
   assert.equal(summaryExtraCost({ mode: "review" }), null);
   assert.equal(summaryExtraCost({ mode: "review", artifact: { text: "" } }), null);
+});
+
+test("the update cost appears only for a review meeting with a document and at least one checked decision", () => {
+  const decision = { id: "a", text: "В разделе 3.1 поднять лимит", status: "accepted" as const, by: "", section: "3.1", before: "не более 50", after: "не более 100", include: true };
+  for (const mode of MEETING_MODES) {
+    const cost = updateCost({ mode, artifact: { text: DOC }, decisions: [decision] });
+    if (mode === "review") assert.ok(cost && cost.total >= cost.doc && cost.count === 1);
+    else assert.equal(cost, null, mode);
+  }
+  assert.equal(updateCost({ mode: "review", decisions: [decision] }), null);
+  assert.equal(updateCost({ mode: "review", artifact: { text: DOC }, decisions: [{ ...decision, include: false }] }), null);
+  assert.equal(updateCost({ mode: "review", artifact: { text: DOC }, decisions: [{ ...decision, removed: true }] }), null);
+  const big = updateCost({ mode: "review", artifact: { text: "x".repeat(90_000) }, decisions: [decision, { ...decision, id: "b" }] })!;
+  assert.equal(big.count, 2);
+  assert.equal(big.high, true);
+  assert.ok(big.doc >= 30_000 && big.total >= big.doc && big.reply > 0);
 });

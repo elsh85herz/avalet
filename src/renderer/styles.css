@@ -2399,3 +2399,71 @@ a {
 .empty-state-row .hint {
   margin: 0;
 }
+.artifact-update {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cost-note.confirm {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.patch-preview h4,
+.artifact-result h4,
+.patch-unplaced h4 {
+  margin: 6px 0 4px;
+  font-size: 13px;
+}
+.patch-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.patch-row {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.patch-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+.patch-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 4px;
+}
+.patch-diff pre {
+  margin: 2px 0 0;
+  padding: 6px;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  max-height: 180px;
+  overflow: auto;
+}
+.patch-old {
+  background: rgba(255, 69, 58, 0.1);
+  border: 1px solid rgba(255, 69, 58, 0.35);
+}
+.patch-new {
+  background: rgba(50, 215, 75, 0.1);
+  border: 1px solid rgba(50, 215, 75, 0.35);
+}
+.patch-unplaced ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+.artifact-result {
+  border-top: 1px solid var(--card-border);
+  padding-top: 6px;
+}

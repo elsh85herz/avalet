@@ -131,6 +131,8 @@ const api: AvaletApi = {
     toText: (id, labels, modeLabel) => invoke("avalet:meetings-to-text", id, labels, modeLabel),
     setArtifact: (id, doc) => invoke("avalet:meetings-set-artifact", id, doc),
     setDecisions: (id, decisions) => invoke("avalet:meetings-set-decisions", id, decisions),
+    proposePatches: (id) => invoke("avalet:artifact-propose", id),
+    applyPatches: (id, patchIds) => invoke("avalet:artifact-apply", id, patchIds),
   },
   events: {
     onBlockStart: on("avalet:event:block-start"),

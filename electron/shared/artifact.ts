@@ -181,3 +181,15 @@ export const SUMMARY_ARTIFACT_OVERHEAD_CHARS = 3_000;
 export const PATCH_PROMPT_OVERHEAD_CHARS = 3_500;
 /** Wrapper text around the index in a live call. */
 export const LIVE_INDEX_OVERHEAD_CHARS = 250;
+
+/** What the update call is told about each checked decision, with short ids ("d1", ...) the model copies back. */
+export type PatchDecision = { id: string; text: string; status: string; section: string; before: string; after: string };
+
+export function patchDecisions(decisions: Array<{ text: string; status: string; section: string; before: string; after: string }>): PatchDecision[] {
+  return decisions.map((d, i) => ({ id: `d${i + 1}`, text: d.text, status: d.status, section: d.section, before: d.before, after: d.after }));
+}
+
+/** Rough size of the model's answer: an anchor and the new text per decision, plus JSON around them. */
+export function expectedReplyChars(decisions: Array<{ text: string; before: string; after: string }>): number {
+  return decisions.reduce((sum, d) => sum + Math.min(d.before.length || 150, 600) + (d.after.length || d.text.length * 2) + 120, 60);
+}

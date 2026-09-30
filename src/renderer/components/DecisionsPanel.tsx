@@ -5,6 +5,7 @@ import type { Decision, DecisionStatus } from "../../../electron/shared/ipc-cont
 import { DECISION_STATUSES } from "../../../electron/shared/ipc-contract.js";
 import { ARTIFACT_CHAR_CAP, SECTION_UNKNOWN, parseSections, sectionLabel } from "../../../electron/shared/artifact.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
+import { ArtifactUpdate } from "./ArtifactUpdate.js";
 
 type Props = {
   meeting: Meeting;
@@ -14,6 +15,8 @@ type Props = {
   onChange: (meeting: Meeting) => void;
   jumpTo: (at: number) => void;
   clock: (at: number) => string;
+  /** Download buttons for the updated document and the decisions. */
+  exports?: React.ReactNode;
 };
 
 function newId(): string {
@@ -25,7 +28,7 @@ function newId(): string {
  * before the document is updated. Every edit is saved on the meeting and
  * marked as done by hand, so a new summary leaves it alone.
  */
-export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, clock }: Props) {
+export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, clock, exports }: Props) {
   const bridge = getBridge();
   const t = UI_STRINGS[uiLanguage].spec;
   const tm = UI_STRINGS[uiLanguage].meeting;
@@ -235,6 +238,7 @@ export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, 
           </button>
         </div>
       ) : null}
+      {meeting.artifact ? <ArtifactUpdate meeting={{ ...meeting, decisions: rows }} uiLanguage={uiLanguage} onChange={onChange} exports={exports} /> : null}
     </section>
   );
 }

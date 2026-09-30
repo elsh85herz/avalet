@@ -2,12 +2,15 @@ import {
   ARTIFACT_HIGHLIGHT_CHARS,
   ARTIFACT_SECTION_CHAR_CAP,
   LIVE_INDEX_OVERHEAD_CHARS,
+  PATCH_PROMPT_OVERHEAD_CHARS,
+  expectedReplyChars,
+  patchDecisions,
   SUMMARY_ARTIFACT_OVERHEAD_CHARS,
   buildArtifactIndex,
   estimateTokens,
   roundTokens,
 } from "../../../electron/shared/artifact.js";
-import type { MeetingMode } from "../../../electron/shared/ipc-contract.js";
+import type { Decision, MeetingMode } from "../../../electron/shared/ipc-contract.js";
 
 // The plain-words token figures shown before a spend that the review
 // document adds (CLOUD_TASK_5 rule). Each returns null when nothing extra is
@@ -41,6 +44,32 @@ export function summaryExtraCost(meeting: { mode: MeetingMode; artifact?: { text
   if (meeting.mode !== "review" || !text.trim()) return null;
   return {
     tokens: roundTokens(estimateTokens(text.length + SUMMARY_ARTIFACT_OVERHEAD_CHARS)),
+    high: text.length > ARTIFACT_HIGHLIGHT_CHARS,
+  };
+}
+
+export type UpdateCost = { doc: number; decisions: number; reply: number; total: number; count: number; high: boolean };
+
+/** Decisions that go into "Update the document". */
+export function chosenDecisions(decisions: Decision[] | undefined): Decision[] {
+  return (decisions ?? []).filter((d) => d.include && !d.removed && d.text.trim());
+}
+
+/** Shown next to "Update the document" and in its confirmation: the document, the checked decisions, the expected answer. */
+export function updateCost(meeting: { mode: MeetingMode; artifact?: { text: string }; decisions?: Decision[] }): UpdateCost | null {
+  const text = meeting.artifact?.text ?? "";
+  if (meeting.mode !== "review" || !text.trim()) return null;
+  const chosen = chosenDecisions(meeting.decisions);
+  if (chosen.length === 0) return null;
+  const docChars = text.length + PATCH_PROMPT_OVERHEAD_CHARS;
+  const decisionChars = JSON.stringify(patchDecisions(chosen)).length;
+  const replyChars = expectedReplyChars(chosen);
+  return {
+    doc: roundTokens(estimateTokens(docChars)),
+    decisions: roundTokens(estimateTokens(decisionChars)),
+    reply: roundTokens(estimateTokens(replyChars)),
+    total: roundTokens(estimateTokens(docChars + decisionChars + replyChars)),
+    count: chosen.length,
     high: text.length > ARTIFACT_HIGHLIGHT_CHARS,
   };
 }

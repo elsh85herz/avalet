@@ -38,6 +38,7 @@ import { summarizeMeeting } from "./meeting-summary.js";
 import { buildProtocolMarkdown, parseAgendaText } from "./summary-format.js";
 import { ARTIFACT_CHAR_CAP } from "./shared/artifact.js";
 import { sanitizeDecisions } from "./decisions.js";
+import { PatchReplyError, applyChosenPatches, proposePatches } from "./artifact-update.js";
 import {
   getAgendaText,
   getAllProviderSettings,
@@ -187,6 +188,7 @@ export class AppCore {
   readonly liveTracker: LiveTracker;
   readonly handlers: HandlerTable;
   private summaryAbort: AbortController | null = null;
+  private artifactAbort: AbortController | null = null;
 
   constructor(private readonly deps: AppCoreDeps) {
     const { emit } = deps;
@@ -596,6 +598,28 @@ export class AppCore {
       return updateMeeting(requireString(rawId, "id"), (meeting) => {
         meeting.decisions = decisions;
       });
+    };
+    h["avalet:artifact-propose"] = async (rawId) => {
+      const id = requireString(rawId, "id");
+      this.artifactAbort?.abort();
+      const controller = new AbortController();
+      this.artifactAbort = controller;
+      const timer = setTimeout(() => controller.abort(), 180_000);
+      try {
+        return { ok: true, proposal: await proposePatches(id, controller.signal) };
+      } catch (error) {
+        if (error instanceof PatchReplyError) return { ok: false, message: error.message, code: "bad-reply" };
+        const problem = accessProblemOf(error);
+        if (problem) this.handleAccessProblem(problem);
+        return { ok: false, message: humanProviderError(error, getUiLanguage()), code: problem ? "paywall" : undefined };
+      } finally {
+        clearTimeout(timer);
+        if (this.artifactAbort === controller) this.artifactAbort = null;
+      }
+    };
+    h["avalet:artifact-apply"] = (rawId, rawIds) => {
+      if (!Array.isArray(rawIds) || rawIds.some((x) => typeof x !== "string")) throw new Error("patch ids must be a string array");
+      return applyChosenPatches(requireString(rawId, "id"), rawIds as string[]);
     };
     h["avalet:auto-detect-set"] = (enabled) => {
       const next = Boolean(enabled);

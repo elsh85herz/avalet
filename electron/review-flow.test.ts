@@ -134,3 +134,57 @@ test("a review meeting without a document gets the plain summary: no decisions, 
   assert.doesNotMatch(summaryCall.system, /<document>|"decisions"/);
   await h.core.shutdown();
 });
+
+test("update the document: one metered call, patches checked against the original, only the chosen ones applied, undo", async () => {
+  const h = reviewHarness();
+  const meeting = await h.runCall();
+  await h.call("avalet:meetings-summarize", meeting.id);
+  const decisions = (await h.call("avalet:meetings-get", meeting.id))!.decisions!;
+  // Include the XLSX proposal too: it has no "before", so the mock inserts a line under 3.2.
+  await h.call(
+    "avalet:meetings-set-decisions",
+    meeting.id,
+    decisions.map((d) => (/XLSX/.test(d.text) ? { ...d, include: true, manual: true } : d)),
+  );
+
+  const proposed = await h.call("avalet:artifact-propose", meeting.id);
+  assert.equal(proposed.ok, true);
+  const proposal = proposed.ok ? proposed.proposal : null;
+  assert.equal(proposal!.decisionIds.length, 2);
+  const [replace, insert] = proposal!.patches;
+  assert.deepEqual([replace!.op, replace!.ok, replace!.oldFragment, replace!.newFragment], ["replace", true, "не более 50 записей", "не более 100 записей"]);
+  assert.equal(insert!.op, "insert_after");
+  assert.equal(insert!.ok, true);
+  // The patch call sent the document and only the checked decisions, and was metered as "artifact".
+  const request = mock.llmCalls.at(-1)!;
+  assert.match(request.system, /turn confirmed decisions into patches/);
+  assert.equal((await h.call("avalet:usage-get")).byPurpose.artifact.calls, 1);
+  const stored = (await h.call("avalet:meetings-get", meeting.id))!;
+  assert.equal(stored.artifactProposal?.patches.length, 2);
+  assert.equal(stored.artifactResult, undefined, "nothing is applied before Apply");
+
+  // Apply only the first one.
+  const applied = (await h.call("avalet:artifact-apply", meeting.id, [replace!.id]))!;
+  assert.deepEqual(applied.artifactResult?.patchIds, [replace!.id]);
+  assert.equal(applied.artifactResult!.text, SPEC.replace("не более 50 записей", "не более 100 записей"));
+  assert.equal(applied.artifact?.text, SPEC, "the original is kept");
+  // Both.
+  const both = (await h.call("avalet:artifact-apply", meeting.id, [replace!.id, insert!.id]))!;
+  assert.match(both.artifactResult!.text, /### 3\.2 POST \/activities\/export\n\nВ разделе 3\.2 добавить выгрузку в XLSX\.\n\nГотовит/);
+  // Back to the original.
+  const reverted = (await h.call("avalet:artifact-apply", meeting.id, []))!;
+  assert.equal(reverted.artifactResult, undefined);
+  await assert.rejects(async () => h.call("avalet:artifact-apply", meeting.id, [5]));
+  await h.core.shutdown();
+});
+
+test("update is refused without a checked decision; the decisions of the call are the only source", async () => {
+  const h = reviewHarness();
+  const meeting = await h.runCall();
+  await h.call("avalet:meetings-summarize", meeting.id);
+  const decisions = (await h.call("avalet:meetings-get", meeting.id))!.decisions!;
+  await h.call("avalet:meetings-set-decisions", meeting.id, decisions.map((d) => ({ ...d, include: false, manual: true })));
+  const refused = await h.call("avalet:artifact-propose", meeting.id);
+  assert.equal(refused.ok, false);
+  await h.core.shutdown();
+});

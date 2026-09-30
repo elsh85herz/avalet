@@ -183,7 +183,7 @@ export type ArtifactPatch = {
   /** New text (replace, insert_after); ignored for delete. */
   text: string;
 };
-export type PatchProblem = "anchor-missing" | "anchor-ambiguous" | "overlap" | "empty-anchor" | "bad-op";
+export type PatchProblem = "anchor-missing" | "anchor-ambiguous" | "overlap" | "empty-anchor" | "bad-op" | "unknown-decision";
 export type CheckedPatch = ArtifactPatch & {
   ok: boolean;
   problem?: PatchProblem;
@@ -200,6 +200,8 @@ export type PatchProposal = {
   decisionIds: string[];
 };
 export type ArtifactResult = { text: string; patchIds: string[]; at: number };
+/** paywall: budget or plan (the usual offer is shown); bad-reply: the answer had no readable patches. */
+export type ProposeResult = { ok: true; proposal: PatchProposal } | { ok: false; message: string; code?: "paywall" | "bad-reply" };
 
 export type MeetingListItem = {
   id: string;
@@ -416,6 +418,10 @@ export type InvokeMap = {
   "avalet:meetings-set-artifact": [[id: string, doc: ArtifactDoc | null], Meeting | null];
   /** The decisions list after the analyst edited it (rows edited by hand carry `manual`). */
   "avalet:meetings-set-decisions": [[id: string, decisions: Decision[]], Meeting | null];
+  /** "Update the document": one model call, returns patches checked against the document; nothing is applied yet. */
+  "avalet:artifact-propose": [[id: string], ProposeResult];
+  /** Applies the chosen patches of the stored proposal to the original; [] goes back to the original. */
+  "avalet:artifact-apply": [[id: string, patchIds: string[]], Meeting | null];
   "avalet:auto-detect-set": [[enabled: boolean], void];
   "avalet:overlay-set-opacity": [[opacity: number], void];
   "avalet:overlay-set-collapsed": [[collapsed: boolean], void];
@@ -625,6 +631,8 @@ export type AvaletApi = {
     toText: (id: string, labels: ExportLabels, modeLabel: string) => Promise<string>;
     setArtifact: (id: string, doc: ArtifactDoc | null) => Promise<Meeting | null>;
     setDecisions: (id: string, decisions: Decision[]) => Promise<Meeting | null>;
+    proposePatches: (id: string) => Promise<ProposeResult>;
+    applyPatches: (id: string, patchIds: string[]) => Promise<Meeting | null>;
   };
   events: {
     onBlockStart: Listener<"avalet:event:block-start">;
@@ -712,6 +720,8 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:artifact-set": true,
   "avalet:meetings-set-artifact": true,
   "avalet:meetings-set-decisions": true,
+  "avalet:artifact-propose": true,
+  "avalet:artifact-apply": true,
   "avalet:auto-detect-set": true,
   "avalet:overlay-set-opacity": true,
   "avalet:overlay-set-collapsed": true,
