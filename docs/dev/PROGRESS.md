@@ -247,3 +247,23 @@ Baseline on `f711314`: `npm ci` ok, `npm run check` ok (187/187).
 ### Blockers
 
 (none)
+
+## CLOUD_TASK_6 (review fidelity), started 2026-09-30
+
+Baseline on `aa85949`: `npm ci` ok, `npm run check` ok (227/227).
+
+### Done
+
+- Phase 0: `docs/dev/review-fidelity-plan.md` (private, in CLEANUP with `CLOUD_TASK_6*.md`): cause, check and fix per finding; echo escape reproduced in `electron/echo-filter.test.ts`.
+
+### In progress
+
+- Phase 1: unanswered questions as risks.
+
+### Next
+
+- Phase 2 terms, phase 3 participants and contradictions, phase 4 transcript hygiene, phase 5 fixture, E2E, docs, REPORT.
+
+### Blockers
+
+(none)

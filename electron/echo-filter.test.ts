@@ -71,3 +71,18 @@ test("flush commits held segments so nothing is lost when the session stops", ()
   h.filter.flush();
   assert.deepEqual(h.committed, ["me"]);
 });
+
+// CLOUD_TASK_6, finding 5: the live filter holds a mic segment for a few
+// seconds only. The other channel is cut at up to 12 s and both channels
+// queue on one recognizer, so the clean copy of long speech can arrive after
+// the hold expired: then both copies reach the saved transcript. This is why
+// the saved transcript gets its own pass (electron/transcript-clean.ts).
+test("a mic copy committed before the matching other segment arrives is not caught live", async () => {
+  const h = harness(10);
+  h.filter.pushMe(span(0.4, 5.2, echoText), () => h.committed.push("me"));
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  h.filter.pushOther(span(0, 11.5, other));
+  assert.deepEqual(h.committed, ["me"]);
+  assert.equal(h.dropped.length, 0);
+  h.filter.reset();
+});
