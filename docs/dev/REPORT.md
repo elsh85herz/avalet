@@ -338,7 +338,7 @@ pacing not touched. Details in `PROGRESS.md` and `DECISIONS.md` ("CLOUD_TASK_6")
 | `electron/transcript-clean.test.ts`, `electron/echo-filter.test.ts`, `electron/meetings-store.test.ts` | every line in both channels: mic copies marked; both talking at once: both kept; later restatement kept; credit lines only whole and in a quiet stretch; quotes move to the kept line; exports skip and count; End marks and saves; 2,400 lines in about 60 ms; the live-filter escape reproduced; python3 on fake segments for the sidecar's confidence |
 | `electron/review-flow.test.ts` | the parcel call through AppCore: summary input without doubled or credit lines, decisions, participants, protocol line, check; live segments keep `end` and low confidence, the summary tags them |
 | `electron/log-hygiene.test.ts` | a canary in a doubled line, a credit line and an unsure line, the check and the transcript export: not in the log |
-| GitHub Actions CI runs 51, 53, 55 | green (50, 52, 54 cancelled by a newer push) |
+| GitHub Actions CI runs 51, 53, 55, 58 (final code and docs, `f89d714`) | green (50, 52, 54, 56, 57 cancelled by a newer push) |
 | Screenshots | `docs/screens/review-fidelity-*.png`; `review-*` regenerated (cost note and check button) |
 
 ## Needs a real call (and a Mac)

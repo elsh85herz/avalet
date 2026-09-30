@@ -260,7 +260,7 @@ Baseline on `aa85949`: `npm ci` ok, `npm run check` ok (227/227).
 - Phase 3: contradiction and names rules, participants (`electron/shared/participants.ts`), protocol and screen line, End-screen note for every review summary.
 - Phase 4: `electron/transcript-clean.ts`, `electron/transcript-noise.ts`, sidecar `_confidence`, segment `end`/`filtered`/`lowConfidence`/`quiet`, hidden lines in the view, exports and summary input, unsure tag, weak-quote guard.
 - Phase 5: parcel fixture (`test/fixtures/parcel-call.json`, `spec-parcel.md`, `FAKE_PLANS.parcel`, mock `parcelSummary`, `AVALET_TEST_ECHO_HOLD_MS`), integration and E2E (`e2e/review-fidelity.spec.ts`), log hygiene, READMEs, CHANGELOG, MAC_VERIFY 9c (EN/RU), screenshots, self-review fixes, REPORT section.
-- Verified: `npm run check` 268/268 (i18n 501); `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 21/21; CI runs 51, 53, 55 green.
+- Verified: `npm run check` 268/268 (i18n 501); `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 21/21; CI runs 51, 53, 55 and 58 (on `f89d714`) green.
 
 ### In progress
 
