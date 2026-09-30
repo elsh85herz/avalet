@@ -131,3 +131,10 @@ One line each: decision, reason.
 - The pace is a pure `shouldAutoSuggest(pacing, ...)` with the table `AUTO_PACING` in `live-session.ts`; the toggle, Process now, quick actions and "Explain" are untouched, Process now still only shows with auto off (and always in interview). Reason: testable and estimable (the test file simulates a 10-minute call); a fifth button in the free mode row would not fit 380 px.
 - Overlay RU/EN button removed; the overlay still follows `uiLanguage` changes live (listener kept). Language stays settable in Advanced Settings (header button), Simple Settings (select) and the first-run wizard (header button); "the pre-meeting setup screen" is read as the first-run setup, because the Simple home has no language control and the task says not to add one. The E2E language check moved to Simple Settings; `explainThis` and its comment untouched (E2E asserts the button is still on the overlay).
 - Guide images `overlay-expanded.png`, `overlay-checklist.png` and `mode-*.png` regenerated from the screenshot mode (with `--user-data-dir` of a fresh profile so no old overlay history shows); the Auto ring re-measured by a pixel scan of the green pill (moved 44 px right, 1 px up: `{x:323,y:43}`); End, quick-actions and checklist rings checked unchanged.
+
+## CLOUD_TASK_5 (review mode: spec sync)
+
+- The design decisions for this task are numbered in `docs/dev/spec-sync-plan.md`; the lines below are the ones worth finding without opening it.
+- The artifact is its own field (settings `artifactName`/`artifactText`, `Meeting.artifact`), not part of the briefing. Reason: the briefing is reference-only and capped in live calls; the artifact is the thing being edited and needs its full text at the end.
+- Artifact cap 200,000 characters, refused above with a plain message; the cost is highlighted above 60,000. Reason: task rule; about 67 k tokens plus the transcript still fits large-context providers.
+- Rough token figures use 3 characters per token everywhere (warnings, estimates). Reason: Russian text on current tokenizers is about 2.5-4 chars per token; 3 is the middle and matches the mock server.

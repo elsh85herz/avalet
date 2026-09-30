@@ -1,6 +1,6 @@
 # Progress (task scaffolding, delete before going public)
 
-Resume rule: read `CLOUD_TASK_4.md` (current task: checklist UX, single speech model, quieter hints, overlay cleanup), `CLOUD_TASK.md` sections 0-3, `CLOUD_TASK_2.md` and `CLOUD_TASK_3.md` (house style), then this file, then `DECISIONS.md`, then `checklist-ux-plan.md`. Work continues from "CLOUD_TASK_4: Next" at the bottom.
+Resume rule: read `CLOUD_TASK_5.md` (current task: review mode as a spec-sync workflow), `CLOUD_TASK.md` sections 0-3, `CLOUD_TASK_2.md`, `CLOUD_TASK_3.md`, `CLOUD_TASK_4.md` (house style), then this file, then `DECISIONS.md`, then `spec-sync-plan.md`. Work continues from "CLOUD_TASK_5: Next" at the bottom.
 
 ## Environment facts (cloud container, 2026-09-26)
 
@@ -216,6 +216,26 @@ Baseline on `abfbb72`: `npm ci` ok, `npm run check` ok (i18n 398 strings, 168/16
 ### Next
 
 - Owner: decisions in REPORT "CLOUD_TASK_4".
+
+### Blockers
+
+(none)
+
+## CLOUD_TASK_5 (review mode: spec sync), started 2026-09-30
+
+Baseline on `f711314`: `npm ci` ok, `npm run check` ok (187/187).
+
+### Done
+
+- Phase 0: `docs/dev/spec-sync-plan.md` (where the artifact lives, cap, index for live calls, decision shape, patch addressing, warnings). Private, in CLEANUP with `CLOUD_TASK_5*.md`.
+
+### In progress
+
+- Phase 1: load the artifact (settings + meeting fields, ContextFields field with cost note, live index, review prompt paragraph, board proposals).
+
+### Next
+
+- Phase 2 (decisions in the summary), 3 (decisions panel), 4 (patches, preview, apply), 5 (exports), 6 (docs, E2E, report).
 
 ### Blockers
 
