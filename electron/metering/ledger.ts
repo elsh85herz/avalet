@@ -114,7 +114,7 @@ export function summarize(state: LedgerState, now: number, meetingId: string | n
     avalet: totalsOf(month?.avalet),
     byPurpose: {
       ...Object.fromEntries(
-        (["suggestion", "tracker", "summary", "screenshot"] as UsagePurpose[]).map((p) => [
+        (["suggestion", "tracker", "summary", "screenshot", "artifact"] as UsagePurpose[]).map((p) => [
           p,
           add2(month?.own.byPurpose[p], month?.avalet.byPurpose[p]),
         ]),

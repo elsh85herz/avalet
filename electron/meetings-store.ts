@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { MeetingMode } from "./modes.js";
 import type { ActionItem, AgendaStatusItem } from "./summary-format.js";
-import type { Meeting, MeetingListItem, TranscriptSegment } from "./shared/ipc-contract.js";
+import type { ArtifactDoc, Meeting, MeetingListItem, TranscriptSegment } from "./shared/ipc-contract.js";
 
 export type { Meeting, MeetingListItem, TranscriptSegment };
 
@@ -67,6 +67,7 @@ export function startMeeting(input: {
   mode: MeetingMode;
   context: string;
   agenda?: string[];
+  artifact?: ArtifactDoc;
 }): Meeting {
   if (current && !current.endedAt) return current;
   const startedAt = Date.now();
@@ -78,6 +79,7 @@ export function startMeeting(input: {
     context: input.context,
     transcript: [],
     agenda: input.agenda ?? [],
+    ...(input.artifact?.text ? { artifact: { name: input.artifact.name, text: input.artifact.text } } : {}),
   };
   writeMeeting(current);
   return current;
@@ -113,6 +115,32 @@ export function setCurrentContext(context: string): void {
   if (!current || current.endedAt) return;
   current.context = context;
   scheduleFlush();
+}
+
+/**
+ * The document of a review meeting. Replacing it drops what was computed from
+ * the old one (patch preview, result); decisions stay, they came from the call.
+ */
+export function setMeetingArtifact(id: string, doc: ArtifactDoc | null): Meeting | null {
+  const meeting = current?.id === id ? current : readMeeting(id);
+  if (!meeting) return null;
+  if (doc?.text) meeting.artifact = { name: doc.name, text: doc.text };
+  else delete meeting.artifact;
+  delete meeting.artifactProposal;
+  delete meeting.artifactResult;
+  if (meeting === current) scheduleFlush();
+  else writeMeeting(meeting);
+  return meeting;
+}
+
+/** Saves any change to a meeting record (the running one is flushed right away). */
+export function updateMeeting(id: string, change: (meeting: Meeting) => void): Meeting | null {
+  const meeting = current?.id === id ? current : readMeeting(id);
+  if (!meeting) return null;
+  change(meeting);
+  if (meeting === current) flushNow();
+  else writeMeeting(meeting);
+  return meeting;
 }
 
 export function renameMeeting(id: string, title: string): void {

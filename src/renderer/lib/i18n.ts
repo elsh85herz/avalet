@@ -66,7 +66,7 @@ export type UiStrings = {
     toggleTitle: string;
     copy: string;
     copied: string;
-    sections: Record<"requirements" | "risks" | "slices" | "separate" | "deviations" | "checks" | "remarks" | "decisions", string>;
+    sections: Record<"requirements" | "risks" | "slices" | "separate" | "deviations" | "checks" | "remarks" | "proposals" | "decisions", string>;
   };
   locks: {
     modeBadge: string;
@@ -320,7 +320,7 @@ export type UiStrings = {
     thisMeeting: string;
     estimatedNote: string;
     byPurpose: string;
-    purposes: Record<"suggestion" | "tracker" | "summary" | "screenshot", string>;
+    purposes: Record<"suggestion" | "tracker" | "summary" | "screenshot" | "artifact", string>;
     overlayTitle: string;
     none: string;
   };
@@ -393,6 +393,80 @@ export type UiStrings = {
     actionOwner: string;
     actionDue: string;
     jumpTitle: string;
+  };
+  spec: {
+    fieldLabel: string;
+    fieldOptional: string;
+    fieldHint: string;
+    loadFile: string;
+    pastePlaceholder: string;
+    pastedName: string;
+    sizeLine: string;
+    remove: string;
+    tooLarge: string;
+    locked: string;
+    saved: string;
+    costNote: string;
+    costSection: string;
+    costHigh: string;
+    summaryCost: string;
+    decisionsTitle: string;
+    decisionsHint: string;
+    noDocument: string;
+    attachDocument: string;
+    noDecisions: string;
+    noDecisionsAfter: string;
+    include: string;
+    statusLabel: string;
+    sectionLabel: string;
+    sectionUnknown: string;
+    textLabel: string;
+    textPlaceholder: string;
+    byLabel: string;
+    beforeLabel: string;
+    afterLabel: string;
+    details: string;
+    deleteRow: string;
+    addRow: string;
+    ungrounded: string;
+    edited: string;
+    jumpTitle: string;
+    updateButton: string;
+    updateNeedsDocument: string;
+    updateNeedsChecked: string;
+    updateCostInline: string;
+    confirmTitle: string;
+    confirmText: string;
+    confirm: string;
+    cancel: string;
+    working: string;
+    previewTitle: string;
+    previewHint: string;
+    oldLabel: string;
+    newLabel: string;
+    emptyFragment: string;
+    apply: string;
+    notAppliedTitle: string;
+    skippedBy: string;
+    fixByHand: string;
+    noPatches: string;
+    resultTitle: string;
+    resultLine: string;
+    revert: string;
+    downloadDoc: string;
+    copyDoc: string;
+    copied: string;
+    downloadDecisions: string;
+    updateError: string;
+    badReply: string;
+    fileTitle: string;
+    fileDocument: string;
+    fileQuote: string;
+    fileActions: string;
+    fileNone: string;
+    status: Record<"accepted" | "proposed" | "rejected" | "open", string>;
+    ops: Record<"replace" | "insert_after" | "delete", string>;
+    problems: Record<"anchor-missing" | "anchor-ambiguous" | "overlap" | "empty-anchor" | "bad-op", string>;
   };
 };
 
@@ -472,6 +546,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         deviations: "Deviations",
         checks: "Ask to see",
         remarks: "Remarks",
+        proposals: "Proposals",
         decisions: "Decisions",
       },
     },
@@ -482,7 +557,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         requirements: "During the call, candidate requirements and risks are collected in a separate list.",
         grooming: "During the call, the proposed slices, separate tasks and risks are collected in a separate list.",
         demo: "During the call, deviations from the requirements and what to ask to see are collected in a separate list.",
-        review: "During the call, remarks and decisions are collected in a separate list.",
+        review: "During the call, remarks, proposals and decisions are collected in a separate list.",
       },
       planLine: "Included in Pro with every meeting type and the live checklist.",
       includedLine: "Your plan includes: {modes}.",
@@ -743,7 +818,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       thisMeeting: "This meeting",
       estimatedNote: "{n} calls had no count from the provider and are estimated.",
       byPurpose: "By purpose",
-      purposes: { suggestion: "Suggestions", tracker: "Checklist", summary: "Summaries", screenshot: "Screenshots" },
+      purposes: { suggestion: "Suggestions", tracker: "Checklist", summary: "Summaries", screenshot: "Screenshots", artifact: "Document updates" },
       overlayTitle: "Tokens used in this meeting",
       none: "No model calls yet this month.",
     },
@@ -782,7 +857,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       requirements: "A session with a stakeholder: turns wishes into testable requirements, catches contradictions, suggests what to clarify.",
       grooming: "Estimating and splitting a task: scope, dependencies, hidden work, a split into slices with acceptance criteria.",
       demo: "Accepting what is shown: compares it with the requirements, finds unverified states, prepares the sign-off conditions.",
-      review: "You present a document: notes remarks by section, catches decisions on open questions with owner and deadline, prepares short answers from your briefing.",
+      review: "You present a document: notes remarks and proposals by section, catches decisions with owner and deadline. Load the document before the call, and after it update the document from the confirmed decisions.",
       interview: "You are the one answering: a complete, structured answer with an example and the likely follow-up question.",
     },
     notesTitle: "Show or hide the notes window (transcript, summary, settings)",
@@ -831,6 +906,80 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       actionOwner: "Owner",
       actionDue: "Due",
       jumpTitle: "Show this moment in the transcript",
+    },
+    spec: {
+      fieldLabel: "Document under review",
+      fieldOptional: "(optional, .md or .txt)",
+      fieldHint: "The specification you are discussing. After the call you get the list of decisions and can update the document with them.",
+      loadFile: "Load file",
+      pastePlaceholder: "Or paste the document text here",
+      pastedName: "Pasted text",
+      sizeLine: "{name}: {chars} characters",
+      remove: "Remove",
+      tooLarge: "The document is too long: {chars} characters, the limit is 200,000. Load only the sections this call is about.",
+      locked: "The document stays as it is while the meeting runs. You can change it after the meeting ends.",
+      saved: "Saved",
+      costNote: "Cost: at the end the whole document goes to the model twice, for the summary and for the update, about {tokens} tokens each time. Hints during the call get only its table of contents, about {index} tokens each.",
+      costSection: "A typed question that names a section, for example «section 3.2», also carries that section, up to about {tokens} tokens.",
+      costHigh: "The document is large, so the summary and the update cost noticeably more than usual.",
+      summaryCost: "This summary also reads the document: about {tokens} more tokens than usual.",
+      decisionsTitle: "Decisions",
+      decisionsHint: "Check what goes into the document update. Everything here comes from the call; correct it if needed.",
+      noDocument: "No document is attached to this meeting, so it cannot be updated.",
+      attachDocument: "Attach document",
+      noDecisions: "No decisions yet. Make the summary: decisions are collected from it.",
+      noDecisionsAfter: "The summary found no decisions in this call. If something was agreed, add it by hand.",
+      include: "Include in the update",
+      statusLabel: "Status",
+      sectionLabel: "Section",
+      sectionUnknown: "Not determined",
+      textLabel: "Decision",
+      textPlaceholder: "What was decided",
+      byLabel: "Who",
+      beforeLabel: "Was",
+      afterLabel: "Becomes",
+      details: "Details",
+      deleteRow: "Delete",
+      addRow: "Add decision",
+      ungrounded: "The supporting words were not found in the transcript. Check before including.",
+      edited: "edited",
+      jumpTitle: "Show this moment in the transcript",
+      updateButton: "Update the document",
+      updateNeedsDocument: "Attach the document to update it.",
+      updateNeedsChecked: "Check at least one decision.",
+      updateCostInline: "about {tokens} tokens",
+      confirmTitle: "Update the document?",
+      confirmText: "One request to the model: the whole document (about {doc} tokens), the checked decisions ({count}, about {decisions}) and the answer with the changes (about {reply}). About {total} tokens in all. Nothing changes in the document until you look through the changes and press Apply.",
+      confirm: "Send",
+      cancel: "Cancel",
+      working: "Preparing the changes…",
+      previewTitle: "Changes to the document",
+      previewHint: "Check each change. Only the checked ones are applied.",
+      oldLabel: "Now",
+      newLabel: "After",
+      emptyFragment: "(nothing)",
+      apply: "Apply",
+      notAppliedTitle: "Not applied",
+      skippedBy: "The model could not place it: {reason}",
+      fixByHand: "Add these by hand to the downloaded document.",
+      noPatches: "The model proposed no changes.",
+      resultTitle: "Updated document",
+      resultLine: "Changes applied: {count}.",
+      revert: "Back to the original",
+      downloadDoc: "Download document",
+      copyDoc: "Copy document",
+      copied: "Copied",
+      downloadDecisions: "Download decisions",
+      updateError: "Could not prepare the changes: {message}",
+      badReply: "The model answered in an unexpected form. Try again.",
+      fileTitle: "Decisions",
+      fileDocument: "Document",
+      fileQuote: "Quote",
+      fileActions: "Action points",
+      fileNone: "none",
+      status: { accepted: "Accepted", proposed: "Proposed", rejected: "Rejected", open: "Open" },
+      ops: { replace: "Replace", insert_after: "Insert after", delete: "Delete" },
+      problems: { "anchor-missing": "the place it points to is not in the document", "anchor-ambiguous": "the place it points to occurs more than once", overlap: "overlaps another change", "empty-anchor": "no place in the document was given", "bad-op": "unknown kind of change" },
     },
   },
   ru: {
@@ -904,6 +1053,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         deviations: "Отклонения",
         checks: "Попросить показать",
         remarks: "Замечания",
+        proposals: "Предложения",
         decisions: "Решения",
       },
     },
@@ -914,7 +1064,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
         requirements: "По ходу встречи требования и риски собираются в отдельный список.",
         grooming: "По ходу встречи предложенные срезы, отдельные задачи и риски собираются в отдельный список.",
         demo: "По ходу встречи отклонения от требований и что ещё попросить показать собираются в отдельный список.",
-        review: "По ходу встречи замечания и решения собираются в отдельный список.",
+        review: "По ходу встречи замечания, предложения и решения собираются в отдельный список.",
       },
       planLine: "Входит в Pro вместе со всеми типами встреч и живым чек-листом.",
       includedLine: "В вашем тарифе есть: {modes}.",
@@ -1175,7 +1325,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       thisMeeting: "Эта встреча",
       estimatedNote: "По {n} запросам провайдер не прислал счётчик, их расход оценён.",
       byPurpose: "По назначению",
-      purposes: { suggestion: "Подсказки", tracker: "Чек-лист", summary: "Итоги", screenshot: "Скриншоты" },
+      purposes: { suggestion: "Подсказки", tracker: "Чек-лист", summary: "Итоги", screenshot: "Скриншоты", artifact: "Обновления документа" },
       overlayTitle: "Токенов потрачено на этой встрече",
       none: "В этом месяце запросов к модели ещё не было.",
     },
@@ -1214,7 +1364,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       requirements: "Встреча с заказчиком: превращает пожелания в проверяемые требования, ловит противоречия, подсказывает, что уточнить.",
       grooming: "Оценка и разбиение задачи: границы, зависимости, скрытая работа, декомпозиция на куски с критериями приёмки.",
       demo: "Приёмка показанного: сверяет с требованиями, ищет непроверенные состояния, готовит условия для подписи.",
-      review: "Вы показываете документ: фиксирует замечания по разделам, ловит решения по открытым вопросам с ответственным и сроком, готовит короткие ответы из вашего брифа.",
+      review: "Вы показываете документ: фиксирует замечания и предложения по разделам, ловит решения с ответственным и сроком. Загрузите документ до звонка, а после обновите его по подтверждённым решениям.",
       interview: "Отвечаете вы: развёрнутый структурный ответ с примером и вероятным следующим вопросом.",
     },
     notesTitle: "Показать или скрыть окно конспекта (транскрипт, итог, настройки)",
@@ -1263,6 +1413,80 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       actionOwner: "Ответственный",
       actionDue: "Срок",
       jumpTitle: "Показать это место в расшифровке",
+    },
+    spec: {
+      fieldLabel: "Документ для ревью",
+      fieldOptional: "(необязательно, .md или .txt)",
+      fieldHint: "Спецификация, которую вы обсуждаете. После звонка будет список решений, и по ним можно обновить документ.",
+      loadFile: "Загрузить файл",
+      pastePlaceholder: "Или вставьте сюда текст документа",
+      pastedName: "Вставленный текст",
+      sizeLine: "{name}: {chars} символов",
+      remove: "Убрать",
+      tooLarge: "Документ слишком длинный: {chars} символов, предел 200 000. Загрузите только разделы, о которых будет разговор.",
+      locked: "Пока идёт встреча, документ не меняется. Его можно заменить после завершения встречи.",
+      saved: "Сохранено",
+      costNote: "Расход: в конце документ целиком уйдёт модели два раза, для итогов и для обновления, примерно по {tokens} токенов. Подсказки во время звонка получают только оглавление, примерно по {index} токенов.",
+      costSection: "Если в вопросе назвать раздел, например «раздел 3.2», к этому вопросу добавится текст раздела, до {tokens} токенов.",
+      costHigh: "Документ большой, поэтому итоги и обновление обойдутся заметно дороже обычного.",
+      summaryCost: "Итоги этой встречи читают и документ: примерно на {tokens} токенов больше обычного.",
+      decisionsTitle: "Решения",
+      decisionsHint: "Отметьте, что войдёт в обновление документа. Всё здесь взято из разговора; при необходимости поправьте.",
+      noDocument: "К этой встрече не приложен документ, поэтому обновить его нельзя.",
+      attachDocument: "Приложить документ",
+      noDecisions: "Решений пока нет. Сделайте итоги: решения собираются из них.",
+      noDecisionsAfter: "В итогах решений не нашлось. Если о чём-то договорились, добавьте решение вручную.",
+      include: "Включить в обновление",
+      statusLabel: "Статус",
+      sectionLabel: "Раздел",
+      sectionUnknown: "Не определён",
+      textLabel: "Решение",
+      textPlaceholder: "Что решили",
+      byLabel: "Кто",
+      beforeLabel: "Было",
+      afterLabel: "Стало",
+      details: "Подробности",
+      deleteRow: "Удалить",
+      addRow: "Добавить решение",
+      ungrounded: "Подтверждающих слов в расшифровке не нашлось. Проверьте, прежде чем включать.",
+      edited: "изменено",
+      jumpTitle: "Показать это место в расшифровке",
+      updateButton: "Обновить документ",
+      updateNeedsDocument: "Чтобы обновить документ, приложите его.",
+      updateNeedsChecked: "Отметьте хотя бы одно решение.",
+      updateCostInline: "примерно {tokens} токенов",
+      confirmTitle: "Обновить документ?",
+      confirmText: "Один запрос к модели: весь документ (примерно {doc} токенов), отмеченные решения ({count}, примерно {decisions}) и ответ с правками (примерно {reply}). Всего примерно {total} токенов. В документе ничего не изменится, пока вы не просмотрите правки и не нажмёте «Применить».",
+      confirm: "Отправить",
+      cancel: "Отмена",
+      working: "Готовлю правки…",
+      previewTitle: "Правки в документе",
+      previewHint: "Проверьте каждую правку. Применятся только отмеченные.",
+      oldLabel: "Сейчас",
+      newLabel: "Станет",
+      emptyFragment: "(ничего)",
+      apply: "Применить",
+      notAppliedTitle: "Не применено",
+      skippedBy: "Модель не нашла, куда это внести: {reason}",
+      fixByHand: "Эти пункты внесите вручную в скачанный документ.",
+      noPatches: "Модель не предложила правок.",
+      resultTitle: "Обновлённый документ",
+      resultLine: "Применено правок: {count}.",
+      revert: "Вернуть исходный",
+      downloadDoc: "Скачать документ",
+      copyDoc: "Скопировать документ",
+      copied: "Скопировано",
+      downloadDecisions: "Скачать решения",
+      updateError: "Не удалось подготовить правки: {message}",
+      badReply: "Модель ответила в неожиданном виде. Попробуйте ещё раз.",
+      fileTitle: "Решения",
+      fileDocument: "Документ",
+      fileQuote: "Цитата",
+      fileActions: "Поручения",
+      fileNone: "нет",
+      status: { accepted: "Принято", proposed: "Предложено", rejected: "Отклонено", open: "Не решено" },
+      ops: { replace: "Заменить", insert_after: "Вставить после", delete: "Удалить" },
+      problems: { "anchor-missing": "указанного места нет в документе", "anchor-ambiguous": "указанное место встречается в документе несколько раз", overlap: "пересекается с другой правкой", "empty-anchor": "место в документе не указано", "bad-op": "непонятный вид правки" },
     },
   },
 };

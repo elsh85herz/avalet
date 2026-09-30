@@ -6,6 +6,7 @@ import { parseAgendaText } from "../lib/agenda.js";
 import { useAppSettings } from "../lib/settings.js";
 import { IconHelp } from "../icons.js";
 import { ModePicker } from "./ModePicker.js";
+import { ArtifactField } from "./ArtifactField.js";
 
 type Props = {
   uiLanguage: UiLanguage;
@@ -119,6 +120,7 @@ export function ContextFields({ uiLanguage, roleWording, advanced, hideMode }: P
           {!edited.context ? "" : contextSaved ? t.contextSaved : "…"}
         </p>
       </div>
+      {settings.meetingMode === "review" && !roleWording ? <ArtifactField uiLanguage={uiLanguage} /> : null}
       <div className="field">
         <label htmlFor="meeting-agenda">
           {t.agendaLabel} <span className="optional">{t.agendaOptional}</span>

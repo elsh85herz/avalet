@@ -64,6 +64,9 @@ export type SettingsShape = {
   liveTrackerEnabled: boolean | null;
   /** Folder exports are offered in; "" = the system Documents folder. */
   exportDir: string;
+  /** Review mode: the document for the next meeting (file name, full text). Copied onto the meeting at Start. */
+  artifactName: string;
+  artifactText: string;
 };
 
 export const SETTINGS_SCHEMA_VERSION = 1;
@@ -104,6 +107,8 @@ export function defaultSettings(): SettingsShape {
     speechModel: "small",
     liveTrackerEnabled: null,
     exportDir: "",
+    artifactName: "",
+    artifactText: "",
   };
 }
 
@@ -199,6 +204,17 @@ export function getSessionContext(): string {
 
 export function setSessionContext(text: string): void {
   write("sessionContext", text);
+}
+
+export function getArtifact(): { name: string; text: string } {
+  const text = read("artifactText");
+  const name = read("artifactName");
+  return typeof text === "string" && text ? { name: typeof name === "string" ? name : "", text } : { name: "", text: "" };
+}
+
+export function setArtifact(doc: { name: string; text: string }): void {
+  write("artifactName", doc.text ? doc.name : "");
+  write("artifactText", doc.text);
 }
 
 export function getAutoDetectEnabled(): boolean {

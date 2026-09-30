@@ -28,15 +28,18 @@ import {
   renameMeeting,
   setAgenda,
   setCurrentContext,
+  setMeetingArtifact,
   setCurrentMode,
   startMeeting,
   transcriptToRawText,
 } from "./meetings-store.js";
 import { summarizeMeeting } from "./meeting-summary.js";
 import { buildProtocolMarkdown, parseAgendaText } from "./summary-format.js";
+import { ARTIFACT_CHAR_CAP } from "./shared/artifact.js";
 import {
   getAgendaText,
   getAllProviderSettings,
+  getArtifact,
   getAutoDetectEnabled,
   getExportDir,
   getGuideSeen,
@@ -59,6 +62,7 @@ import {
   isUiLevelForced,
   setAgendaText,
   setApiKey,
+  setArtifact,
   setAutoDetectEnabled,
   setGuideSeen,
   setKeyCheck,
@@ -145,6 +149,13 @@ export { SELFTEST_TRANSCRIPT } from "./shared/selftest.js";
 function requireString(value: unknown, name: string): string {
   if (typeof value !== "string") throw new Error(`${name} must be a string`);
   return value;
+}
+
+function validArtifact(raw: unknown): { name: string; text: string } {
+  const doc = (raw ?? {}) as { name?: unknown; text?: unknown };
+  if (typeof doc.text !== "string") throw new Error("document text must be a string");
+  const name = typeof doc.name === "string" ? doc.name.replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, 200) : "";
+  return { name, text: doc.text };
 }
 
 function pickLabels(labels: unknown): (key: string, fallback: string) => string {
@@ -300,6 +311,8 @@ export class AppCore {
       fakeCapture: Boolean(this.deps.fakeCapture),
       exportDir: this.exportDir(),
       builtInProviderAvailable: Boolean(this.deps.billing?.builtInAvailable),
+      artifactName: getArtifact().name,
+      artifactChars: getArtifact().text.length,
     };
   }
 
@@ -488,6 +501,9 @@ export class AppCore {
       if (this.gate().modeLocked(mode)) throw new Error("this meeting mode is not in the current plan");
       setMeetingMode(mode);
       setCurrentMode(mode);
+      // Switched to review during a call: the loaded document comes along.
+      const running = getCurrentMeeting();
+      if (mode === "review" && running && !running.artifact && getArtifact().text) setMeetingArtifact(running.id, getArtifact());
       emit("avalet:event:meeting-mode-changed", mode);
     };
 
@@ -557,6 +573,22 @@ export class AppCore {
       setSessionContext(text);
       setCurrentContext(text);
     };
+    h["avalet:artifact-get"] = () => getArtifact();
+    h["avalet:artifact-set"] = (raw) => {
+      const doc = validArtifact(raw);
+      if (doc.text.length > ARTIFACT_CHAR_CAP) return { ok: false, reason: "too-large", chars: doc.text.length };
+      // The running meeting already has its copy; the field is read-only until End.
+      const running = getCurrentMeeting();
+      if (running && !running.endedAt) return { ok: false, reason: "meeting-running", chars: doc.text.length };
+      setArtifact(doc);
+      return { ok: true };
+    };
+    h["avalet:meetings-set-artifact"] = (rawId, raw) => {
+      const id = requireString(rawId, "id");
+      const doc = raw === null ? null : validArtifact(raw);
+      if (doc && doc.text.length > ARTIFACT_CHAR_CAP) throw new Error("the document is too large");
+      return setMeetingArtifact(id, doc);
+    };
     h["avalet:auto-detect-set"] = (enabled) => {
       const next = Boolean(enabled);
       setAutoDetectEnabled(next);
@@ -614,6 +646,8 @@ export class AppCore {
         mode: getMeetingMode(),
         context: getSessionContext(),
         agenda: parseAgendaText(getAgendaText()),
+        // Only review meetings keep the document: it is what they are about.
+        artifact: getMeetingMode() === "review" ? getArtifact() : undefined,
       });
       emit("avalet:event:meeting-started", meeting, "main");
       this.deps.onSessionStarted?.();

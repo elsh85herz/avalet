@@ -28,7 +28,7 @@ test("a marker inside a sentence is not an item", () => {
   );
 });
 
-test("grooming: slices, separate tasks and risks; demo: deviations and checks; review: remarks and decisions", () => {
+test("grooming: slices, separate tasks and risks; demo: deviations and checks; review: remarks, proposals and decisions", () => {
   const grooming = extractBoard("grooming", [
     "Срез: выгрузка отчёта без фильтров. Критерий: файл открывается в Excel.\nОтдельная задача: права доступа к отчёту\nRisk: backfill for old data",
   ]);
@@ -42,8 +42,10 @@ test("grooming: slices, separate tasks and risks; demo: deviations and checks; r
   );
   const demo = extractBoard("demo", ["Попросите показать: пустой список\nОтклонение: по требованию 3 должна быть сортировка, показано без неё"]);
   assert.deepEqual(demo.map((s) => s.items), [["по требованию 3 должна быть сортировка, показано без неё"], ["пустой список"]]);
-  const review = extractBoard("review", ["Замечание: раздел 2, уточнить термин, Ольга\nРешение: принято, срок пятница"]);
-  assert.deepEqual(review.map((s) => s.key), ["remarks", "decisions"]);
+  const review = extractBoard("review", [
+    "Замечание: раздел 2, уточнить термин, Ольга\nПредложение: раздел 3.1, поднять лимит до 100, разработчик\nРешение: принято, срок пятница",
+  ]);
+  assert.deepEqual(review.map((s) => [s.key, s.items.length]), [["remarks", 1], ["proposals", 1], ["decisions", 1]]);
 });
 
 test("free and interview have no board; a long meeting keeps the newest items", () => {
@@ -65,6 +67,7 @@ test("clipboard text lists only sections with items", () => {
     deviations: "",
     checks: "",
     remarks: "",
+    proposals: "",
     decisions: "",
   });
   assert.equal(text, "Требования\n- a\n- b");

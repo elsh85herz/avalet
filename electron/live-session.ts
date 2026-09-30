@@ -16,6 +16,8 @@ import {
 } from "./settings-store.js";
 import { MODE_INSTRUCTIONS, type MeetingMode } from "./modes.js";
 import type { PythonRuntime } from "./python-runtime.js";
+import { getCurrentMeeting } from "./meetings-store.js";
+import { buildArtifactIndex, findSection, parseSections, sectionAskedFor, sectionText } from "./shared/artifact.js";
 
 const BASE_SYSTEM_PROMPT = [
   "You are a live meeting copilot for a systems/business analyst.",
@@ -182,7 +184,43 @@ export function capBriefing(text: string, cap = LIVE_BRIEFING_CHAR_CAP): string 
   return `${trimmed.slice(0, cap).trimEnd()}\n[Briefing shortened for the live call; the full text is used for the meeting summary.]`;
 }
 
+// The index is rebuilt only when the document changes (once per meeting).
+let indexCache: { text: string; index: string } | null = null;
+function artifactIndex(text: string): string {
+  if (indexCache?.text !== text) indexCache = { text, index: buildArtifactIndex(text) };
+  return indexCache.index;
+}
+
+/**
+ * The document of the running review meeting, or "" (other modes, none
+ * loaded). Live calls never get its text, only the bounded index.
+ */
+function reviewArtifactText(): string {
+  if (getMeetingMode() !== "review") return "";
+  return getCurrentMeeting()?.artifact?.text ?? "";
+}
+
+/**
+ * A typed question that names a section ("что в разделе 3.2?") gets that one
+ * section of the document, in review mode only. Everything else asked or
+ * automatic gets the index alone.
+ */
+export function sectionForQuestion(question: string, artifact: string): string {
+  const number = artifact ? sectionAskedFor(question) : null;
+  if (!number) return "";
+  const section = findSection(parseSections(artifact), number);
+  return section ? sectionText(artifact, section) : "";
+}
+
 export function buildSystemPrompt(options: { includeScreenshot?: boolean; includeScreenText?: boolean } = {}): string {
+  const artifact = reviewArtifactText();
+  const index = artifact
+    ? `\n\nIndex of the document under review (section numbers, headings and first lines only; the full text is not included here). Address sections by these numbers:\n<document_index>\n${artifactIndex(artifact)}\n</document_index>`
+    : "";
+  return `${buildBasePrompt(options)}${index}`;
+}
+
+function buildBasePrompt(options: { includeScreenshot?: boolean; includeScreenText?: boolean }): string {
   let prompt = BASE_SYSTEM_PROMPT;
   const modeInstruction = MODE_INSTRUCTIONS[getMeetingMode()];
   if (modeInstruction) prompt = `${prompt} ${modeInstruction}`;
@@ -348,9 +386,11 @@ export class LiveSession {
     const trimmed = question.trim();
     if (!trimmed) return;
     if (this.generating) this.abortController?.abort();
+    const section = sectionForQuestion(trimmed, reviewArtifactText());
+    const asked = section ? `${trimmed}\n\n[Text of that section of the document under review]:\n${section}` : trimmed;
     const prompt = this.transcript
-      ? `${this.transcript}\n\n[Analyst's direct question]: ${trimmed}`
-      : `[Analyst's direct question]: ${trimmed}`;
+      ? `${this.transcript}\n\n[Analyst's direct question]: ${asked}`
+      : `[Analyst's direct question]: ${asked}`;
     await this.runGeneration(prompt);
   }
 

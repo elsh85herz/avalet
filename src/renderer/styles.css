@@ -2261,3 +2261,26 @@ a {
 .locked-card.compact .locked-shot img {
   max-height: 150px;
 }
+
+/* Review mode: document field, decisions panel, patch preview (CLOUD_TASK_5). */
+.cost-note {
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.cost-note p {
+  margin: 2px 0;
+}
+.cost-note.high {
+  border-color: var(--warn);
+  color: var(--text);
+}
+.cost-note .cost-high {
+  font-weight: 600;
+}
+.problem-text {
+  color: var(--danger-text);
+}

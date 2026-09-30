@@ -73,6 +73,9 @@ export type SettingsSnapshot = {
   exportDir: string;
   /** The built-in "Avalet" provider exists in this build (a billing server is configured). */
   builtInProviderAvailable: boolean;
+  /** Document for the next review meeting: file name ("" = none) and length; the text itself via artifact-get. */
+  artifactName: string;
+  artifactChars: number;
 };
 
 export type LiveBlockEvent = { id: string };
@@ -129,7 +132,74 @@ export type Meeting = {
   agendaStatus?: AgendaStatusItem[];
   /** Action points. */
   actions?: ActionItem[];
+  /** Review mode: the document under discussion, as loaded before Start. */
+  artifact?: ArtifactDoc;
+  /** Review mode: decisions from the summary, edited by the analyst. */
+  decisions?: Decision[];
+  /** The last "Update the document" answer, checked against the document. */
+  artifactProposal?: PatchProposal;
+  /** The document with the chosen patches applied; `artifact` keeps the original. */
+  artifactResult?: ArtifactResult;
 };
+
+// --- review mode: document, decisions, patches (CLOUD_TASK_5) ---
+
+/** A specification loaded for a review meeting. */
+export type ArtifactDoc = { name: string; text: string };
+export type ArtifactSetResult = { ok: true } | { ok: false; reason: "too-large" | "meeting-running"; chars: number };
+
+export type DecisionStatus = "accepted" | "proposed" | "rejected" | "open";
+export const DECISION_STATUSES: DecisionStatus[] = ["accepted", "proposed", "rejected", "open"];
+export type Decision = {
+  id: string;
+  /** One line: what was decided, phrased as an edit to the document. */
+  text: string;
+  status: DecisionStatus;
+  /** Who proposed or agreed, as said in the call. */
+  by: string;
+  /** "3.2 Title" from the document's index, or "не определён". */
+  section: string;
+  /** Old wording (from the call or read from the document); "" when unknown. */
+  before: string;
+  /** New wording, only as said in the call; "" when not said. */
+  after: string;
+  /** "Include in the update" checkbox. */
+  include: boolean;
+  /** Edited or added by the analyst: a new summary leaves it alone. */
+  manual?: boolean;
+  /** Deleted by the analyst: hidden, and a new summary does not bring it back. */
+  removed?: boolean;
+  /** The model gave a supporting quote that is not in the transcript (or none for an accepted one): check by hand. */
+  ungrounded?: boolean;
+} & QuoteRef;
+
+export type PatchOp = "replace" | "insert_after" | "delete";
+export type ArtifactPatch = {
+  id: string;
+  decisionId: string;
+  op: PatchOp;
+  /** Exact text copied from the document; must occur once. */
+  anchor: string;
+  /** New text (replace, insert_after); ignored for delete. */
+  text: string;
+};
+export type PatchProblem = "anchor-missing" | "anchor-ambiguous" | "overlap" | "empty-anchor" | "bad-op";
+export type CheckedPatch = ArtifactPatch & {
+  ok: boolean;
+  problem?: PatchProblem;
+  /** The document fragment the patch changes, and what it becomes (for the preview). */
+  oldFragment: string;
+  newFragment: string;
+};
+export type PatchProposal = {
+  at: number;
+  patches: CheckedPatch[];
+  /** Decisions the model could not place, with its reason. */
+  skipped: Array<{ decisionId: string; reason: string }>;
+  /** Decisions sent with the request. */
+  decisionIds: string[];
+};
+export type ArtifactResult = { text: string; patchIds: string[]; at: number };
 
 export type MeetingListItem = {
   id: string;
@@ -189,7 +259,7 @@ export type StartResult = { ok: true } | { ok: false; reason: "model-missing"; m
 
 // --- token metering ---
 
-export type UsagePurpose = "suggestion" | "tracker" | "summary" | "screenshot";
+export type UsagePurpose = "suggestion" | "tracker" | "summary" | "screenshot" | "artifact";
 export type UsageTotals = {
   inputTokens: number;
   outputTokens: number;
@@ -336,6 +406,12 @@ export type InvokeMap = {
   "avalet:meetings-set-agenda": [[id: string, agenda: string[]], Meeting | null];
   "avalet:agenda-set": [[text: string], void];
   "avalet:context-set": [[text: string], void];
+  /** The document for the next review meeting ({name: "", text: ""} when none). */
+  "avalet:artifact-get": [[], ArtifactDoc];
+  /** Refused above ARTIFACT_CHAR_CAP and while a meeting runs; an empty text clears it. */
+  "avalet:artifact-set": [[doc: ArtifactDoc], ArtifactSetResult];
+  /** Attaches (or with null removes) the document on a saved meeting, e.g. one forgotten before Start. */
+  "avalet:meetings-set-artifact": [[id: string, doc: ArtifactDoc | null], Meeting | null];
   "avalet:auto-detect-set": [[enabled: boolean], void];
   "avalet:overlay-set-opacity": [[opacity: number], void];
   "avalet:overlay-set-collapsed": [[collapsed: boolean], void];
@@ -438,6 +514,8 @@ export type AvaletApi = {
     updateProvider: (providerId: string, patch: { model?: string; baseUrl?: string; backgroundModel?: string }) => Promise<void>;
     setApiKey: (providerId: string, apiKey: string) => Promise<void>;
     setContext: (text: string) => Promise<void>;
+    getArtifact: () => Promise<ArtifactDoc>;
+    setArtifact: (doc: ArtifactDoc) => Promise<ArtifactSetResult>;
     setAgenda: (text: string) => Promise<void>;
     setAutoDetect: (enabled: boolean) => Promise<void>;
     setTheme: (theme: Theme) => Promise<void>;
@@ -541,6 +619,7 @@ export type AvaletApi = {
     exportTranscript: (id: string, labels: ExportLabels) => Promise<string | null>;
     setAgenda: (id: string, agenda: string[]) => Promise<Meeting | null>;
     toText: (id: string, labels: ExportLabels, modeLabel: string) => Promise<string>;
+    setArtifact: (id: string, doc: ArtifactDoc | null) => Promise<Meeting | null>;
   };
   events: {
     onBlockStart: Listener<"avalet:event:block-start">;
@@ -624,6 +703,9 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:meetings-set-agenda": true,
   "avalet:agenda-set": true,
   "avalet:context-set": true,
+  "avalet:artifact-get": true,
+  "avalet:artifact-set": true,
+  "avalet:meetings-set-artifact": true,
   "avalet:auto-detect-set": true,
   "avalet:overlay-set-opacity": true,
   "avalet:overlay-set-collapsed": true,

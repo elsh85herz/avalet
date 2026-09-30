@@ -6,7 +6,7 @@ import type { MeetingMode } from "../../../electron/shared/ipc-contract.js";
 // marker ("Требование: ...", "Срез: ..."); this file reads them back.
 // The model answers in Russian; the English markers are a fallback.
 
-export type BoardSectionKey = "requirements" | "risks" | "slices" | "separate" | "deviations" | "checks" | "remarks" | "decisions";
+export type BoardSectionKey = "requirements" | "risks" | "slices" | "separate" | "deviations" | "checks" | "remarks" | "proposals" | "decisions";
 
 type SectionSpec = { key: BoardSectionKey; markers: string[] };
 
@@ -25,6 +25,7 @@ export const MODE_BOARD: Partial<Record<MeetingMode, SectionSpec[]>> = {
   ],
   review: [
     { key: "remarks", markers: ["Замечание", "Remark"] },
+    { key: "proposals", markers: ["Предложение", "Proposal"] },
     { key: "decisions", markers: ["Решение", "Decision"] },
   ],
 };

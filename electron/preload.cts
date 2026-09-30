@@ -34,6 +34,8 @@ const api: AvaletApi = {
     updateProvider: (providerId, patch) => invoke("avalet:settings-update-provider", providerId, patch),
     setApiKey: (providerId, apiKey) => invoke("avalet:settings-set-api-key", providerId, apiKey),
     setContext: (text) => invoke("avalet:context-set", text),
+    getArtifact: () => invoke("avalet:artifact-get"),
+    setArtifact: (doc) => invoke("avalet:artifact-set", doc),
     setAgenda: (text) => invoke("avalet:agenda-set", text),
     setAutoDetect: (enabled) => invoke("avalet:auto-detect-set", enabled),
     setTheme: (theme) => invoke("avalet:theme-set", theme),
@@ -127,6 +129,7 @@ const api: AvaletApi = {
     exportTranscript: (id, labels) => invoke("avalet:meetings-export-transcript", id, labels),
     setAgenda: (id, agenda) => invoke("avalet:meetings-set-agenda", id, agenda),
     toText: (id, labels, modeLabel) => invoke("avalet:meetings-to-text", id, labels, modeLabel),
+    setArtifact: (id, doc) => invoke("avalet:meetings-set-artifact", id, doc),
   },
   events: {
     onBlockStart: on("avalet:event:block-start"),
