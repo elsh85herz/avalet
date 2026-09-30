@@ -113,3 +113,14 @@ test("decisions from the renderer are checked field by field", () => {
   assert.throws(() => sanitizeDecisions("nope"));
   assert.throws(() => sanitizeDecisions([{ id: "../../etc" }]));
 });
+
+// CLOUD_TASK_6 phase 1: an unanswered question repeated in the call.
+test("an open question keeps its repeat count and never starts checked", () => {
+  const [d] = groundDecisions([raw({ status: "open", text: "Как быть с выгрузкой в XLSX?", quote: "добавим выгрузку в XLSX", asked: 3 })], meeting, id);
+  assert.equal(d!.status, "open");
+  assert.equal(d!.asked, 3);
+  assert.equal(d!.include, false);
+  const [clean] = sanitizeDecisions([{ ...d, asked: 3 }]);
+  assert.equal(clean!.asked, 3);
+  assert.equal(sanitizeDecisions([{ ...d, asked: "many" }])[0]!.asked, undefined);
+});

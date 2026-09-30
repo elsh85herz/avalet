@@ -429,6 +429,7 @@ export type UiStrings = {
     deleteRow: string;
     addRow: string;
     ungrounded: string;
+    askedTimes: string;
     edited: string;
     jumpTitle: string;
     updateButton: string;
@@ -943,6 +944,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       deleteRow: "Delete",
       addRow: "Add decision",
       ungrounded: "The supporting words were not found in the transcript. Check before including.",
+      askedTimes: "Asked in the call without an answer, times: {n}",
       edited: "edited",
       jumpTitle: "Show this moment in the transcript",
       updateButton: "Update the document",
@@ -1451,6 +1453,7 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       deleteRow: "Удалить",
       addRow: "Добавить решение",
       ungrounded: "Подтверждающих слов в расшифровке не нашлось. Проверьте, прежде чем включать.",
+      askedTimes: "Спрашивали на встрече без ответа, раз: {n}",
       edited: "изменено",
       jumpTitle: "Показать это место в расшифровке",
       updateButton: "Обновить документ",

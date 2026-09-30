@@ -110,3 +110,17 @@ test("review: malformed decisions never break the protocol, the agenda or the ac
   // Other modes' tails have no decisions key at all.
   assert.equal(splitSummary(`Т\n${ANALYSIS_MARKER}\n{"agenda":[],"actions":[]}`, []).analysis?.decisions, undefined);
 });
+
+test("review: the repeat count of an open question is read tolerantly, once says nothing", async () => {
+  const { parseDecisions } = await import("./summary-format.js");
+  const [a, b, c, d] = parseDecisions([
+    { text: "Как хранить ключ из нескольких колонок?", status: "open", asked: 3 },
+    { text: "Сохраняется ли обратная совместимость?", status: "open", asked: 1 },
+    { text: "x", status: "open", asked: "4" },
+    { text: "y", status: "open", asked: "много" },
+  ]);
+  assert.equal(a!.asked, 3);
+  assert.equal(b!.asked, undefined);
+  assert.equal(c!.asked, 4);
+  assert.equal(d!.asked, undefined);
+});

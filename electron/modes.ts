@@ -82,7 +82,7 @@ export const MODE_SUMMARY: Record<MeetingMode, SummarySpec> = {
   },
   review: {
     headings: ["Обсуждения", "Замечания к документу", "Решения по открытым вопросам", "Поручения и сроки", "Новые вопросы и риски"],
-    guidance: "'Замечания к документу': one line per remark as 'раздел - суть - кто сказал'. 'Решения по открытым вопросам': one line per question from the briefing or agenda that was actually discussed, as 'вопрос - принято / отклонено / нужна проверка - формулировка'; a question that nobody discussed is written as 'не обсуждали', never guessed from the briefing. 'Поручения и сроки' repeats the agreed follow-ups with owner and deadline as said. 'Новые вопросы и риски' holds only what was raised in the call and is absent from the briefing.",
+    guidance: "'Замечания к документу': one line per remark as 'раздел - суть - кто сказал'. 'Решения по открытым вопросам': one line per question from the briefing or agenda that was actually discussed, as 'вопрос - принято / отклонено / нужна проверка / без ответа - формулировка'; a question that nobody discussed is written as 'не обсуждали', never guessed from the briefing. 'Поручения и сроки' repeats the agreed follow-ups with owner and deadline as said. 'Новые вопросы и риски' holds what the call itself raised: every question asked and left without an answer (see the rule on unanswered questions), and the risks that were named; not a briefing topic nobody raised.",
   },
   interview: {
     headings: ["Вопросы интервьюера", "Мои ответы (кратко)", "Слабые места", "Что повторить", "Итог"],

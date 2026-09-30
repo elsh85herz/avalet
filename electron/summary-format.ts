@@ -24,7 +24,15 @@ export type RawDecision = {
   quote: string;
   /** Seconds from the meeting start, from "mm:ss" / "hh:mm:ss"; null when absent or unreadable. */
   atSeconds: number | null;
+  /** An open question asked more than once: how many times (CLOUD_TASK_6). */
+  asked?: number;
 };
+
+/** A repeat count of 2 or more, else undefined: once is the default and says nothing. */
+export function parseAsked(value: unknown): number | undefined {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value.trim()) : NaN;
+  return Number.isInteger(n) && n >= 2 && n <= 99 ? n : undefined;
+}
 
 const STATUSES: DecisionStatus[] = ["accepted", "proposed", "rejected", "open"];
 
@@ -52,6 +60,7 @@ export function parseDecisions(value: unknown): RawDecision[] {
       after: str(item.after),
       quote: str(item.quote),
       atSeconds: parseClock(item.at),
+      ...(parseAsked(item.asked) ? { asked: parseAsked(item.asked) } : {}),
     }));
 }
 

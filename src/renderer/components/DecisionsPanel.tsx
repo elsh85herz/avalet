@@ -248,6 +248,11 @@ export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, 
                     {t.ungrounded}
                   </p>
                 ) : null}
+                {d.asked ? (
+                  <p className="hint problem-text" data-testid="decision-asked">
+                    {t.askedTimes.replace("{n}", String(d.asked))}
+                  </p>
+                ) : null}
                 {simple ? (
                   <details className="decision-details">
                     <summary>{t.details}</summary>

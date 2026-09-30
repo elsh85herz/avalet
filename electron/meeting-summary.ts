@@ -46,6 +46,7 @@ export async function summarizeMeeting(
     baseUrl,
     model: settings.model,
     systemPrompt: buildSummaryPrompt(spec.headings, spec.guidance, meeting.context, agenda, meeting.mode === "interview", {
+      mode: meeting.mode,
       // Structured decisions only when there is a document to update: the
       // End screen warned about exactly this extra cost (CLOUD_TASK_5).
       review: meeting.mode === "review" && Boolean(meeting.artifact?.text),

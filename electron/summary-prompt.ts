@@ -1,19 +1,40 @@
 import { ANALYSIS_MARKER } from "./summary-format.js";
 import { SECTION_UNKNOWN, parseSections, sectionLabel } from "./shared/artifact.js";
+import type { MeetingMode } from "./shared/ipc-contract.js";
 
 /**
- * Review mode (CLOUD_TASK_5): the summary also returns structured decisions,
+ * `mode`: the meeting mode; review meetings get the fidelity rules below
+ * (CLOUD_TASK_6) with or without a document.
+ * `review` (CLOUD_TASK_5): the summary also returns structured decisions,
  * the guide for updating the document. `artifact` is the document under
  * review, sent as reference for section names and "before" wording only.
  */
-export type ReviewSummaryOptions = { review?: boolean; artifact?: string };
+export type ReviewSummaryOptions = { mode?: MeetingMode; review?: boolean; artifact?: string };
+
+// CLOUD_TASK_6, finding 1 and 3: a question asked and not answered is the
+// most important thing to carry out of a review call, and it was the thing
+// lost. It is a risk, never a neutral "discussed", and "- нет" is only
+// allowed when nothing is left open.
+export const UNANSWERED_REVIEW_RULES = [
+  "Unanswered questions are the most important thing to carry out of this call.",
+  "A question that was asked in the call and got no answer, got an evasive answer ('это мелочь', 'не будем сейчас'), or was deferred to someone else ('я спрошу у ...', 'уточню у ...') is NOT a neutral discussion topic: never soften it into 'обсудили' or 'обсуждали, сложнее или проще'.",
+  "List every such question under 'Новые вопросы и риски', including a question asked only once and a question from the briefing, as one line: 'Вопрос без ответа: <the question in plain words> - задал <who asked> - <передан <кому>, as said | без ответа>', then '(задан N раз)' when it was asked more than once, then its shortest exact quote and time as «...» (мм:сс).",
+  "A question asked several times is one line with the count, not several lines: the repetition is the signal.",
+  "In its 'Тема:' block under 'Обсуждения' such a question gets the bullet '- без ответа' (or '- передан <кому>'), and under 'Решения по открытым вопросам' it is 'без ответа' or 'нужна проверка', never 'принято'.",
+  "Write '- нет' under 'Новые вопросы и риски' only when no question was left without an answer and nothing else belongs there; while any question is open, '- нет' is wrong.",
+].join(" ");
+
+/** The same rule in one sentence for the other modes' "Открытые вопросы" heading. */
+export const UNANSWERED_OPEN_QUESTIONS_RULE =
+  "Under 'Открытые вопросы' also list every question asked in the call that got no answer, an evasive one, or was deferred to someone else ('я спрошу у ...'), once each as 'вопрос - кто задал - передан <кому> или без ответа', with '(задан N раз)' when repeated; never soften such a question into 'обсудили', and write '- нет' there only when no such question remains.";
 
 // Decisions are held to the same ground rule as the rest of the protocol:
 // only what was said, "accepted" only with an explicit agreement.
 const DECISIONS_RULES = [
   "'decisions' lists every decision, proposal and question about the document that came up in the call, in the order they came up.",
   "text: one line phrased as an edit to the document ('В разделе 3.1 поднять размер страницы до 100 записей').",
-  "status: 'accepted' only if the transcript contains an explicit agreement to it by the other side or the analyst (for example 'согласен', 'да, так и делаем', 'принимаем'); 'rejected' only if it was explicitly declined; 'open' for a question left without an answer; everything else is 'proposed'. A proposal nobody explicitly accepted is never 'accepted', and silence is not agreement.",
+  "status: 'accepted' only if the transcript contains an explicit agreement to it by the other side or the analyst (for example 'согласен', 'да, так и делаем', 'принимаем'); 'rejected' only if it was explicitly declined; 'open' for a question left without an answer, answered evasively or deferred to someone else, and for anything the call did not close; everything else is 'proposed'. A proposal nobody explicitly accepted is never 'accepted', and silence is not agreement.",
+  "Every question listed as 'Вопрос без ответа' in the text is also an entry here with status 'open', its text phrased as the question; asked: how many times it was asked in the call, when more than once (omit otherwise).",
   "by: who proposed it and who agreed, as said in the call ('Собеседник предложил, Я согласился'); never taken from the briefing or the document.",
   `section: the section number and heading from the document index below when the call named or clearly meant that section, otherwise '${SECTION_UNKNOWN}'. Never invent a section.`,
   "before: the old wording, only if it was said in the call or copied word for word from the document; otherwise ''.",
@@ -32,6 +53,7 @@ export function buildSummaryPrompt(
   options: ReviewSummaryOptions = {},
 ): string {
   const review = Boolean(options.review) && !interview;
+  const reviewMode = options.mode === "review" && !interview;
   const artifact = review ? (options.artifact ?? "").trim() : "";
   const parts = [
     "You are a systems analyst writing the outcome of a meeting from its transcript.",
@@ -47,6 +69,8 @@ export function buildSummaryPrompt(
         : "Under 'Обсуждения' write one block per substantial topic, in the order discussed. Each block starts with a line 'Тема: <topic phrased as a question>' followed by bullets: what was answered or decided (who said it, with numbers and names as spoken), and what is still unclear.",
     );
   }
+  if (reviewMode) parts.push(UNANSWERED_REVIEW_RULES);
+  else if (!interview && headings.includes("Открытые вопросы")) parts.push(UNANSWERED_OPEN_QUESTIONS_RULE);
   parts.push(
     "Ground rule: every bullet must rest on a line of the transcript. Never write a decision, requirement, agreement or owner that nobody said in the call. Attribute to a person only what that person said; write 'согласился' only if the transcript has an explicit agreement, otherwise 'не возражал' or 'не прозвучало'. If a claim about a system, integration or process is stated as fact but nothing confirms it, mark it 'не подтверждено, уточнить у <кого>'.",
     "Only include what was actually said or clearly implied; if a section has nothing, write '- нет'. Keep identifiers, table/field/endpoint names in English exactly as spoken. No preamble, no closing remarks, no markdown symbols other than the '- ' bullets.",

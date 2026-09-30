@@ -171,6 +171,8 @@ export type Decision = {
   removed?: boolean;
   /** The model gave a supporting quote that is not in the transcript (or none for an accepted one): check by hand. */
   ungrounded?: boolean;
+  /** An open question asked more than once in the call: how many times. */
+  asked?: number;
 } & QuoteRef;
 
 export type PatchOp = "replace" | "insert_after" | "delete";

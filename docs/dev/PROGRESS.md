@@ -258,7 +258,7 @@ Baseline on `aa85949`: `npm ci` ok, `npm run check` ok (227/227).
 
 ### In progress
 
-- Phase 1: unanswered questions as risks.
+- Phase 1 done (prompt rule, `asked`, tests); the End-screen cost note for the new review rules comes with phase 3, when all rules are in.
 
 ### Next
 

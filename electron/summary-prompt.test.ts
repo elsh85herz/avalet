@@ -71,3 +71,50 @@ test("the cost note's overhead bound covers what the document adds to the summar
   const added = withDoc().length - base.length - DOC.length;
   assert.ok(added > 0 && added <= SUMMARY_ARTIFACT_OVERHEAD_CHARS, `adds ${added} chars`);
 });
+
+// CLOUD_TASK_6 phase 1: an unanswered question is a risk, never "discussed".
+const reviewPrompt = (options: { review?: boolean; artifact?: string } = {}) =>
+  buildSummaryPrompt(spec.headings, spec.guidance, "бриф", [], false, { mode: "review", ...options });
+
+test("review: an unanswered, evasive or deferred question goes to 'Новые вопросы и риски' with who asked, the count and a quote", () => {
+  const prompt = reviewPrompt();
+  assert.match(prompt, /got no answer, got an evasive answer/);
+  assert.match(prompt, /deferred to someone else \('я спрошу у \.\.\.'/);
+  assert.match(prompt, /never soften it into 'обсудили'/);
+  assert.match(prompt, /'Вопрос без ответа: <the question in plain words> - задал <who asked> - <передан <кому>, as said \| без ответа>'/);
+  assert.match(prompt, /'\(задан N раз\)' when it was asked more than once/);
+  assert.match(prompt, /including a question asked only once/);
+  assert.match(prompt, /one line with the count, not several lines/);
+  // The rule stands with and without a document.
+  assert.match(reviewPrompt({ review: true, artifact: DOC }), /Вопрос без ответа/);
+});
+
+test("review: '- нет' under the risks heading only when nothing is left open", () => {
+  const prompt = reviewPrompt();
+  assert.match(prompt, /Write '- нет' under 'Новые вопросы и риски' only when no question was left without an answer/);
+  assert.match(prompt, /while any question is open, '- нет' is wrong/);
+  assert.match(spec.guidance, /every question asked and left without an answer/);
+  assert.match(spec.guidance, /нужна проверка \/ без ответа/);
+});
+
+test("review with a document: an unanswered question is also an open decision with its repeat count", () => {
+  const prompt = reviewPrompt({ review: true, artifact: DOC });
+  assert.match(prompt, /'open' for a question left without an answer, answered evasively or deferred to someone else/);
+  assert.match(prompt, /Every question listed as 'Вопрос без ответа' in the text is also an entry here with status 'open'/);
+  assert.match(prompt, /asked: how many times it was asked in the call, when more than once/);
+});
+
+test("other modes with 'Открытые вопросы' get the same rule in one sentence; interview gets none; headings unchanged", () => {
+  for (const mode of ["free", "requirements", "grooming", "demo"] as const) {
+    const s = MODE_SUMMARY[mode];
+    assert.ok(s.headings.includes("Открытые вопросы"), mode);
+    const prompt = buildSummaryPrompt(s.headings, s.guidance, "", [], false, { mode });
+    assert.match(prompt, /Under 'Открытые вопросы' also list every question asked in the call that got no answer/, mode);
+    assert.doesNotMatch(prompt, /Вопрос без ответа/, mode);
+  }
+  const interview = MODE_SUMMARY.interview;
+  const prompt = buildSummaryPrompt(interview.headings, interview.guidance, "", [], true, { mode: "interview" });
+  assert.doesNotMatch(prompt, /without an answer|без ответа/);
+  assert.deepEqual(MODE_SUMMARY.free.headings, ["Обсуждения", "Решения", "Открытые вопросы", "Риски"]);
+  assert.deepEqual(spec.headings, ["Обсуждения", "Замечания к документу", "Решения по открытым вопросам", "Поручения и сроки", "Новые вопросы и риски"]);
+});

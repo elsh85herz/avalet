@@ -2,7 +2,7 @@ import type { Decision, DecisionLabels, DecisionStatus, Meeting } from "./shared
 import { DECISION_STATUSES } from "./shared/ipc-contract.js";
 import { SECTION_UNKNOWN, findSection, parseSections, sectionLabel } from "./shared/artifact.js";
 import { locateQuote, sameTask } from "./live-tracker-logic.js";
-import { meetingClock, type RawDecision } from "./summary-format.js";
+import { meetingClock, parseAsked, type RawDecision } from "./summary-format.js";
 
 // Review mode decisions (CLOUD_TASK_5): the summary's list checked against
 // what was actually said and against the document, then merged with what the
@@ -52,6 +52,7 @@ export function groundDecisions(
       ...(found ? { quote: found.quote, speaker: found.speaker } : {}),
       ...(at !== undefined ? { at } : {}),
       ...(ungrounded ? { ungrounded: true } : {}),
+      ...(item.asked ? { asked: item.asked } : {}),
     };
   });
 }
@@ -99,6 +100,8 @@ export function sanitizeDecisions(value: unknown): Decision[] {
     if (typeof d.quote === "string" && d.quote) out.quote = str(d.quote);
     if (d.speaker === "me" || d.speaker === "other") out.speaker = d.speaker;
     if (typeof d.at === "number" && Number.isFinite(d.at)) out.at = d.at;
+    const asked = parseAsked(d.asked);
+    if (asked) out.asked = asked;
     return out;
   });
 }
