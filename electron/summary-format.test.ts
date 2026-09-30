@@ -60,6 +60,7 @@ test("the protocol shows each quote under its agenda item and action, with speak
   const labels = {
     date: "Дата", mode: "Режим", participants: "Участники", agenda: "Повестка", discussions: "Обсуждения", actions: "Задачи",
     actionTask: "Задача", actionOwner: "Кто", actionDue: "Срок", agendaClosed: "закрыт", agendaOpen: "открыт", me: "Я", other: "Собеседник",
+    participantsInferred: "по ходу встречи", participantsThird: "третьи лица, не на встрече",
   };
   const md = buildProtocolMarkdown(meeting, labels, "Ревью", ["Обсуждения"]);
   assert.match(md, /- \[x\] Кто подтверждает \(риск-менеджер\)\n  > «Подтверждает дежурный риск-менеджер» \(Собеседник, 00:12:04\)/);

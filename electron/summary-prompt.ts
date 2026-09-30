@@ -34,6 +34,17 @@ export const TERMS_REVIEW_RULES = [
   "Never choose an interpretation yourself and never fill a term from the briefing or the document: 'не уточнено' is a correct, wanted answer.",
 ].join(" ");
 
+// CLOUD_TASK_6, finding 4: the call can contradict the briefing (two roles
+// the briefing called one person); the summary shows both sides instead of
+// silently following one. Names come only from the call.
+export const CONTEXT_REVIEW_RULES = [
+  "If the call shows something that contradicts a fact stated in the briefing (for example the briefing says two roles are one person and the call shows two different people, or it names a different owner, system, number or deadline), list it under 'Новые вопросы и риски' as 'Расхождение с контекстом: в контексте <X>, на встрече <Y> - «цитата» (мм:сс)'. Do not silently follow either side, and do not correct one by the other anywhere else in the summary.",
+  "The recognizer gives no speaker names: '[Я]' is the analyst, '[Собеседник]' is everyone else, possibly several people. Never write a person's name that was not said in the call, and never take a name or a role from the briefing.",
+].join(" ");
+
+const PARTICIPANTS_RULES =
+  "'participants' lists who took part as far as the call itself shows it: kind 'named' only for a person whose name was said in the call and who spoke or was addressed in it; kind 'inferred' for a role reasoned from the call without a name ('разработчик, отвечает за реализацию'), with who ''; kind 'third_party' for a person or role mentioned as someone to contact or ask ('я спрошу у ...'), who is not in the call. role: what they do in this call, in a few words. An empty list is the correct answer when the call shows nothing.";
+
 /** The same rule in one sentence for the other modes' "Открытые вопросы" heading. */
 export const UNANSWERED_OPEN_QUESTIONS_RULE =
   "Under 'Открытые вопросы' also list every question asked in the call that got no answer, an evasive one, or was deferred to someone else ('я спрошу у ...'), once each as 'вопрос - кто задал - передан <кому> или без ответа', with '(задан N раз)' when repeated; never soften such a question into 'обсудили', and write '- нет' there only when no such question remains.";
@@ -80,7 +91,7 @@ export function buildSummaryPrompt(
         : "Under 'Обсуждения' write one block per substantial topic, in the order discussed. Each block starts with a line 'Тема: <topic phrased as a question>' followed by bullets: what was answered or decided (who said it, with numbers and names as spoken), and what is still unclear.",
     );
   }
-  if (reviewMode) parts.push(UNANSWERED_REVIEW_RULES, TERMS_REVIEW_RULES);
+  if (reviewMode) parts.push(UNANSWERED_REVIEW_RULES, TERMS_REVIEW_RULES, CONTEXT_REVIEW_RULES);
   else if (!interview && headings.includes("Открытые вопросы")) parts.push(UNANSWERED_OPEN_QUESTIONS_RULE);
   parts.push(
     "Ground rule: every bullet must rest on a line of the transcript. Never write a decision, requirement, agreement or owner that nobody said in the call. Attribute to a person only what that person said; write 'согласился' only if the transcript has an explicit agreement, otherwise 'не возражал' or 'не прозвучало'. If a claim about a system, integration or process is stated as fact but nothing confirms it, mark it 'не подтверждено, уточнить у <кого>'.",
@@ -90,14 +101,20 @@ export function buildSummaryPrompt(
   parts.push(
     [
       `After the text, on a new line write exactly ${ANALYSIS_MARKER} and then one JSON object, nothing after it:`,
-      review
-        ? '{"agenda":[{"index":1,"closed":true,"note":"..."}],"actions":[{"task":"...","owner":"...","due":"..."}],"decisions":[{"id":"d1","text":"...","status":"accepted","by":"...","section":"...","before":"...","after":"...","terms":"...","quote":"...","at":"mm:ss"}]}'
-        : '{"agenda":[{"index":1,"closed":true,"note":"..."}],"actions":[{"task":"...","owner":"...","due":"..."}]}',
+      [
+        '{"agenda":[{"index":1,"closed":true,"note":"..."}],"actions":[{"task":"...","owner":"...","due":"..."}]',
+        review
+          ? ',"decisions":[{"id":"d1","text":"...","status":"accepted","by":"...","section":"...","before":"...","after":"...","terms":"...","quote":"...","at":"mm:ss"}]'
+          : "",
+        reviewMode ? ',"participants":[{"who":"","role":"...","kind":"inferred"}]' : "",
+        "}",
+      ].join(""),
       agendaBlock
         ? "'agenda' has one entry per agenda question above: closed=true only if the transcript contains a clear answer or decision for it, otherwise false; note is the answer in at most 12 words when closed, or what is still missing when open."
         : "'agenda' is an empty array.",
       "'actions' lists concrete tasks that were assigned or agreed in the call: task is a short imperative phrase; owner is the person or role that was named for it in the call (the analyst is 'Я'), or 'не назван' if nobody was named; due is the deadline as said, or 'срок не назван' if none was said. Never fill owner or due from the briefing. Do not invent tasks nobody agreed to; a task somebody only proposed and nobody accepted is not a task.",
       review ? DECISIONS_RULES : "",
+      reviewMode ? PARTICIPANTS_RULES : "",
       agendaBlock,
     ]
       .filter(Boolean)

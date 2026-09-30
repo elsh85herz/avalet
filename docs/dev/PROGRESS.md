@@ -255,15 +255,18 @@ Baseline on `aa85949`: `npm ci` ok, `npm run check` ok (227/227).
 ### Done
 
 - Phase 0: `docs/dev/review-fidelity-plan.md` (private, in CLEANUP with `CLOUD_TASK_6*.md`): cause, check and fix per finding; echo escape reproduced in `electron/echo-filter.test.ts`.
+- Phase 1: unanswered-question rule (review block, one sentence for the other modes' "Открытые вопросы"), `asked` count on open decisions, tests.
+- Phase 2: terms rule and field, code guard (`electron/shared/decision-terms.ts`), terms row in the checklist, patch call skips unpinned terms, decisions file Terms line, on-request check (`electron/shared/decision-check.ts`, `electron/decisions-check-run.ts`, `DecisionsCheck.tsx`, IPC `avalet:decisions-check`, mock reply). `npm run check` 245/245.
+
+- Phase 3: contradiction and names rules, participants in the JSON tail (`electron/shared/participants.ts`, grounded against the transcript), protocol "Участники" line and meeting screen line, End-screen note for every review summary (`summaryExtraCost`). `npm run check` 251/251.
 
 ### In progress
 
-- Phase 1 done (prompt rule, `asked`, tests); the End-screen cost note for the new review rules comes with phase 3, when all rules are in.
-- Phase 2 done: terms rule and field, code guard (`electron/shared/decision-terms.ts`), terms row in the checklist, patch call skips unpinned terms, decisions file Terms line, on-request check (`electron/shared/decision-check.ts`, `electron/decisions-check-run.ts`, `DecisionsCheck.tsx`, IPC `avalet:decisions-check`, mock reply). `npm run check` 245/245.
+- Phase 4: transcript hygiene (echo pass over the saved transcript, credit-line blocklist, recognizer confidence).
 
 ### Next
 
-- Phase 2 terms, phase 3 participants and contradictions, phase 4 transcript hygiene, phase 5 fixture, E2E, docs, REPORT.
+- Phase 4 transcript hygiene, phase 5 fixture, E2E, docs, REPORT.
 
 ### Blockers
 

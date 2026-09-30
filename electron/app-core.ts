@@ -374,6 +374,8 @@ export class AppCore {
         actionDue: pick("actionDue", "Due"),
         agendaClosed: pick("agendaClosed", "closed"),
         agendaOpen: pick("agendaOpen", "open"),
+        participantsInferred: pick("participantsInferred", "from the call"),
+        participantsThird: pick("participantsThird", "mentioned, not in the call"),
         me: pick("me", "Me"),
         other: pick("other", "Other"),
       },
@@ -553,12 +555,12 @@ export class AppCore {
       this.summaryAbort = controller;
       flushCurrentMeeting();
       try {
-        const { text, analysis, decisions } = await summarizeMeeting(id, controller.signal, {
+        const { text, analysis, decisions, participants } = await summarizeMeeting(id, controller.signal, {
           onDelta: (delta) => emit("avalet:event:summary-delta", { id, delta }, "main"),
         });
         emit(
           "avalet:event:summary-done",
-          { id, text, agendaStatus: analysis?.agendaStatus ?? null, actions: analysis?.actions ?? null, decisions },
+          { id, text, agendaStatus: analysis?.agendaStatus ?? null, actions: analysis?.actions ?? null, decisions, participants },
           "main",
         );
         return text;

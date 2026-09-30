@@ -156,6 +156,8 @@ export type Meeting = {
   artifactProposal?: PatchProposal;
   /** The document with the chosen patches applied; `artifact` keeps the original. */
   artifactResult?: ArtifactResult;
+  /** Review mode: participants as the call shows them; absent or empty when it shows nothing. */
+  participants?: Participant[];
 };
 
 // --- review mode: document, decisions, patches (CLOUD_TASK_5) ---
@@ -198,6 +200,15 @@ export type Decision = {
   /** The last "Check against the quotes" verdict for this row (on request, CLOUD_TASK_6). */
   check?: DecisionCheck;
 } & QuoteRef;
+
+/**
+ * Who took part, as far as the call itself shows it (CLOUD_TASK_6, review):
+ * "named" only for a name said in the call, "inferred" a role reasoned from
+ * the call without a name, "third_party" someone mentioned as a person to
+ * contact, not in the call.
+ */
+export type ParticipantKind = "named" | "inferred" | "third_party";
+export type Participant = { who: string; role: string; kind: ParticipantKind };
 
 /** ok: the quote shows agreement and the terms are pinned; the other two only ever lower a decision. */
 export type DecisionCheck = { verdict: "ok" | "not_supported" | "terms_unclear"; reason: string; at: number };
@@ -261,6 +272,11 @@ export type ExportLabels = {
   actionDue: string;
   agendaClosed: string;
   agendaOpen: string;
+  /** Participants line (review): roles from the call, and people mentioned but not in it. */
+  participantsInferred: string;
+  participantsThird: string;
+  /** Transcript: how many lines were left out as noise, with "{n}" (CLOUD_TASK_6). */
+  hiddenLines: string;
 };
 
 /** Headings of the decisions export, in the interface language. */
@@ -290,6 +306,8 @@ export type SummaryDoneEvent = {
   actions: ActionItem[] | null;
   /** Review mode: the decisions after the merge with hand edits; null when the summary returned none. */
   decisions: Decision[] | null;
+  /** Review mode: participants checked against the transcript; null when the summary returned none. */
+  participants: Participant[] | null;
 };
 
 // --- speech models ---

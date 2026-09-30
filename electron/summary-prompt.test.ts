@@ -133,3 +133,28 @@ test("review: structure decisions pin their terms in the speakers' words or say 
   assert.match(plain, /Never choose an interpretation yourself/);
   assert.doesNotMatch(plain, /"terms"/);
 });
+
+test("review: a contradiction with the briefing is listed with both sides; names only from the call; participants in the tail", () => {
+  const prompt = reviewPrompt();
+  assert.match(prompt, /'Расхождение с контекстом: в контексте <X>, на встрече <Y> - «цитата» \(мм:сс\)'/);
+  assert.match(prompt, /Do not silently follow either side/);
+  assert.match(prompt, /Never write a person's name that was not said in the call, and never take a name or a role from the briefing/);
+  assert.match(prompt, /"participants":\[\{"who":"","role":"\.\.\.","kind":"inferred"\}\]/);
+  assert.match(prompt, /kind 'third_party' for a person or role mentioned as someone to contact or ask/);
+  assert.match(prompt, /An empty list is the correct answer when the call shows nothing/);
+  // With a document: one JSON object with decisions and participants.
+  assert.match(reviewPrompt({ review: true, artifact: DOC }), /"decisions":\[\{[^\n]*\}\],"participants":\[/);
+  // Other modes: no participants, no contradiction block.
+  const free = MODE_SUMMARY.free;
+  assert.doesNotMatch(buildSummaryPrompt(free.headings, free.guidance, "бриф", [], false, { mode: "free" }), /participants|Расхождение/);
+});
+
+test("the review cost note's bound covers what the review rules add to the summary prompt", async () => {
+  const { SUMMARY_REVIEW_RULES_CHARS } = await import("./shared/artifact.js");
+  const plain = buildSummaryPrompt(spec.headings, spec.guidance, "бриф", [], false);
+  const added = reviewPrompt().length - plain.length;
+  assert.ok(added > 0 && added <= SUMMARY_REVIEW_RULES_CHARS, `adds ${added} chars`);
+  // With a document, the rules and the document block together stay within both bounds.
+  const both = reviewPrompt({ review: true, artifact: DOC }).length - plain.length - DOC.length;
+  assert.ok(both <= SUMMARY_REVIEW_RULES_CHARS + SUMMARY_ARTIFACT_OVERHEAD_CHARS, `adds ${both} chars`);
+});

@@ -7,6 +7,8 @@ import {
   patchDecisions,
   SUMMARY_ARTIFACT_OVERHEAD_CHARS,
   SUMMARY_DECISIONS_REPLY_CHARS,
+  SUMMARY_REVIEW_REPLY_CHARS,
+  SUMMARY_REVIEW_RULES_CHARS,
   buildArtifactIndex,
   estimateTokens,
   roundTokens,
@@ -39,14 +41,18 @@ export function artifactFieldCost(mode: MeetingMode, text: string): FieldCost | 
   };
 }
 
-/** Shown next to "Summarize" for a review meeting with a document: how much bigger the summary request is. */
-export function summaryExtraCost(meeting: { mode: MeetingMode; artifact?: { text: string } }): { tokens: number; high: boolean } | null {
+/**
+ * Shown next to "Summarize" for every review meeting: how much bigger the
+ * summary request is than an ordinary one. The review rules (unanswered
+ * questions, terms, contradictions, participants) always; the document and
+ * the decisions list when a document is attached.
+ */
+export function summaryExtraCost(meeting: { mode: MeetingMode; artifact?: { text: string } }): { tokens: number; high: boolean; document: boolean } | null {
+  if (meeting.mode !== "review") return null;
   const text = meeting.artifact?.text ?? "";
-  if (meeting.mode !== "review" || !text.trim()) return null;
-  return {
-    tokens: roundTokens(estimateTokens(text.length + SUMMARY_ARTIFACT_OVERHEAD_CHARS + SUMMARY_DECISIONS_REPLY_CHARS)),
-    high: text.length > ARTIFACT_HIGHLIGHT_CHARS,
-  };
+  const document = Boolean(text.trim());
+  const chars = SUMMARY_REVIEW_RULES_CHARS + SUMMARY_REVIEW_REPLY_CHARS + (document ? text.length + SUMMARY_ARTIFACT_OVERHEAD_CHARS + SUMMARY_DECISIONS_REPLY_CHARS : 0);
+  return { tokens: roundTokens(estimateTokens(chars)), high: document && text.length > ARTIFACT_HIGHLIGHT_CHARS, document };
 }
 
 export type UpdateCost = { doc: number; decisions: number; reply: number; total: number; count: number; high: boolean };

@@ -8,7 +8,8 @@ import { MODE_SUMMARY } from "./modes.js";
 import { mergeSummaryAnalysis } from "./live-tracker-logic.js";
 import { randomUUID } from "node:crypto";
 import { groundDecisions, mergeDecisions } from "./decisions.js";
-import type { Decision } from "./shared/ipc-contract.js";
+import type { Decision, Participant } from "./shared/ipc-contract.js";
+import { groundParticipants } from "./shared/participants.js";
 
 // A one-hour meeting is roughly 60k characters of Russian transcript; keep a
 // hard cap so a marathon call can't blow the provider's context window.
@@ -18,7 +19,7 @@ export type SummaryEvents = {
   onDelta: (delta: string) => void;
 };
 
-export type SummaryResult = { text: string; analysis: MeetingAnalysis | null; decisions: Decision[] | null };
+export type SummaryResult = { text: string; analysis: MeetingAnalysis | null; decisions: Decision[] | null; participants: Participant[] | null };
 
 export async function summarizeMeeting(
   meetingId: string,
@@ -71,6 +72,9 @@ export async function summarizeMeeting(
     meeting.mode === "review" && split.analysis?.decisions
       ? mergeDecisions(meeting.decisions, groundDecisions(split.analysis.decisions, meeting, randomUUID))
       : null;
-  setSummary(meetingId, split.protocol, analysis, decisions);
-  return { text: split.protocol, analysis, decisions };
+  // Review: a name the call never said is removed here, whatever the model wrote (CLOUD_TASK_6).
+  const participants =
+    meeting.mode === "review" && split.analysis?.participants ? groundParticipants(split.analysis.participants, meeting.transcript) : null;
+  setSummary(meetingId, split.protocol, analysis, decisions, participants);
+  return { text: split.protocol, analysis, decisions, participants };
 }

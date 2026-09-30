@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { MeetingMode } from "./modes.js";
 import type { ActionItem, AgendaStatusItem } from "./summary-format.js";
-import type { ArtifactDoc, Decision, Meeting, MeetingListItem, TranscriptSegment } from "./shared/ipc-contract.js";
+import type { ArtifactDoc, Decision, Meeting, MeetingListItem, Participant, TranscriptSegment } from "./shared/ipc-contract.js";
 
 export type { Meeting, MeetingListItem, TranscriptSegment };
 
@@ -184,6 +184,7 @@ export function setSummary(
   summary: string,
   analysis?: { agendaStatus: AgendaStatusItem[]; actions: ActionItem[] } | null,
   decisions?: Decision[] | null,
+  participants?: Participant[] | null,
 ): void {
   const meeting = current?.id === id ? current : readMeeting(id);
   if (!meeting) return;
@@ -194,6 +195,7 @@ export function setSummary(
     meeting.actions = analysis.actions;
   }
   if (decisions) meeting.decisions = decisions;
+  if (participants) meeting.participants = participants;
   if (meeting === current) flushNow();
   else writeMeeting(meeting);
 }

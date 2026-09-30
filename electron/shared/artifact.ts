@@ -181,6 +181,13 @@ export function sectionText(raw: string, section: ArtifactSection, cap = ARTIFAC
 export const SUMMARY_ARTIFACT_OVERHEAD_CHARS = 3_000;
 /** Allowance for the decisions list in the summary's answer. */
 export const SUMMARY_DECISIONS_REPLY_CHARS = 3_000;
+/**
+ * Review summaries with or without a document (CLOUD_TASK_6): the rules on
+ * unanswered questions, terms, contradictions and participants in the
+ * prompt, and the longer risks section plus the participants list in the answer.
+ */
+export const SUMMARY_REVIEW_RULES_CHARS = 3_600;
+export const SUMMARY_REVIEW_REPLY_CHARS = 900;
 export const PATCH_PROMPT_OVERHEAD_CHARS = 3_500;
 /** Wrapper text around the index in a live call. */
 export const LIVE_INDEX_OVERHEAD_CHARS = 250;

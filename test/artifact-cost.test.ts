@@ -27,14 +27,20 @@ test("the figure grows with the document and a large one is highlighted", () => 
   assert.equal(large.tokensEach, 32_000);
 });
 
-test("the summary note appears only for a review meeting with a document", () => {
+test("the summary note appears for every review meeting and only there; the document makes it larger", () => {
   for (const mode of MEETING_MODES) {
     const cost = summaryExtraCost({ mode, artifact: { text: DOC } });
-    if (mode === "review") assert.ok(cost && cost.tokens > 0);
+    if (mode === "review") assert.ok(cost && cost.tokens > 0 && cost.document);
     else assert.equal(cost, null, mode);
   }
-  assert.equal(summaryExtraCost({ mode: "review" }), null);
-  assert.equal(summaryExtraCost({ mode: "review", artifact: { text: "" } }), null);
+  // CLOUD_TASK_6: the review rules raise every review summary, so the note is there without a document too.
+  const rules = summaryExtraCost({ mode: "review" })!;
+  assert.equal(rules.document, false);
+  assert.equal(rules.high, false);
+  // About 3,600 characters of rules and 900 of answer at 3 per token.
+  assert.equal(rules.tokens, 1_500);
+  assert.deepEqual(summaryExtraCost({ mode: "review", artifact: { text: "" } }), rules);
+  assert.ok(summaryExtraCost({ mode: "review", artifact: { text: DOC } })!.tokens > rules.tokens);
 });
 
 test("the update cost appears only for a review meeting with a document and at least one checked decision", () => {

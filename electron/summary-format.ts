@@ -1,5 +1,6 @@
 import type { Meeting } from "./meetings-store.js";
-import type { ActionItem, ActionState, AgendaStatusItem, DecisionStatus, QuoteRef } from "./shared/ipc-contract.js";
+import type { ActionItem, ActionState, AgendaStatusItem, DecisionStatus, Participant, QuoteRef } from "./shared/ipc-contract.js";
+import { formatParticipants, parseParticipants } from "./shared/participants.js";
 
 // The summary call returns the protocol text first and, after this marker, a
 // small JSON block with the machine-readable part: which agenda questions got
@@ -8,7 +9,7 @@ import type { ActionItem, ActionState, AgendaStatusItem, DecisionStatus, QuoteRe
 export const ANALYSIS_MARKER = "@@AVALET_JSON@@";
 
 export type { ActionItem, ActionState, AgendaStatusItem };
-export type MeetingAnalysis = { agendaStatus: AgendaStatusItem[]; actions: ActionItem[]; decisions?: RawDecision[] };
+export type MeetingAnalysis = { agendaStatus: AgendaStatusItem[]; actions: ActionItem[]; decisions?: RawDecision[]; participants?: Participant[] };
 
 /**
  * A decision as the review summary returns it (CLOUD_TASK_5), before it is
@@ -87,7 +88,7 @@ export function splitSummary(raw: string, agenda: string[]): { protocol: string;
   try {
     const start = tail.indexOf("{");
     const end = tail.lastIndexOf("}");
-    const data = JSON.parse(tail.slice(start, end + 1)) as { agenda?: unknown; actions?: unknown; decisions?: unknown };
+    const data = JSON.parse(tail.slice(start, end + 1)) as { agenda?: unknown; actions?: unknown; decisions?: unknown; participants?: unknown };
     const agendaStatus: AgendaStatusItem[] = agenda.map((question, i) => {
       const found = Array.isArray(data.agenda)
         ? (data.agenda as { index?: unknown; closed?: unknown; note?: unknown }[]).find((item) => Number(item?.index) === i + 1)
@@ -103,7 +104,10 @@ export function splitSummary(raw: string, agenda: string[]): { protocol: string;
             due: typeof item.due === "string" ? item.due.trim() : "",
           }))
       : [];
-    return { protocol, analysis: data.decisions === undefined ? { agendaStatus, actions } : { agendaStatus, actions, decisions: parseDecisions(data.decisions) } };
+    const analysis: MeetingAnalysis = { agendaStatus, actions };
+    if (data.decisions !== undefined) analysis.decisions = parseDecisions(data.decisions);
+    if (data.participants !== undefined) analysis.participants = parseParticipants(data.participants);
+    return { protocol, analysis };
   } catch {
     return { protocol, analysis: null };
   }
@@ -153,6 +157,9 @@ export type ProtocolLabels = {
   actionDue: string;
   agendaClosed: string;
   agendaOpen: string;
+  /** Participants line: "from the call: ..." and "not in the call: ..." (review, CLOUD_TASK_6). */
+  participantsInferred: string;
+  participantsThird: string;
   /** Speaker names for quotes. */
   me: string;
   other: string;
@@ -192,7 +199,8 @@ export function buildProtocolMarkdown(
   const lines: string[] = [`# ${meeting.title}`, ""];
   lines.push(`${labels.date}: ${new Date(meeting.startedAt).toLocaleString()}`);
   lines.push(`${labels.mode}: ${modeLabel}`);
-  lines.push(`${labels.participants}: `, "");
+  const participants = formatParticipants(meeting.participants, { inferred: labels.participantsInferred, thirdParty: labels.participantsThird });
+  lines.push(`${labels.participants}: ${participants}`, "");
 
   const status = meeting.agendaStatus ?? [];
   if (status.length > 0) {

@@ -7,6 +7,7 @@ import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { IconChevron, IconCheck } from "../icons.js";
 import { DecisionsPanel } from "./DecisionsPanel.js";
 import { formatTokens, summaryExtraCost } from "../lib/artifact-cost.js";
+import { formatParticipants } from "../../../electron/shared/participants.js";
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -84,7 +85,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
         if (id !== meeting.id) return;
         setSummaryDraft((prev) => prev + delta);
       }),
-      bridge.events.onSummaryDone(({ id, text, agendaStatus, actions, decisions }) => {
+      bridge.events.onSummaryDone(({ id, text, agendaStatus, actions, decisions, participants }) => {
         if (id !== meeting.id) return;
         setSummaryDraft(text);
         setSummarizing(false);
@@ -96,6 +97,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
             agendaStatus: agendaStatus ?? prev.agendaStatus,
             actions: actions ?? prev.actions,
             decisions: decisions ?? prev.decisions,
+            participants: participants ?? prev.participants,
           };
           onChanged?.(next);
           return next;
@@ -136,6 +138,9 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     actionDue: t.meeting.actionDue,
     agendaClosed: t.meeting.agendaClosed,
     agendaOpen: t.meeting.agendaOpen,
+    participantsInferred: t.meeting.participantsInferred,
+    participantsThird: t.meeting.participantsThird,
+    hiddenLines: t.meeting.hiddenLines,
   };
 
   async function commitTitle() {
@@ -229,6 +234,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
 
   // Review with a document: the summary request is bigger; said before it is sent.
   const summaryCost = summaryExtraCost(meeting);
+  const participantsLine = formatParticipants(meeting.participants, { inferred: t.meeting.participantsInferred, thirdParty: t.meeting.participantsThird });
 
   function updateMeeting(next: Meeting) {
     // The saved record wins (a removed field stays removed); a live transcript may be a segment ahead here.
@@ -292,7 +298,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
       </div>
       {summaryCost ? (
         <p className={`cost-note${summaryCost.high ? " high" : ""}`} data-testid="summary-cost" role="note">
-          {t.spec.summaryCost.replace("{tokens}", formatTokens(summaryCost.tokens, uiLanguage))}
+          {(summaryCost.document ? t.spec.summaryCost : t.spec.summaryCostRules).replace("{tokens}", formatTokens(summaryCost.tokens, uiLanguage))}
         </p>
       ) : null}
 
@@ -384,6 +390,11 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
 
       <div className="meeting-summary">
         <h3>{t.meeting.summaryTitle}</h3>
+        {participantsLine ? (
+          <p className="hint participants-line" data-testid="participants">
+            {t.meeting.participants}: {participantsLine}
+          </p>
+        ) : null}
         {summaryDraft ? <pre className="summary-text">{summaryDraft}</pre> : <p className="hint">{t.meeting.summaryEmpty}</p>}
       </div>
 

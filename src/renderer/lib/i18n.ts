@@ -385,6 +385,14 @@ export type UiStrings = {
     agendaProgress: string;
     agendaClosed: string;
     agendaOpen: string;
+    participantsInferred: string;
+    participantsThird: string;
+    hiddenLines: string;
+    showHidden: string;
+    hideHidden: string;
+    hiddenEcho: string;
+    hiddenNoise: string;
+    lowConfidence: string;
     actionsTitle: string;
     actionsEmpty: string;
     participants: string;
@@ -410,6 +418,7 @@ export type UiStrings = {
     costSection: string;
     costHigh: string;
     summaryCost: string;
+    summaryCostRules: string;
     decisionsTitle: string;
     decisionsHint: string;
     noDocument: string;
@@ -912,6 +921,14 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       agendaProgress: "closed",
       agendaClosed: "closed",
       agendaOpen: "open",
+      participantsInferred: "from the call",
+      participantsThird: "mentioned, not in the call",
+      hiddenLines: "Lines left out as recognition noise: {n}. They are kept in the meeting record.",
+      showHidden: "Show hidden lines ({n})",
+      hideHidden: "Hide them again",
+      hiddenEcho: "repeat of the other side through the speakers",
+      hiddenNoise: "recognizer noise in a quiet stretch",
+      lowConfidence: "recognized with low confidence",
       actionsTitle: "Action points",
       actionsEmpty: "None yet. They appear after \"Summary\".",
       participants: "Participants",
@@ -936,7 +953,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       costNote: "Cost: at the end the whole document goes to the model twice, for the summary and for the update, about {tokens} tokens each time. Hints during the call get only its table of contents, about {index} tokens each.",
       costSection: "A typed question that names a section, for example «section 3.2», also carries that section, up to about {tokens} tokens.",
       costHigh: "The document is large, so the summary and the update cost noticeably more than usual.",
-      summaryCost: "This summary also reads the document: about {tokens} more tokens than usual.",
+      summaryCost: "This summary also reads the document and checks unanswered questions, decision terms and participants: about {tokens} more tokens than usual.",
+      summaryCostRules: "A review summary also checks unanswered questions, decision terms and participants: about {tokens} more tokens than usual.",
       decisionsTitle: "Decisions",
       decisionsHint: "Check what goes into the document update. Everything here comes from the call; correct it if needed.",
       noDocument: "No document is attached to this meeting, so it cannot be updated.",
@@ -1433,6 +1451,14 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       agendaProgress: "закрыто",
       agendaClosed: "закрыт",
       agendaOpen: "открыт",
+      participantsInferred: "по ходу встречи",
+      participantsThird: "третьи лица, не на встрече",
+      hiddenLines: "Строк убрано как шум распознавания: {n}. В записи встречи они сохранены.",
+      showHidden: "Показать скрытые строки ({n})",
+      hideHidden: "Скрыть снова",
+      hiddenEcho: "повтор собеседника через динамики",
+      hiddenNoise: "шум распознавания в тишине",
+      lowConfidence: "распознано неуверенно",
       actionsTitle: "Экшн-поинты",
       actionsEmpty: "Пока нет. Появятся после \"Итога встречи\".",
       participants: "Участники",
@@ -1457,7 +1483,8 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       costNote: "Расход: в конце документ целиком уйдёт модели два раза, для итогов и для обновления, примерно по {tokens} токенов. Подсказки во время звонка получают только оглавление, примерно по {index} токенов.",
       costSection: "Если в вопросе назвать раздел, например «раздел 3.2», к этому вопросу добавится текст раздела, до {tokens} токенов.",
       costHigh: "Документ большой, поэтому итоги и обновление обойдутся заметно дороже обычного.",
-      summaryCost: "Итоги этой встречи читают и документ: примерно на {tokens} токенов больше обычного.",
+      summaryCost: "Итоги этой встречи читают и документ, а ещё проверяют вопросы без ответа, термины решений и участников: примерно на {tokens} токенов больше обычного.",
+      summaryCostRules: "Итоги ревью ещё проверяют вопросы без ответа, термины решений и участников: примерно на {tokens} токенов больше обычного.",
       decisionsTitle: "Решения",
       decisionsHint: "Отметьте, что войдёт в обновление документа. Всё здесь взято из разговора; при необходимости поправьте.",
       noDocument: "К этой встрече не приложен документ, поэтому обновить его нельзя.",
