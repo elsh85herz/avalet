@@ -255,20 +255,20 @@ Baseline on `aa85949`: `npm ci` ok, `npm run check` ok (227/227).
 ### Done
 
 - Phase 0: `docs/dev/review-fidelity-plan.md` (private, in CLEANUP with `CLOUD_TASK_6*.md`): cause, check and fix per finding; echo escape reproduced in `electron/echo-filter.test.ts`.
-- Phase 1: unanswered-question rule (review block, one sentence for the other modes' "Открытые вопросы"), `asked` count on open decisions, tests.
-- Phase 2: terms rule and field, code guard (`electron/shared/decision-terms.ts`), terms row in the checklist, patch call skips unpinned terms, decisions file Terms line, on-request check (`electron/shared/decision-check.ts`, `electron/decisions-check-run.ts`, `DecisionsCheck.tsx`, IPC `avalet:decisions-check`, mock reply). `npm run check` 245/245.
-
-- Phase 3: contradiction and names rules, participants in the JSON tail (`electron/shared/participants.ts`, grounded against the transcript), protocol "Участники" line and meeting screen line, End-screen note for every review summary (`summaryExtraCost`). `npm run check` 251/251.
-
-- Phase 4: `electron/transcript-clean.ts` (echo pass over the saved call, noise marks, quotes moved onto kept lines), `electron/transcript-noise.ts` (credit-line blocklist), sidecar `_confidence` and `confidenceFlags`, segment `end`, exports and summary input skip hidden lines, "(неразборчиво)" tag and rule, weak-quote guard, transcript view "Show hidden lines". `npm run check` 264/264.
+- Phase 1: unanswered-question rule (review block, one sentence for the other modes' "Открытые вопросы"), `asked` count on open decisions.
+- Phase 2: terms rule and field, code guard (`electron/shared/decision-terms.ts`), terms row in the checklist, update call skips unclear terms, decisions file Terms line, on-request "Check against the quotes" (`electron/shared/decision-check.ts`, `electron/decisions-check-run.ts`, `DecisionsCheck.tsx`, IPC `avalet:decisions-check`).
+- Phase 3: contradiction and names rules, participants (`electron/shared/participants.ts`), protocol and screen line, End-screen note for every review summary.
+- Phase 4: `electron/transcript-clean.ts`, `electron/transcript-noise.ts`, sidecar `_confidence`, segment `end`/`filtered`/`lowConfidence`/`quiet`, hidden lines in the view, exports and summary input, unsure tag, weak-quote guard.
+- Phase 5: parcel fixture (`test/fixtures/parcel-call.json`, `spec-parcel.md`, `FAKE_PLANS.parcel`, mock `parcelSummary`, `AVALET_TEST_ECHO_HOLD_MS`), integration and E2E (`e2e/review-fidelity.spec.ts`), log hygiene, READMEs, CHANGELOG, MAC_VERIFY 9c (EN/RU), screenshots, self-review fixes, REPORT section.
+- Verified: `npm run check` 268/268 (i18n 501); `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 21/21; CI runs 51, 53, 55 green.
 
 ### In progress
 
-- Phase 5: synthetic "parcel" fixture (fake capture script, mock summary), E2E, log hygiene, README, screenshots, REPORT.
+(nothing: all phases of CLOUD_TASK_6.md done)
 
 ### Next
 
-- Phase 4 transcript hygiene, phase 5 fixture, E2E, docs, REPORT.
+- Owner: MAC_VERIFY step 9c; decisions in REPORT "Honest summaries of review calls".
 
 ### Blockers
 

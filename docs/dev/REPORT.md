@@ -309,3 +309,62 @@ One unit test outside this task (`model-manager.test.ts`, "cancel then Continue 
 1. MAC_VERIFY step 9b on a build from this branch, with a real spec on a real call.
 2. Compare the warnings' figures with the ledger after two review meetings; adjust the allowances.
 3. Decide item 4 above after that.
+
+# Honest summaries of review calls (2026-09-30, CLOUD_TASK_6.md)
+
+On `release/v0.2-autopilot` after `aa85949`, not tagged. No new meeting mode:
+`review` changed, transcript hygiene applies to every mode. Plan with the cause,
+the check and the fix for each of the owner's five findings (private, in
+CLEANUP): `review-fidelity-plan.md`. Tier, billing, speech models and auto-hint
+pacing not touched. Details in `PROGRESS.md` and `DECISIONS.md` ("CLOUD_TASK_6").
+
+## What changed
+
+1. **Unanswered questions are risks** (findings 1, 3). The review summary lists every question asked and not answered, answered evasively or deferred ("я спрошу у ...") as `Вопрос без ответа: вопрос - задал кто - передан кому / без ответа (задан N раз) «цитата» (мм:сс)` under "Новые вопросы и риски", once per question with the repeat count, including a question asked once; "- нет" there only when nothing is open. With a document such a question is also an `open` decision with `asked`, shown in the checklist and never checked. Free, requirements, grooming and demo get the same rule in one sentence under their existing "Открытые вопросы".
+2. **Decisions pin their terms** (finding 2). A decision that shapes data says what the key, the value and one entry are, in the speakers' words and with their example, or `не уточнено: термин, прочтение 1 или прочтение 2` (also listed as an unanswered question). New `terms` field; a code guard (no model call) marks an accepted structure decision with empty terms, or `не уточнено`, and it starts unchecked; the analyst pins the terms in the row. The update call gets the terms and skips a decision whose terms are unclear instead of guessing. The decisions file has a "Terms" line.
+3. **Optional second pass**, on request only: "Check against the quotes" sends only the accepted decisions with their quotes and two lines around each, shows the cost on the button and in a confirmation, and can only lower a decision (to proposed) or mark its terms unclear; enforced in code, hand-edited rows only get a note.
+4. **Briefing contradictions and participants** (finding 4). `Расхождение с контекстом: в контексте X, на встрече Y` in the risks; names never from the briefing. Participants come back as a structured list (named / from the call / not in the call); a name not found in the transcript is removed in code. The protocol's "Участники" line (empty in every export before) and the meeting screen show it.
+5. **Transcript hygiene** (finding 5, all modes). Cause of the doubled lines confirmed by a test: the live echo filter holds a mic line 7 s, the other channel is cut at up to 12 s and both queue on one recognizer, so a late clean copy lets both through. Now the same comparison runs over the whole saved call at End (and before a summary of an older meeting). Invented credit lines (a short blocklist, whole line only) in a quiet stretch are marked. Marked lines stay in the record, are hidden in the view ("Show hidden lines"), left out of exports (with a count) and the summary input; quotes move to the kept line. The sidecar now returns faster-whisper's own confidence; unsure lines are tagged for the summary and cannot back an accepted decision ("weak quote", unchecked).
+6. **Warnings before the spend.** The End screen note now appears for every review meeting before Summarize (the rules add about 1,500 tokens; with a document the figure adds it as before); the check has its own figure and confirmation.
+
+## Verified here (Linux container, commands run)
+
+| Command | Result |
+|---|---|
+| `npm run check` | ok; 501 strings per language; 268/268 tests (was 227) |
+| `npm run build` then `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` | 21/21 (was 20), new `e2e/review-fidelity.spec.ts` on the synthetic parcel call: 13 lines live, 10 after End, 3 hidden and shown on request; unanswered questions with "(задан 3 раз)"; contradiction listed; participants without the invented name; map decision unchecked with the terms mark; open question with its count; pinning terms by hand clears the mark; the check's cost, confirmation, result; transcript export without the doubled or credit lines and with the count |
+| `electron/summary-prompt.test.ts` | the unanswered rule, "- нет" only when nothing is open, terms rule, contradiction and names rule, participants in the tail only for review, other modes' one sentence, unsure rule only when there are unsure lines; the cost note's bound covers what the rules add |
+| `electron/decision-terms.test.ts`, `electron/decisions.test.ts`, `electron/decision-check.test.ts`, `electron/participants.test.ts` | structure words RU/EN at word starts; missing / unclear terms start unchecked; asked count parsed tolerantly; weak quote; the check only lowers and leaves hand edits; names not in the transcript dropped; protocol participants line |
+| `electron/transcript-clean.test.ts`, `electron/echo-filter.test.ts`, `electron/meetings-store.test.ts` | every line in both channels: mic copies marked; both talking at once: both kept; later restatement kept; credit lines only whole and in a quiet stretch; quotes move to the kept line; exports skip and count; End marks and saves; 2,400 lines in about 60 ms; the live-filter escape reproduced; python3 on fake segments for the sidecar's confidence |
+| `electron/review-flow.test.ts` | the parcel call through AppCore: summary input without doubled or credit lines, decisions, participants, protocol line, check; live segments keep `end` and low confidence, the summary tags them |
+| `electron/log-hygiene.test.ts` | a canary in a doubled line, a credit line and an unsure line, the check and the transcript export: not in the log |
+| GitHub Actions CI runs 51, 53, 55 | green (50, 52, 54 cancelled by a newer push) |
+| Screenshots | `docs/screens/review-fidelity-*.png`; `review-*` regenerated (cost note and check button) |
+
+## Needs a real call (and a Mac)
+
+`MAC_VERIFY.md` step 9c (EN/RU). Everything here ran against scripted recognizer output and a fixed mock answer: the tests prove how the app parses, marks and shows a summary, not that a real model writes it. Whether a real model lists every unanswered question, keeps "не уточнено" instead of picking a reading, and fills participants honestly can only be judged by the owner on a real call. faster-whisper's confidence numbers were not seen from a real model here (no model download); the thresholds are its own defaults.
+
+## Known gaps
+
+- Real-model summary quality unverified (see above).
+- If the system audio also carries the analyst's own voice, the other-side copy of a doubled line wins and the analyst's words are attributed to the other side; no saved signal tells which copy is the source.
+- An echo copy garbled beyond the text comparison stays; the credit blocklist is short by design.
+- Live suggestions still see a doubled line when its clean copy arrives late (the fix is on the saved transcript); a longer live hold would delay every analyst line.
+- Old meetings are cleaned on their next summary, not when merely opened.
+- The terms guard flags any accepted decision with a structure word and no terms, also a plain "add field X"; the analyst clears it by writing the terms.
+
+## Decisions needing the owner
+
+1. **Second verification pass: on request only, not on by default** (a button with cost and confirmation, both levels). *Recommended: keep on request; consider an Advanced setting to run it after every review summary once real calls show it catches wrong acceptances.*
+2. **Blocklist wording** (`electron/transcript-noise.ts`): Russian and English credit-style lines ("Субтитры сделал ...", "Редактор субтитров ...", "Корректор И.Фамилия", "Subtitles by ...", "Subtitle editor ...", "Proofreader ..."), whole line only, quiet stretch only. *Recommended: keep conservative; add a phrase only when it shows up in a real transcript.*
+3. **Doubled lines: the mic copy is the one hidden** (as in the live filter). *Recommended: keep; if your setup plays your own voice back, tell us and we add a per-meeting "which copy wins" choice.*
+4. **Participants and briefing contradictions only in review.** *Recommended: keep until real review calls show it works, then extend to requirements.*
+5. **No cost note for the other modes' one-sentence rule** (about 120 tokens, under 1% of a 30-minute summary). *Recommended: accept; a note on every summary for that would be noise.*
+6. **Accepted structure decisions without terms start unchecked.** *Recommended: keep; it is the "never choose a reading" rule made visible.*
+
+## Next steps
+
+1. MAC_VERIFY step 9c with speakers on, on a real call.
+2. Collect real credit-line hallucinations and doubled lines from two or three calls; tune the blocklist and, if needed, the echo thresholds for the saved-transcript pass.
+3. Decide items 1 and 4 above after that.
