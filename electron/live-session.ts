@@ -242,6 +242,18 @@ function buildBasePrompt(options: { includeScreenshot?: boolean; includeScreenTe
  * capture stay outside this class (renderer captures audio, main captures
  * screenshots) — this is just "transcript deltas in, suggestion blocks out".
  */
+/**
+ * Tests only (E2E mode or the node test runner): a shorter live echo hold,
+ * so a scripted call can reproduce a doubled line that gets past the live
+ * filter, the way a late clean copy does on a real call (CLOUD_TASK_6).
+ */
+function testEchoHoldMs(): number | undefined {
+  const raw = process.env.AVALET_TEST_ECHO_HOLD_MS;
+  if (raw === undefined || (process.env.AVALET_E2E !== "1" && !process.env.NODE_TEST_CONTEXT)) return undefined;
+  const ms = Number(raw);
+  return Number.isFinite(ms) && ms >= 0 ? ms : undefined;
+}
+
 export class LiveSession {
   private transcript = "";
   // Raw text heard since the last generated block — scanned for
@@ -259,8 +271,10 @@ export class LiveSession {
   // raw audio transcript, never its own prior output.
   private lastAnswer = "";
   private consecutiveTranscriptionFailures = 0;
-  private readonly echo = new EchoFilter(Date.now, (text) =>
-    logLine(`[echo] dropped a mic segment that repeats the other side (${text.length} chars)`),
+  private readonly echo = new EchoFilter(
+    Date.now,
+    (text) => logLine(`[echo] dropped a mic segment that repeats the other side (${text.length} chars)`),
+    testEchoHoldMs(),
   );
   private readonly promptTail: Record<AudioChannel, string> = { me: "", other: "" };
 

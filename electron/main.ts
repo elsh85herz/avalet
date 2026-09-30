@@ -19,7 +19,7 @@ import { AppCore, type Emit, type Handler, type WindowChannel } from "./app-core
 import { PythonRuntime, defaultSidecarCommand, type SidecarCommand } from "./python-runtime.js";
 import { SpeechModelManager } from "./model-manager.js";
 import { UsageLedger } from "./metering/ledger.js";
-import { FakeCapture } from "./fake-capture.js";
+import { FAKE_PLANS, FakeCapture } from "./fake-capture.js";
 import { BillingService } from "./billing/service.js";
 import { billingConfigFromEnv } from "./billing/config.js";
 import { HttpBillingProvider } from "./billing/http-provider.js";
@@ -544,9 +544,13 @@ app.whenReady().then(() => {
   core = createCore();
   if (e2e) {
     const handler = core.handlers["avalet:capture-audio-chunk"]!;
-    fakeCapture = new FakeCapture(async (audio, channel, meta) => {
-      await handler(audio, channel, meta);
-    });
+    fakeCapture = new FakeCapture(
+      async (audio, channel, meta) => {
+        await handler(audio, channel, meta);
+      },
+      1_500,
+      FAKE_PLANS[process.env.FAKE_SIDECAR_SCRIPT ?? ""],
+    );
     const reset = core.handlers["avalet:session-reset"]!;
     core.handlers["avalet:session-reset"] = (...args) => {
       fakeCapture?.reset();

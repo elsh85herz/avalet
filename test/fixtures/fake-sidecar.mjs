@@ -7,6 +7,7 @@
 // "QUIET:<phrase>" also report low confidence or "probably not speech". Anything else (real WAV bytes
 // from the fake capture) gets the next line of a canned conversation.
 // FAKE_SIDECAR_FAIL=<n> makes the first n transcriptions fail.
+import fs from "node:fs";
 import readline from "node:readline";
 
 const CANNED = [
@@ -23,6 +24,10 @@ const REVIEW = [
   "И ещё давайте добавим выгрузку в XLSX, не только CSV.",
   "Срок хранения 180 дней пока не трогаем, это надо согласовать с безопасностью.",
 ];
+// FAKE_SIDECAR_SCRIPT=parcel (CLOUD_TASK_6): the synthetic parcel call in
+// parcel-call.json, line n for chunk "FAKE-AUDIO-n", with doubled lines and a
+// quiet credit line (the channel plan is electron/fake-capture.ts).
+const PARCEL = JSON.parse(fs.readFileSync(new URL("./parcel-call.json", import.meta.url), "utf8")).lines;
 const SCRIPT = process.env.FAKE_SIDECAR_SCRIPT === "review" ? REVIEW : CANNED;
 let cannedIndex = 0;
 let failuresLeft = Number(process.env.FAKE_SIDECAR_FAIL ?? 0);
@@ -42,6 +47,11 @@ function transcribe(params) {
   // CLOUD_TASK_6: the recognizer's own confidence, as faster-whisper reports it.
   if (decoded.startsWith("UNSURE:")) return { text: decoded.slice(7), language: params.language ?? "ru", ends_with_pause: true, avg_logprob: -1.45, no_speech_prob: 0.1 };
   if (decoded.startsWith("QUIET:")) return { text: decoded.slice(6), language: params.language ?? "ru", ends_with_pause: true, avg_logprob: -0.9, no_speech_prob: 0.93 };
+  const numbered = decoded.match(/^FAKE-AUDIO-(\d+)$/);
+  if (process.env.FAKE_SIDECAR_SCRIPT === "parcel" && numbered) {
+    const line = PARCEL[(Number(numbered[1]) - 1) % PARCEL.length];
+    return { text: line.text, language: params.language ?? "ru", ends_with_pause: true, ...(line.quiet ? { avg_logprob: -0.9, no_speech_prob: 0.93 } : {}) };
+  }
   const text = SCRIPT[cannedIndex % SCRIPT.length];
   cannedIndex += 1;
   return { text, language: params.language ?? "ru", ends_with_pause: true };

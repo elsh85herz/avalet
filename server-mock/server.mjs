@@ -69,7 +69,7 @@ export function fakeCompletion(system, user) {
   if (/You check decisions taken on a call/i.test(system)) return decisionChecks(userText(user));
   if (/writing the outcome of a meeting/i.test(system) && /"decisions":\[/.test(system)) {
     const marker = (system.match(/write exactly (\S+) and then/) ?? [])[1] ?? "@@AVALET_JSON@@";
-    return reviewSummary(marker);
+    return /посылк/i.test(userText(user)) ? parcelSummary(marker) : reviewSummary(marker);
   }
   if (/writing the outcome of a meeting/i.test(system)) {
     const marker = (system.match(/write exactly (\S+) and then/) ?? [])[1] ?? "@@AVALET_JSON@@";
@@ -158,6 +158,82 @@ function reviewSummary(marker) {
           quote: "Срок хранения 180 дней пока не трогаем, это надо согласовать с безопасностью.",
           at: "00:06",
         },
+      ],
+    }),
+  ].join("\n");
+}
+
+// CLOUD_TASK_6: the synthetic parcel call (test/fixtures/parcel-call.json).
+// A fixed answer with the three things the owner's real call lost: a map
+// decision that does not say what its key is, a question asked three times
+// and deferred, a role that contradicts the briefing. Plus a participant name
+// nobody said, which the app must drop. The checks are about how the app
+// parses, shows and marks this, not about model quality.
+function parcelSummary(marker) {
+  return [
+    "Обсуждения",
+    "Тема: Как хранить позиции посылки (раздел 2.1)",
+    "- Собеседник предложил вместо двух списков мапу, Я согласился.",
+    "- не уточнено: ключ мапы, название поля или значение типа вложения.",
+    "Тема: Обратная совместимость со старым форматом",
+    "- без ответа",
+    "Замечания к документу",
+    "- раздел 2.1 - заменить два списка на мапу - Собеседник",
+    "Решения по открытым вопросам",
+    "- хранение позиций - принято - мапа; ключ не уточнено",
+    "Поручения и сроки",
+    "- нет",
+    "Новые вопросы и риски",
+    "- Вопрос без ответа: что является ключом мапы, название поля или значение типа - задал Я - передан владельцу продукта (задан 3 раз) - «ключ это название поля или значение типа?» (00:07)",
+    "- Вопрос без ответа: сохраняется ли обратная совместимость со старым форматом - задал Я - без ответа - «обратная совместимость со старым форматом сохраняется?» (00:14)",
+    "- Расхождение с контекстом: в контексте разработчик и владелец продукта один человек, на встрече разработчик передаёт вопрос владельцу продукта - «я спрошу у владельца продукта» (00:11)",
+    marker,
+    JSON.stringify({
+      agenda: [],
+      actions: [],
+      decisions: [
+        {
+          id: "d1",
+          text: "В разделе 2.1 хранить позиции посылки мапой: ключ - массив количеств",
+          status: "accepted",
+          by: "Собеседник предложил, Я согласился",
+          section: "2.1 Посылка",
+          before: "",
+          after: "",
+          terms: "",
+          quote: "Согласен, делаем мапу.",
+          at: "00:08",
+        },
+        {
+          id: "d2",
+          text: "Что является ключом мапы: название поля или значение типа вложения?",
+          status: "open",
+          by: "Я",
+          section: "2.1 Посылка",
+          before: "",
+          after: "",
+          terms: "не уточнено: ключ мапы, название поля или значение типа вложения",
+          quote: "Ключ это что: название поля или значение типа вложения?",
+          at: "00:05",
+          asked: 3,
+        },
+        {
+          id: "d3",
+          text: "Сохраняется ли обратная совместимость со старым форматом?",
+          status: "open",
+          by: "Я",
+          section: "не определён",
+          before: "",
+          after: "",
+          terms: "",
+          quote: "обратная совместимость со старым форматом сохраняется?",
+          at: "00:14",
+        },
+      ],
+      participants: [
+        { who: "Кирилл", role: "разработчик, предлагает решение", kind: "named" },
+        { who: "", role: "аналитик, ведёт ревью", kind: "inferred" },
+        { who: "", role: "владелец продукта, ему передан вопрос", kind: "third_party" },
       ],
     }),
   ].join("\n");

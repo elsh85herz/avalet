@@ -172,10 +172,20 @@ test("a review meeting with a document: neither the document nor the key reaches
     assert.deepEqual(await call("avalet:session-start"), { ok: true });
     await say("По разделу 3.1: пятидесяти записей на страницу мало, предлагаю поднять лимит до 100.");
     await say("Согласен, поднимаем до 100 записей.", "me");
+    // CLOUD_TASK_6: a doubled line, a credit line in a quiet stretch and an unsure line carry the canary too.
+    await say(`Ключ мапы это ${TEXT_CANARY}, договорились?`, "me");
+    await say(`Ключ мапы это ${TEXT_CANARY}, договорились?`, "other");
+    await call("avalet:capture-audio-chunk", Buffer.from(`QUIET:Субтитры сделал ${TEXT_CANARY}`).toString("base64"), "me", { startedAt: Date.now() + 60_000, endedAt: Date.now() + 61_000, endedBySilence: true });
+    await call("avalet:capture-audio-chunk", Buffer.from(`UNSURE:неразборчиво ${TEXT_CANARY}`).toString("base64"), "other", { startedAt: Date.now() - 1_000, endedAt: Date.now(), endedBySilence: true });
     await call("avalet:session-ask", "что сейчас в разделе 2?");
     const meeting = await call("avalet:meetings-current");
     await call("avalet:session-reset");
     await call("avalet:meetings-summarize", meeting!.id);
+    const saved = await call("avalet:meetings-get", meeting!.id);
+    assert.ok(saved!.transcript.some((seg) => seg.filtered), "the cleaning pass ran");
+    const checked = await call("avalet:decisions-check", meeting!.id);
+    assert.equal(checked.ok, true);
+    await call("avalet:meetings-export-transcript", meeting!.id, {});
     const proposed = await call("avalet:artifact-propose", meeting!.id);
     assert.equal(proposed.ok, true);
     const ids = proposed.ok ? proposed.proposal.patches.filter((p) => p.ok).map((p) => p.id) : [];
