@@ -37,7 +37,7 @@ import {
 import { summarizeMeeting } from "./meeting-summary.js";
 import { buildProtocolMarkdown, parseAgendaText } from "./summary-format.js";
 import { ARTIFACT_CHAR_CAP } from "./shared/artifact.js";
-import { sanitizeDecisions } from "./decisions.js";
+import { buildDecisionsMarkdown, sanitizeDecisions } from "./decisions.js";
 import { PatchReplyError, applyChosenPatches, proposePatches } from "./artifact-update.js";
 import {
   getAgendaText,
@@ -84,6 +84,7 @@ import {
   updateProviderSettings,
 } from "./settings-store.js";
 import type {
+  DecisionLabels,
   EventChannel,
   EventMap,
   InvokeChannel,
@@ -159,6 +160,32 @@ function validArtifact(raw: unknown): { name: string; text: string } {
   if (typeof doc.text !== "string") throw new Error("document text must be a string");
   const name = typeof doc.name === "string" ? doc.name.replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, 200) : "";
   return { name, text: doc.text };
+}
+
+function decisionLabels(raw: unknown): DecisionLabels {
+  const pick = pickLabels(raw);
+  const statuses = pickLabels((raw as { statuses?: unknown } | null)?.statuses);
+  return {
+    title: pick("title", "Decisions"),
+    date: pick("date", "Date"),
+    document: pick("document", "Document"),
+    section: pick("section", "Section"),
+    status: pick("status", "Status"),
+    before: pick("before", "Was"),
+    after: pick("after", "Becomes"),
+    by: pick("by", "Who"),
+    quote: pick("quote", "Quote"),
+    actions: pick("actions", "Action points"),
+    none: pick("none", "none"),
+    me: pick("me", "Me"),
+    other: pick("other", "Other"),
+    statuses: {
+      accepted: statuses("accepted", "accepted"),
+      proposed: statuses("proposed", "proposed"),
+      rejected: statuses("rejected", "rejected"),
+      open: statuses("open", "open"),
+    },
+  };
 }
 
 function pickLabels(labels: unknown): (key: string, fallback: string) => string {
@@ -620,6 +647,18 @@ export class AppCore {
     h["avalet:artifact-apply"] = (rawId, rawIds) => {
       if (!Array.isArray(rawIds) || rawIds.some((x) => typeof x !== "string")) throw new Error("patch ids must be a string array");
       return applyChosenPatches(requireString(rawId, "id"), rawIds as string[]);
+    };
+    // Exactly the computed text: no header, no reformatting.
+    h["avalet:meetings-export-artifact"] = async (rawId) => {
+      const meeting = readMeeting(requireString(rawId, "id"));
+      if (!meeting?.artifactResult) throw new Error("the document has not been updated");
+      const base = (meeting.artifact?.name || meeting.title).replace(/\.(md|markdown|txt)$/i, "");
+      return this.saveFile(`${base} (updated)`, "Markdown", "md", meeting.artifactResult.text);
+    };
+    h["avalet:meetings-export-decisions"] = async (rawId, rawLabels) => {
+      const meeting = readMeeting(requireString(rawId, "id"));
+      if (!meeting) throw new Error("meeting not found");
+      return this.saveFile(`${meeting.title} - decisions`, "Markdown", "md", buildDecisionsMarkdown(meeting, decisionLabels(rawLabels)));
     };
     h["avalet:auto-detect-set"] = (enabled) => {
       const next = Boolean(enabled);

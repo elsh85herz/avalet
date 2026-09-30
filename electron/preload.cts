@@ -133,6 +133,8 @@ const api: AvaletApi = {
     setDecisions: (id, decisions) => invoke("avalet:meetings-set-decisions", id, decisions),
     proposePatches: (id) => invoke("avalet:artifact-propose", id),
     applyPatches: (id, patchIds) => invoke("avalet:artifact-apply", id, patchIds),
+    exportArtifact: (id) => invoke("avalet:meetings-export-artifact", id),
+    exportDecisions: (id, labels) => invoke("avalet:meetings-export-decisions", id, labels),
   },
   events: {
     onBlockStart: on("avalet:event:block-start"),

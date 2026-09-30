@@ -23,6 +23,23 @@ const SCRIPT: Array<[string, "me" | "other"]> = [
   ["Срок хранения 180 дней пока не трогаем, это надо согласовать с безопасностью.", "other"],
 ];
 
+const LABELS = {
+  title: "Решения",
+  date: "Дата",
+  document: "Документ",
+  section: "Раздел",
+  status: "Статус",
+  before: "Было",
+  after: "Стало",
+  by: "Кто",
+  quote: "Цитата",
+  actions: "Поручения",
+  none: "нет",
+  me: "Я",
+  other: "Собеседник",
+  statuses: { accepted: "Принято", proposed: "Предложено", rejected: "Отклонено", open: "Не решено" },
+};
+
 let mock: MockServer;
 before(async () => {
   mock = await startMockServer();
@@ -171,10 +188,27 @@ test("update the document: one metered call, patches checked against the origina
   // Both.
   const both = (await h.call("avalet:artifact-apply", meeting.id, [replace!.id, insert!.id]))!;
   assert.match(both.artifactResult!.text, /### 3\.2 POST \/activities\/export\n\nВ разделе 3\.2 добавить выгрузку в XLSX\.\n\nГотовит/);
+  // Download: exactly the computed text, nothing added.
+  const docFile = await h.call("avalet:meetings-export-artifact", meeting.id);
+  assert.equal(path.basename(docFile!), "spec-activity-journal (updated).md");
+  assert.equal(fs.readFileSync(docFile!, "utf8"), both.artifactResult!.text);
+  const decisionsFile = await h.call("avalet:meetings-export-decisions", meeting.id, LABELS);
+  const exported = fs.readFileSync(decisionsFile!, "utf8");
+  assert.match(exported, /^# Решения: Встреча /);
+  assert.match(exported, /\nДокумент: spec-activity-journal\.md\n/);
+  assert.match(
+    exported,
+    /## 1\. В разделе 3\.1 поднять размер страницы до 100 записей\n\n- Раздел: 3\.1 GET \/activities\n- Статус: Принято\n- Было: не более 50 записей\n- Стало: не более 100 записей\n- Кто: Собеседник предложил, Я согласился\n- Цитата: «Согласен, поднимаем до 100 записей\.» \(Я, 00:00:0\d\)\n/,
+  );
+  assert.match(exported, /## 2\. В разделе 3\.2 добавить выгрузку в XLSX\n\n- Раздел: 3\.2 POST \/activities\/export\n- Статус: Предложено\n- Было: нет\n/);
+  assert.doesNotMatch(exported, /Срок хранения 180 дней согласовать/, "an unchecked decision is not exported");
+  assert.match(exported, /## Поручения\n\n- Согласовать срок хранения 180 дней с безопасностью \(Я, срок не назван\)\n$/);
+
   // Back to the original.
   const reverted = (await h.call("avalet:artifact-apply", meeting.id, []))!;
   assert.equal(reverted.artifactResult, undefined);
   await assert.rejects(async () => h.call("avalet:artifact-apply", meeting.id, [5]));
+  await assert.rejects(async () => h.call("avalet:meetings-export-artifact", meeting.id), /not been updated/);
   await h.core.shutdown();
 });
 

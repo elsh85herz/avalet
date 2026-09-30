@@ -15,8 +15,6 @@ type Props = {
   onChange: (meeting: Meeting) => void;
   jumpTo: (at: number) => void;
   clock: (at: number) => string;
-  /** Download buttons for the updated document and the decisions. */
-  exports?: React.ReactNode;
 };
 
 function newId(): string {
@@ -28,7 +26,7 @@ function newId(): string {
  * before the document is updated. Every edit is saved on the meeting and
  * marked as done by hand, so a new summary leaves it alone.
  */
-export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, clock, exports }: Props) {
+export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, clock }: Props) {
   const bridge = getBridge();
   const t = UI_STRINGS[uiLanguage].spec;
   const tm = UI_STRINGS[uiLanguage].meeting;
@@ -77,6 +75,38 @@ export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, 
   }
 
   const visible = rows.filter((d) => !d.removed);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  function flash(text: string) {
+    setNotice(text);
+    setTimeout(() => setNotice((current) => (current === text ? null : current)), 2500);
+  }
+
+  async function exportDecisions() {
+    await persist(rowsRef.current);
+    const saved = await bridge.meetings.exportDecisions(meeting.id, {
+      title: t.fileTitle,
+      date: tm.date,
+      document: t.fileDocument,
+      section: t.sectionLabel,
+      status: t.statusLabel,
+      before: t.beforeLabel,
+      after: t.afterLabel,
+      by: t.byLabel,
+      quote: t.fileQuote,
+      actions: t.fileActions,
+      none: t.fileNone,
+      me: tm.me,
+      other: tm.other,
+      statuses: t.status,
+    });
+    if (saved) flash(tm.exported);
+  }
+
+  async function exportArtifact() {
+    const saved = await bridge.meetings.exportArtifact(meeting.id);
+    if (saved) flash(tm.exported);
+  }
 
   const sectionOptions = (current: string) => {
     const list = [...sections];
@@ -236,9 +266,24 @@ export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, 
           <button type="button" onClick={add} data-testid="decision-add">
             {t.addRow}
           </button>
+          <button type="button" onClick={() => void exportDecisions()} disabled={!visible.some((d) => d.include)} data-testid="decisions-download">
+            {t.downloadDecisions}
+          </button>
+          {notice ? <span className="notice">{notice}</span> : null}
         </div>
       ) : null}
-      {meeting.artifact ? <ArtifactUpdate meeting={{ ...meeting, decisions: rows }} uiLanguage={uiLanguage} onChange={onChange} exports={exports} /> : null}
+      {meeting.artifact ? (
+        <ArtifactUpdate
+          meeting={{ ...meeting, decisions: rows }}
+          uiLanguage={uiLanguage}
+          onChange={onChange}
+          exports={
+            <button type="button" className="primary" onClick={() => void exportArtifact()} data-testid="artifact-download">
+              {t.downloadDoc}
+            </button>
+          }
+        />
+      ) : null}
     </section>
   );
 }

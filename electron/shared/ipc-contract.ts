@@ -231,6 +231,24 @@ export type ExportLabels = {
   agendaOpen: string;
 };
 
+/** Headings of the decisions export, in the interface language. */
+export type DecisionLabels = {
+  title: string;
+  date: string;
+  document: string;
+  section: string;
+  status: string;
+  before: string;
+  after: string;
+  by: string;
+  quote: string;
+  actions: string;
+  none: string;
+  me: string;
+  other: string;
+  statuses: Record<DecisionStatus, string>;
+};
+
 export type SummaryDoneEvent = {
   id: string;
   text: string;
@@ -422,6 +440,10 @@ export type InvokeMap = {
   "avalet:artifact-propose": [[id: string], ProposeResult];
   /** Applies the chosen patches of the stored proposal to the original; [] goes back to the original. */
   "avalet:artifact-apply": [[id: string, patchIds: string[]], Meeting | null];
+  /** Save dialog: the updated document exactly as computed (.md). */
+  "avalet:meetings-export-artifact": [[id: string], string | null];
+  /** Save dialog: the checked decisions and the action points, fixed headings (.md). */
+  "avalet:meetings-export-decisions": [[id: string, labels: DecisionLabels], string | null];
   "avalet:auto-detect-set": [[enabled: boolean], void];
   "avalet:overlay-set-opacity": [[opacity: number], void];
   "avalet:overlay-set-collapsed": [[collapsed: boolean], void];
@@ -633,6 +655,8 @@ export type AvaletApi = {
     setDecisions: (id: string, decisions: Decision[]) => Promise<Meeting | null>;
     proposePatches: (id: string) => Promise<ProposeResult>;
     applyPatches: (id: string, patchIds: string[]) => Promise<Meeting | null>;
+    exportArtifact: (id: string) => Promise<string | null>;
+    exportDecisions: (id: string, labels: DecisionLabels) => Promise<string | null>;
   };
   events: {
     onBlockStart: Listener<"avalet:event:block-start">;
@@ -722,6 +746,8 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:meetings-set-decisions": true,
   "avalet:artifact-propose": true,
   "avalet:artifact-apply": true,
+  "avalet:meetings-export-artifact": true,
+  "avalet:meetings-export-decisions": true,
   "avalet:auto-detect-set": true,
   "avalet:overlay-set-opacity": true,
   "avalet:overlay-set-collapsed": true,

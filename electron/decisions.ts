@@ -1,8 +1,8 @@
-import type { Decision, DecisionStatus, Meeting } from "./shared/ipc-contract.js";
+import type { Decision, DecisionLabels, DecisionStatus, Meeting } from "./shared/ipc-contract.js";
 import { DECISION_STATUSES } from "./shared/ipc-contract.js";
 import { SECTION_UNKNOWN, findSection, parseSections, sectionLabel } from "./shared/artifact.js";
 import { locateQuote, sameTask } from "./live-tracker-logic.js";
-import type { RawDecision } from "./summary-format.js";
+import { meetingClock, type RawDecision } from "./summary-format.js";
 
 // Review mode decisions (CLOUD_TASK_5): the summary's list checked against
 // what was actually said and against the document, then merged with what the
@@ -101,4 +101,37 @@ export function sanitizeDecisions(value: unknown): Decision[] {
     if (typeof d.at === "number" && Number.isFinite(d.at)) out.at = d.at;
     return out;
   });
+}
+
+/**
+ * The decisions file (README "Review mode"): stable headings, one block per
+ * checked decision, then the protocol's action points. Meant to be handed,
+ * with the original document, to someone (or something) else to apply.
+ */
+export function buildDecisionsMarkdown(meeting: Meeting, labels: DecisionLabels): string {
+  const none = labels.none;
+  const value = (text: string) => (text.trim() ? text.replace(/\r?\n/g, " ").trim() : none);
+  const lines = [`# ${labels.title}: ${meeting.title}`, ""];
+  lines.push(`${labels.date}: ${new Date(meeting.startedAt).toLocaleString()}`);
+  lines.push(`${labels.document}: ${meeting.artifact?.name || none}`, "");
+  const chosen = (meeting.decisions ?? []).filter((d) => d.include && !d.removed && d.text.trim());
+  chosen.forEach((d, i) => {
+    const who = d.speaker === "me" ? labels.me : d.speaker === "other" ? labels.other : "";
+    const when = typeof d.at === "number" ? meetingClock(d.at, meeting.startedAt) : "";
+    const source = [who, when].filter(Boolean).join(", ");
+    lines.push(`## ${i + 1}. ${value(d.text)}`, "");
+    lines.push(`- ${labels.section}: ${value(d.section)}`);
+    lines.push(`- ${labels.status}: ${labels.statuses[d.status] ?? d.status}`);
+    lines.push(`- ${labels.before}: ${value(d.before)}`);
+    lines.push(`- ${labels.after}: ${value(d.after)}`);
+    lines.push(`- ${labels.by}: ${value(d.by)}`);
+    lines.push(`- ${labels.quote}: ${d.quote ? `«${value(d.quote)}»${source ? ` (${source})` : ""}` : source ? `(${source})` : none}`, "");
+  });
+  if (chosen.length === 0) lines.push(none, "");
+  lines.push(`## ${labels.actions}`, "");
+  const actions = (meeting.actions ?? []).filter((a) => a.state !== "dismissed");
+  if (actions.length === 0) lines.push(`- ${none}`);
+  for (const a of actions) lines.push(`- ${value(a.task)} (${[a.owner, a.due].map((x) => x?.trim()).filter(Boolean).join(", ") || none})`);
+  lines.push("");
+  return lines.join("\n");
 }
