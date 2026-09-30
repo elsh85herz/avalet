@@ -2367,6 +2367,34 @@ a {
   font-size: 12px;
   color: var(--muted);
 }
+.decision-terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.decision-terms input {
+  flex: 1 1 240px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+/* Terms the call did not pin: the one field the analyst must look at. */
+.decision-terms.missing input,
+.decision-terms.unclear input {
+  border-color: var(--warn);
+  border-width: 2px;
+}
+.decision-terms .hint {
+  flex-basis: 100%;
+  margin: 0;
+}
 .decision-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;

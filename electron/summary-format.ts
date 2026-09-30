@@ -26,6 +26,8 @@ export type RawDecision = {
   atSeconds: number | null;
   /** An open question asked more than once: how many times (CLOUD_TASK_6). */
   asked?: number;
+  /** Pinned subject terms of a structure decision, or "не уточнено: ..."; "" when none (CLOUD_TASK_6). */
+  terms: string;
 };
 
 /** A repeat count of 2 or more, else undefined: once is the default and says nothing. */
@@ -59,6 +61,7 @@ export function parseDecisions(value: unknown): RawDecision[] {
       before: str(item.before),
       after: str(item.after),
       quote: str(item.quote),
+      terms: str(item.terms).replace(/\s*\r?\n\s*/g, " "),
       atSeconds: parseClock(item.at),
       ...(parseAsked(item.asked) ? { asked: parseAsked(item.asked) } : {}),
     }));

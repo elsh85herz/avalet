@@ -5,7 +5,9 @@ import type { Decision, DecisionStatus } from "../../../electron/shared/ipc-cont
 import { DECISION_STATUSES } from "../../../electron/shared/ipc-contract.js";
 import { ARTIFACT_CHAR_CAP, SECTION_UNKNOWN, parseSections, sectionLabel } from "../../../electron/shared/artifact.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
+import { termsProblem } from "../../../electron/shared/decision-terms.js";
 import { ArtifactUpdate } from "./ArtifactUpdate.js";
+import { DecisionsCheck } from "./DecisionsCheck.js";
 
 type Props = {
   meeting: Meeting;
@@ -92,6 +94,7 @@ export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, 
       status: t.statusLabel,
       before: t.beforeLabel,
       after: t.afterLabel,
+      terms: t.termsLabel,
       by: t.byLabel,
       quote: t.fileQuote,
       actions: t.fileActions,
@@ -226,6 +229,26 @@ export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, 
                   onBlur={() => void persist(rowsRef.current)}
                   data-testid="decision-text"
                 />
+                {(() => {
+                  const problem = termsProblem(d);
+                  return d.terms || problem ? (
+                    <label className={`decision-terms${problem ? ` ${problem}` : ""}`} data-testid="decision-terms-row" data-problem={problem ?? ""}>
+                      <span>{t.termsLabel}</span>
+                      <input
+                        value={d.terms ?? ""}
+                        placeholder={t.termsPlaceholder}
+                        onChange={(e) => edit(d.id, { terms: e.target.value }, false)}
+                        onBlur={() => void persist(rowsRef.current)}
+                        data-testid="decision-terms"
+                      />
+                      {problem ? (
+                        <span className="hint problem-text" data-testid={`decision-terms-${problem}`}>
+                          {problem === "missing" ? t.termsMissing : t.termsUnclear}
+                        </span>
+                      ) : null}
+                    </label>
+                  ) : null;
+                })()}
                 <div className="decision-meta">
                   {d.by ? (
                     <span>
@@ -246,6 +269,11 @@ export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, 
                 {d.ungrounded ? (
                   <p className="hint problem-text" data-testid="decision-ungrounded">
                     {t.ungrounded}
+                  </p>
+                ) : null}
+                {d.check ? (
+                  <p className={`hint${d.check.verdict === "ok" ? "" : " problem-text"}`} data-testid="decision-check" data-verdict={d.check.verdict}>
+                    {(d.check.verdict === "ok" ? t.checkOk : d.check.verdict === "not_supported" ? t.checkNotSupported : t.checkTermsUnclear).replace("{reason}", d.check.reason)}
                   </p>
                 ) : null}
                 {d.asked ? (
@@ -277,6 +305,7 @@ export function DecisionsPanel({ meeting, uiLanguage, simple, onChange, jumpTo, 
           {notice ? <span className="notice">{notice}</span> : null}
         </div>
       ) : null}
+      <DecisionsCheck meeting={meeting} rows={rows} uiLanguage={uiLanguage} beforeSend={() => persist(rowsRef.current)} onChange={onChange} />
       {meeting.artifact ? (
         <ArtifactUpdate
           meeting={{ ...meeting, decisions: rows }}

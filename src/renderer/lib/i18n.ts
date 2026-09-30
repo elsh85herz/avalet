@@ -430,6 +430,18 @@ export type UiStrings = {
     addRow: string;
     ungrounded: string;
     askedTimes: string;
+    termsLabel: string;
+    termsPlaceholder: string;
+    termsMissing: string;
+    termsUnclear: string;
+    checkButton: string;
+    checkWorking: string;
+    checkConfirmText: string;
+    checkDone: string;
+    checkError: string;
+    checkOk: string;
+    checkNotSupported: string;
+    checkTermsUnclear: string;
     edited: string;
     jumpTitle: string;
     updateButton: string;
@@ -945,6 +957,18 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       addRow: "Add decision",
       ungrounded: "The supporting words were not found in the transcript. Check before including.",
       askedTimes: "Asked in the call without an answer, times: {n}",
+      termsLabel: "Terms",
+      termsPlaceholder: "What the key, the value and one entry are, as said in the call",
+      termsMissing: "Terms not pinned: the call did not say what the key and the value are here. Pin them before including.",
+      termsUnclear: "Not clarified in the call. Ask before applying this decision.",
+      checkButton: "Check against the quotes",
+      checkWorking: "Checking…",
+      checkConfirmText: "One small request to the model: {count} accepted decisions, each with its quote and the lines around it, about {tokens} tokens. The check can only lower a decision or mark its terms as not clarified. It never adds or rewrites anything.",
+      checkDone: "Checked: {n}. A decision that did not hold up is unchecked and marked below.",
+      checkError: "Could not check the decisions: {message}",
+      checkOk: "Check: the quote supports this decision.",
+      checkNotSupported: "Check: the quote does not show agreement to exactly this, so it is back to proposed. {reason}",
+      checkTermsUnclear: "Check: the call does not make the terms clear. {reason}",
       edited: "edited",
       jumpTitle: "Show this moment in the transcript",
       updateButton: "Update the document",
@@ -1454,6 +1478,18 @@ export const UI_STRINGS: Record<UiLanguage, UiStrings> = {
       addRow: "Добавить решение",
       ungrounded: "Подтверждающих слов в расшифровке не нашлось. Проверьте, прежде чем включать.",
       askedTimes: "Спрашивали на встрече без ответа, раз: {n}",
+      termsLabel: "Термины",
+      termsPlaceholder: "Что здесь ключ, значение и одна запись, как сказали на встрече",
+      termsMissing: "Термины не закреплены: на встрече не сказали, что здесь ключ и что значение. Закрепите их, прежде чем включать.",
+      termsUnclear: "На встрече это не уточнили. Спросите, прежде чем применять решение.",
+      checkButton: "Сверить с цитатами",
+      checkWorking: "Сверяю…",
+      checkConfirmText: "Один небольшой запрос к модели: принятые решения ({count}), у каждого цитата и соседние реплики, примерно {tokens} токенов. Сверка может только понизить решение или пометить термины как не уточнённые. Она ничего не добавляет и не переписывает.",
+      checkDone: "Сверено: {n}. Решение, которое не подтвердилось, снято с отметки и помечено ниже.",
+      checkError: "Не удалось сверить решения: {message}",
+      checkOk: "Сверка: цитата подтверждает это решение.",
+      checkNotSupported: "Сверка: цитата не показывает согласия именно с этим, решение возвращено в предложенные. {reason}",
+      checkTermsUnclear: "Сверка: по разговору не ясно, что значат термины. {reason}",
       edited: "изменено",
       jumpTitle: "Показать это место в расшифровке",
       updateButton: "Обновить документ",

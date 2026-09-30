@@ -31,6 +31,7 @@ const LABELS = {
   status: "Статус",
   before: "Было",
   after: "Стало",
+  terms: "Термины",
   by: "Кто",
   quote: "Цитата",
   actions: "Поручения",
@@ -198,7 +199,7 @@ test("update the document: one metered call, patches checked against the origina
   assert.match(exported, /\nДокумент: spec-activity-journal\.md\n/);
   assert.match(
     exported,
-    /## 1\. В разделе 3\.1 поднять размер страницы до 100 записей\n\n- Раздел: 3\.1 GET \/activities\n- Статус: Принято\n- Было: не более 50 записей\n- Стало: не более 100 записей\n- Кто: Собеседник предложил, Я согласился\n- Цитата: «Согласен, поднимаем до 100 записей\.» \(Я, 00:00:0\d\)\n/,
+    /## 1\. В разделе 3\.1 поднять размер страницы до 100 записей\n\n- Раздел: 3\.1 GET \/activities\n- Статус: Принято\n- Было: не более 50 записей\n- Стало: не более 100 записей\n- Термины: нет\n- Кто: Собеседник предложил, Я согласился\n- Цитата: «Согласен, поднимаем до 100 записей\.» \(Я, 00:00:0\d\)\n/,
   );
   assert.match(exported, /## 2\. В разделе 3\.2 добавить выгрузку в XLSX\n\n- Раздел: 3\.2 POST \/activities\/export\n- Статус: Предложено\n- Было: нет\n/);
   assert.doesNotMatch(exported, /Срок хранения 180 дней согласовать/, "an unchecked decision is not exported");
@@ -220,5 +221,27 @@ test("update is refused without a checked decision; the decisions of the call ar
   await h.call("avalet:meetings-set-decisions", meeting.id, decisions.map((d) => ({ ...d, include: false, manual: true })));
   const refused = await h.call("avalet:artifact-propose", meeting.id);
   assert.equal(refused.ok, false);
+  await h.core.shutdown();
+});
+
+// CLOUD_TASK_6 phase 2: the optional check, only on request, metered as part of the summary.
+test("check against the quotes: one metered call over the accepted decisions, results folded without raising anything", async () => {
+  const h = reviewHarness();
+  const meeting = await h.runCall();
+  const none = await h.call("avalet:decisions-check", meeting.id);
+  assert.deepEqual(none, { ok: false, message: "no accepted decision with a quote", code: "nothing" });
+  assert.equal((await h.call("avalet:usage-get")).byPurpose.summary.calls, 0, "nothing to check, nothing spent");
+
+  await h.call("avalet:meetings-summarize", meeting.id);
+  const result = await h.call("avalet:decisions-check", meeting.id);
+  assert.ok(result.ok);
+  assert.equal(result.checked, 1);
+  const rows = result.meeting.decisions!;
+  const raise = rows.find((d) => d.status === "accepted")!;
+  assert.equal(raise.check?.verdict, "ok");
+  assert.equal(raise.include, true);
+  // The proposal and the open question were not sent and are unchanged.
+  assert.ok(rows.filter((d) => d.status !== "accepted").every((d) => !d.check));
+  assert.equal((await h.call("avalet:usage-get")).byPurpose.summary.calls, 2);
   await h.core.shutdown();
 });

@@ -186,10 +186,20 @@ export const PATCH_PROMPT_OVERHEAD_CHARS = 3_500;
 export const LIVE_INDEX_OVERHEAD_CHARS = 250;
 
 /** What the update call is told about each checked decision, with short ids ("d1", ...) the model copies back. */
-export type PatchDecision = { id: string; text: string; status: string; section: string; before: string; after: string };
+export type PatchDecision = { id: string; text: string; status: string; section: string; before: string; after: string; terms?: string };
 
-export function patchDecisions(decisions: Array<{ text: string; status: string; section: string; before: string; after: string }>): PatchDecision[] {
-  return decisions.map((d, i) => ({ id: `d${i + 1}`, text: d.text, status: d.status, section: d.section, before: d.before, after: d.after }));
+export function patchDecisions(
+  decisions: Array<{ text: string; status: string; section: string; before: string; after: string; terms?: string }>,
+): PatchDecision[] {
+  return decisions.map((d, i) => ({
+    id: `d${i + 1}`,
+    text: d.text,
+    status: d.status,
+    section: d.section,
+    before: d.before,
+    after: d.after,
+    ...(d.terms?.trim() ? { terms: d.terms.trim() } : {}),
+  }));
 }
 
 /** Rough size of the model's answer: an anchor and the new text per decision, plus JSON around them. */

@@ -30,6 +30,7 @@ const raw = (patch: Partial<RawDecision>): RawDecision => ({
   before: "не более 50 записей",
   after: "не более 100 записей",
   quote: "Согласен, поднимаем до 100 записей",
+  terms: "",
   atSeconds: 99,
   ...patch,
 });
@@ -123,4 +124,44 @@ test("an open question keeps its repeat count and never starts checked", () => {
   const [clean] = sanitizeDecisions([{ ...d, asked: 3 }]);
   assert.equal(clean!.asked, 3);
   assert.equal(sanitizeDecisions([{ ...d, asked: "many" }])[0]!.asked, undefined);
+});
+
+// CLOUD_TASK_6 phase 2: a structure decision is usable only with its terms pinned.
+test("an accepted structure decision without terms, or with 'не уточнено', starts unchecked and keeps its terms", () => {
+  const text = "Значение items становится мапой: ключ - массив количеств";
+  const quote = "Согласен, поднимаем до 100 записей";
+  const [missing, unclear, pinned, plain] = groundDecisions(
+    [
+      raw({ text, quote }),
+      raw({ text, quote, terms: "не уточнено: ключ мапы, название поля или значение типа" }),
+      raw({ text, quote, terms: "ключ - тип вложения (значение поля type); значение - массив количеств" }),
+      raw({ quote }),
+    ],
+    meeting,
+    id,
+  );
+  assert.equal(missing!.include, false);
+  assert.equal(missing!.terms, undefined);
+  assert.equal(unclear!.include, false);
+  assert.match(unclear!.terms!, /^не уточнено/);
+  assert.equal(pinned!.include, true);
+  assert.match(pinned!.terms!, /тип вложения/);
+  // A decision that shapes no structure needs no terms.
+  assert.equal(plain!.include, true);
+  const [clean] = sanitizeDecisions([{ ...pinned, terms: "ключ - id" }]);
+  assert.equal(clean!.terms, "ключ - id");
+});
+
+test("the decisions file carries a terms line for every checked decision", async () => {
+  const { buildDecisionsMarkdown } = await import("./decisions.js");
+  const labels = {
+    title: "Решения", date: "Дата", document: "Документ", section: "Раздел", status: "Статус", before: "Было", after: "Стало",
+    terms: "Термины", by: "Кто", quote: "Цитата", actions: "Поручения", none: "нет", me: "Я", other: "Собеседник",
+    statuses: { accepted: "Принято", proposed: "Предложено", rejected: "Отклонено", open: "Не решено" },
+  };
+  const base: Decision = { id: "a", text: "Хранить items мапой", status: "accepted", by: "", section: "3", before: "", after: "", include: true };
+  const full = { ...meeting, id: "m", title: "Разбор", mode: "review", context: "" } as Meeting;
+  const md = buildDecisionsMarkdown({ ...full, decisions: [{ ...base, terms: "ключ - тип; значение - массив" }, { ...base, id: "b", text: "Второе" }] }, labels);
+  assert.match(md, /- Термины: ключ - тип; значение - массив/);
+  assert.match(md, /## 2\. Второе[\s\S]*- Термины: нет/);
 });

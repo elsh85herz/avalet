@@ -259,6 +259,7 @@ Baseline on `aa85949`: `npm ci` ok, `npm run check` ok (227/227).
 ### In progress
 
 - Phase 1 done (prompt rule, `asked`, tests); the End-screen cost note for the new review rules comes with phase 3, when all rules are in.
+- Phase 2 done: terms rule and field, code guard (`electron/shared/decision-terms.ts`), terms row in the checklist, patch call skips unpinned terms, decisions file Terms line, on-request check (`electron/shared/decision-check.ts`, `electron/decisions-check-run.ts`, `DecisionsCheck.tsx`, IPC `avalet:decisions-check`, mock reply). `npm run check` 245/245.
 
 ### Next
 

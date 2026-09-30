@@ -130,3 +130,16 @@ test("the cost note's bound covers everything the update request adds around the
   assert.match(PATCH_SYSTEM_PROMPT, /copied character for character/);
   assert.match(PATCH_SYSTEM_PROMPT, /do not guess: list it in 'skipped'/);
 });
+
+test("the update call carries each decision's terms and skips unpinned ones instead of guessing (CLOUD_TASK_6)", async () => {
+  const { PATCH_SYSTEM_PROMPT, buildPatchUserContent } = await import("./artifact-prompt.js");
+  const { patchDecisions } = await import("./shared/artifact.js");
+  const sent = patchDecisions([
+    { text: "items становятся мапой", status: "accepted", section: "3", before: "", after: "", terms: "ключ - тип вложения; значение - массив количеств" },
+    { text: "Поднять лимит", status: "accepted", section: "3", before: "", after: "", terms: "  " },
+  ]);
+  assert.equal(sent[0]!.terms, "ключ - тип вложения; значение - массив количеств");
+  assert.equal("terms" in sent[1]!, false);
+  assert.match(buildPatchUserContent("doc", sent), /"terms":"ключ - тип вложения/);
+  assert.match(PATCH_SYSTEM_PROMPT, /When 'terms' start with 'не уточнено'[^\n]*do not pick a reading: list it in 'skipped'/);
+});

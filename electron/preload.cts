@@ -132,6 +132,7 @@ const api: AvaletApi = {
     setArtifact: (id, doc) => invoke("avalet:meetings-set-artifact", id, doc),
     setDecisions: (id, decisions) => invoke("avalet:meetings-set-decisions", id, decisions),
     proposePatches: (id) => invoke("avalet:artifact-propose", id),
+    checkDecisions: (id) => invoke("avalet:decisions-check", id),
     applyPatches: (id, patchIds) => invoke("avalet:artifact-apply", id, patchIds),
     exportArtifact: (id) => invoke("avalet:meetings-export-artifact", id),
     exportDecisions: (id, labels) => invoke("avalet:meetings-export-decisions", id, labels),

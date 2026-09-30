@@ -66,6 +66,7 @@ export function fakeCompletion(system, user) {
     });
   }
   if (/turn confirmed decisions into patches/i.test(system)) return reviewPatches(userText(user));
+  if (/You check decisions taken on a call/i.test(system)) return decisionChecks(userText(user));
   if (/writing the outcome of a meeting/i.test(system) && /"decisions":\[/.test(system)) {
     const marker = (system.match(/write exactly (\S+) and then/) ?? [])[1] ?? "@@AVALET_JSON@@";
     return reviewSummary(marker);
@@ -160,6 +161,28 @@ function reviewSummary(marker) {
       ],
     }),
   ].join("\n");
+}
+
+/**
+ * "Check against the quotes" (CLOUD_TASK_6): a structure decision with no
+ * terms is "terms_unclear", a quote without an agreement word is
+ * "not_supported", the rest "ok". Deterministic, for tests only.
+ */
+function decisionChecks(text) {
+  let items = [];
+  try {
+    items = JSON.parse((text.match(/<decisions>\n([\s\S]*?)\n<\/decisions>/) ?? [])[1] ?? "[]");
+  } catch {
+    items = [];
+  }
+  const checks = items.map((item) => {
+    if (!item.terms && /мап|map|ключ|массив/i.test(item.text)) {
+      return { id: item.id, verdict: "terms_unclear", terms: "не уточнено: что ключ, название поля или значение типа", reason: "В разговоре есть и то, и другое прочтение." };
+    }
+    if (!/соглас|принимаем|так и делаем/i.test(item.quote)) return { id: item.id, verdict: "not_supported", terms: "", reason: "В цитате нет согласия." };
+    return { id: item.id, verdict: "ok", terms: "", reason: "" };
+  });
+  return JSON.stringify({ checks });
 }
 
 /** Patches for the decisions in the request: "before" replaced by "after", else a line under the section heading. */

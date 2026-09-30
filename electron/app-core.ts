@@ -39,6 +39,7 @@ import { buildProtocolMarkdown, parseAgendaText } from "./summary-format.js";
 import { ARTIFACT_CHAR_CAP } from "./shared/artifact.js";
 import { buildDecisionsMarkdown, sanitizeDecisions } from "./decisions.js";
 import { PatchReplyError, applyChosenPatches, proposePatches } from "./artifact-update.js";
+import { CheckReplyError, checkDecisions } from "./decisions-check-run.js";
 import {
   getAgendaText,
   getAllProviderSettings,
@@ -173,6 +174,7 @@ function decisionLabels(raw: unknown): DecisionLabels {
     status: pick("status", "Status"),
     before: pick("before", "Was"),
     after: pick("after", "Becomes"),
+    terms: pick("terms", "Terms"),
     by: pick("by", "Who"),
     quote: pick("quote", "Quote"),
     actions: pick("actions", "Action points"),
@@ -642,6 +644,23 @@ export class AppCore {
       } finally {
         clearTimeout(timer);
         if (this.artifactAbort === controller) this.artifactAbort = null;
+      }
+    };
+    h["avalet:decisions-check"] = async (rawId) => {
+      const id = requireString(rawId, "id");
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 120_000);
+      try {
+        const done = await checkDecisions(id, controller.signal);
+        if (!done) return { ok: false, message: "no accepted decision with a quote", code: "nothing" };
+        return { ok: true, meeting: done.meeting, checked: done.checked };
+      } catch (error) {
+        if (error instanceof CheckReplyError) return { ok: false, message: error.message, code: "bad-reply" };
+        const problem = accessProblemOf(error);
+        if (problem) this.handleAccessProblem(problem);
+        return { ok: false, message: humanProviderError(error, getUiLanguage()), code: problem ? "paywall" : undefined };
+      } finally {
+        clearTimeout(timer);
       }
     };
     h["avalet:artifact-apply"] = (rawId, rawIds) => {

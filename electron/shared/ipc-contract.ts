@@ -84,7 +84,23 @@ export type LiveBlockDeltaEvent = { id: string; delta: string };
 export type LiveBlockErrorEvent = { id: string; message: string; code?: "paywall" };
 export type HistoryBlock = { id: string; text: string; status: "done" | "error"; createdAt: number };
 
-export type TranscriptSegment = { at: number; speaker: AudioChannel; text: string };
+export type TranscriptSegment = {
+  at: number;
+  speaker: AudioChannel;
+  text: string;
+  /** When the words ended (same clock as `at`); absent on older records. */
+  end?: number;
+  /**
+   * Kept in the record but left out of the view, the exports and the summary
+   * (CLOUD_TASK_6): "echo" is a mic copy of what the other side said through
+   * the speakers, "noise" an invented credit line in a quiet stretch.
+   */
+  filtered?: "echo" | "noise";
+  /** The recognizer was unsure of these words: never evidence for an accepted decision. */
+  lowConfidence?: boolean;
+  /** The recognizer judged the stretch as probably not speech. */
+  quiet?: boolean;
+};
 
 export type AgendaStatusItem = {
   question: string;
@@ -173,7 +189,21 @@ export type Decision = {
   ungrounded?: boolean;
   /** An open question asked more than once in the call: how many times. */
   asked?: number;
+  /**
+   * What the decision's structure words mean, as pinned in the call ("ключ -
+   * название поля; значение - массив"), or "не уточнено: ..."; absent when
+   * the decision shapes no structure (or on older records).
+   */
+  terms?: string;
+  /** The last "Check against the quotes" verdict for this row (on request, CLOUD_TASK_6). */
+  check?: DecisionCheck;
 } & QuoteRef;
+
+/** ok: the quote shows agreement and the terms are pinned; the other two only ever lower a decision. */
+export type DecisionCheck = { verdict: "ok" | "not_supported" | "terms_unclear"; reason: string; at: number };
+export type CheckDecisionsResult =
+  | { ok: true; meeting: Meeting; checked: number }
+  | { ok: false; message: string; code?: "paywall" | "bad-reply" | "nothing" };
 
 export type PatchOp = "replace" | "insert_after" | "delete";
 export type ArtifactPatch = {
@@ -242,6 +272,8 @@ export type DecisionLabels = {
   status: string;
   before: string;
   after: string;
+  /** "Terms": what the decision's key, value and unit mean. */
+  terms: string;
   by: string;
   quote: string;
   actions: string;
@@ -440,6 +472,8 @@ export type InvokeMap = {
   "avalet:meetings-set-decisions": [[id: string, decisions: Decision[]], Meeting | null];
   /** "Update the document": one model call, returns patches checked against the document; nothing is applied yet. */
   "avalet:artifact-propose": [[id: string], ProposeResult];
+  /** On request: one small call that checks the accepted decisions against their quotes; it can only lower them. */
+  "avalet:decisions-check": [[id: string], CheckDecisionsResult];
   /** Applies the chosen patches of the stored proposal to the original; [] goes back to the original. */
   "avalet:artifact-apply": [[id: string, patchIds: string[]], Meeting | null];
   /** Save dialog: the updated document exactly as computed (.md). */
@@ -656,6 +690,7 @@ export type AvaletApi = {
     setArtifact: (id: string, doc: ArtifactDoc | null) => Promise<Meeting | null>;
     setDecisions: (id: string, decisions: Decision[]) => Promise<Meeting | null>;
     proposePatches: (id: string) => Promise<ProposeResult>;
+    checkDecisions: (id: string) => Promise<CheckDecisionsResult>;
     applyPatches: (id: string, patchIds: string[]) => Promise<Meeting | null>;
     exportArtifact: (id: string) => Promise<string | null>;
     exportDecisions: (id: string, labels: DecisionLabels) => Promise<string | null>;
@@ -747,6 +782,7 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:meetings-set-artifact": true,
   "avalet:meetings-set-decisions": true,
   "avalet:artifact-propose": true,
+  "avalet:decisions-check": true,
   "avalet:artifact-apply": true,
   "avalet:meetings-export-artifact": true,
   "avalet:meetings-export-decisions": true,

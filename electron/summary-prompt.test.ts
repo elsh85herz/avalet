@@ -118,3 +118,18 @@ test("other modes with 'Открытые вопросы' get the same rule in on
   assert.deepEqual(MODE_SUMMARY.free.headings, ["Обсуждения", "Решения", "Открытые вопросы", "Риски"]);
   assert.deepEqual(spec.headings, ["Обсуждения", "Замечания к документу", "Решения по открытым вопросам", "Поручения и сроки", "Новые вопросы и риски"]);
 });
+
+test("review: structure decisions pin their terms in the speakers' words or say 'не уточнено'; the model never picks a reading", () => {
+  const prompt = reviewPrompt({ review: true, artifact: DOC });
+  assert.match(prompt, /what the key is \(a field name, a field value, an id\), what the value is, one entry per what/);
+  assert.match(prompt, /if the speakers gave an example in the call, repeat that example/);
+  assert.match(prompt, /'не уточнено: <which term>, <reading one> или <reading two>'/);
+  assert.match(prompt, /also listed as a 'Вопрос без ответа'/);
+  assert.match(prompt, /Never choose an interpretation yourself/);
+  assert.match(prompt, /"terms":"\.\.\."/);
+  assert.match(prompt, /terms: for a decision that defines or changes a data or interface structure/);
+  // The text rule holds without a document too; the JSON field only with one.
+  const plain = reviewPrompt();
+  assert.match(plain, /Never choose an interpretation yourself/);
+  assert.doesNotMatch(plain, /"terms"/);
+});

@@ -88,6 +88,7 @@ test("review: decisions are parsed from the JSON tail next to agenda and actions
     before: "не более 50 записей",
     after: "не более 100 записей",
     quote: "Согласен, поднимаем",
+    terms: "",
     atSeconds: 65,
   });
   assert.equal(analysis?.decisions?.[1]?.atSeconds, 3723);

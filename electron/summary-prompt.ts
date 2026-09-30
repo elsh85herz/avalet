@@ -24,6 +24,16 @@ export const UNANSWERED_REVIEW_RULES = [
   "Write '- нет' under 'Новые вопросы и риски' only when no question was left without an answer and nothing else belongs there; while any question is open, '- нет' is wrong.",
 ].join(" ");
 
+// CLOUD_TASK_6, finding 2: a decision that shapes data is written with its
+// terms pinned, in the speakers' words, or says which term is unclear. The
+// model never picks a reading on its own.
+export const TERMS_REVIEW_RULES = [
+  "A decision that defines or changes a data or interface structure (a list, array, map, key, field, table, column, message or file format) is only usable when its subject terms are pinned.",
+  "Its bullet must say them in plain words, in the speakers' own words: what the key is (a field name, a field value, an id), what the value is, one entry per what, the unit; and if the speakers gave an example in the call, repeat that example briefly.",
+  "If the call did not make a term clear, or the wording and an example given in the call point to different readings, the bullet says 'не уточнено: <which term>, <reading one> или <reading two>' and the same question is also listed as a 'Вопрос без ответа'.",
+  "Never choose an interpretation yourself and never fill a term from the briefing or the document: 'не уточнено' is a correct, wanted answer.",
+].join(" ");
+
 /** The same rule in one sentence for the other modes' "Открытые вопросы" heading. */
 export const UNANSWERED_OPEN_QUESTIONS_RULE =
   "Under 'Открытые вопросы' also list every question asked in the call that got no answer, an evasive one, or was deferred to someone else ('я спрошу у ...'), once each as 'вопрос - кто задал - передан <кому> или без ответа', with '(задан N раз)' when repeated; never soften such a question into 'обсудили', and write '- нет' there only when no such question remains.";
@@ -39,6 +49,7 @@ const DECISIONS_RULES = [
   `section: the section number and heading from the document index below when the call named or clearly meant that section, otherwise '${SECTION_UNKNOWN}'. Never invent a section.`,
   "before: the old wording, only if it was said in the call or copied word for word from the document; otherwise ''.",
   "after: the new wording, only as it was said in the call; otherwise ''. Never compose it yourself.",
+  "terms: for a decision that defines or changes a data or interface structure, its pinned subject terms in the speakers' own words ('ключ - название поля; значение - массив значений этого поля; одна запись на заказ; пример из разговора: ...'), or 'не уточнено: <which term>, <reading one> или <reading two>' when the call left it open; '' for a decision that shapes no structure. Never pick a reading.",
   "quote: a short exact fragment of the transcript line that shows the decision or the agreement, copied character for character, not paraphrased; at: its timestamp from the transcript as mm:ss.",
   "id: 'd1', 'd2', ... in order.",
   "Every decision with status 'accepted' must also appear as a line under 'Решения по открытым вопросам' in the text above, and nothing under that heading may claim acceptance that is not 'accepted' here.",
@@ -69,7 +80,7 @@ export function buildSummaryPrompt(
         : "Under 'Обсуждения' write one block per substantial topic, in the order discussed. Each block starts with a line 'Тема: <topic phrased as a question>' followed by bullets: what was answered or decided (who said it, with numbers and names as spoken), and what is still unclear.",
     );
   }
-  if (reviewMode) parts.push(UNANSWERED_REVIEW_RULES);
+  if (reviewMode) parts.push(UNANSWERED_REVIEW_RULES, TERMS_REVIEW_RULES);
   else if (!interview && headings.includes("Открытые вопросы")) parts.push(UNANSWERED_OPEN_QUESTIONS_RULE);
   parts.push(
     "Ground rule: every bullet must rest on a line of the transcript. Never write a decision, requirement, agreement or owner that nobody said in the call. Attribute to a person only what that person said; write 'согласился' only if the transcript has an explicit agreement, otherwise 'не возражал' or 'не прозвучало'. If a claim about a system, integration or process is stated as fact but nothing confirms it, mark it 'не подтверждено, уточнить у <кого>'.",
@@ -80,7 +91,7 @@ export function buildSummaryPrompt(
     [
       `After the text, on a new line write exactly ${ANALYSIS_MARKER} and then one JSON object, nothing after it:`,
       review
-        ? '{"agenda":[{"index":1,"closed":true,"note":"..."}],"actions":[{"task":"...","owner":"...","due":"..."}],"decisions":[{"id":"d1","text":"...","status":"accepted","by":"...","section":"...","before":"...","after":"...","quote":"...","at":"mm:ss"}]}'
+        ? '{"agenda":[{"index":1,"closed":true,"note":"..."}],"actions":[{"task":"...","owner":"...","due":"..."}],"decisions":[{"id":"d1","text":"...","status":"accepted","by":"...","section":"...","before":"...","after":"...","terms":"...","quote":"...","at":"mm:ss"}]}'
         : '{"agenda":[{"index":1,"closed":true,"note":"..."}],"actions":[{"task":"...","owner":"...","due":"..."}]}',
       agendaBlock
         ? "'agenda' has one entry per agenda question above: closed=true only if the transcript contains a clear answer or decision for it, otherwise false; note is the answer in at most 12 words when closed, or what is still missing when open."

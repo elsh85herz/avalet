@@ -3,6 +3,7 @@ import { DECISION_STATUSES } from "./shared/ipc-contract.js";
 import { SECTION_UNKNOWN, findSection, parseSections, sectionLabel } from "./shared/artifact.js";
 import { locateQuote, sameTask } from "./live-tracker-logic.js";
 import { meetingClock, parseAsked, type RawDecision } from "./summary-format.js";
+import { termsProblem } from "./shared/decision-terms.js";
 
 // Review mode decisions (CLOUD_TASK_5): the summary's list checked against
 // what was actually said and against the document, then merged with what the
@@ -14,7 +15,10 @@ import { meetingClock, parseAsked, type RawDecision } from "./summary-format.js"
  *   the speaker then come from the transcript, not from the model;
  * - an accepted decision without a found quote is kept but `ungrounded`, and
  *   its checkbox starts off: acceptance has to rest on words that were said;
- * - a section that is not in the document's index becomes "не определён".
+ * - a section that is not in the document's index becomes "не определён";
+ * - an accepted decision about a structure whose terms are not pinned (or
+ *   "не уточнено") starts unchecked too: applying it would mean choosing a
+ *   reading nobody gave (CLOUD_TASK_6).
  */
 export function groundDecisions(
   raw: RawDecision[],
@@ -48,11 +52,12 @@ export function groundDecisions(
       section,
       before: item.before,
       after: item.after,
-      include: item.status === "accepted" && !ungrounded,
+      include: item.status === "accepted" && !ungrounded && !termsProblem(item),
       ...(found ? { quote: found.quote, speaker: found.speaker } : {}),
       ...(at !== undefined ? { at } : {}),
       ...(ungrounded ? { ungrounded: true } : {}),
       ...(item.asked ? { asked: item.asked } : {}),
+      ...(item.terms ? { terms: item.terms } : {}),
     };
   });
 }
@@ -100,6 +105,7 @@ export function sanitizeDecisions(value: unknown): Decision[] {
     if (typeof d.quote === "string" && d.quote) out.quote = str(d.quote);
     if (d.speaker === "me" || d.speaker === "other") out.speaker = d.speaker;
     if (typeof d.at === "number" && Number.isFinite(d.at)) out.at = d.at;
+    if (typeof d.terms === "string" && d.terms.trim()) out.terms = str(d.terms);
     const asked = parseAsked(d.asked);
     if (asked) out.asked = asked;
     return out;
@@ -127,6 +133,7 @@ export function buildDecisionsMarkdown(meeting: Meeting, labels: DecisionLabels)
     lines.push(`- ${labels.status}: ${labels.statuses[d.status] ?? d.status}`);
     lines.push(`- ${labels.before}: ${value(d.before)}`);
     lines.push(`- ${labels.after}: ${value(d.after)}`);
+    lines.push(`- ${labels.terms}: ${value(d.terms ?? "")}`);
     lines.push(`- ${labels.by}: ${value(d.by)}`);
     lines.push(`- ${labels.quote}: ${d.quote ? `«${value(d.quote)}»${source ? ` (${source})` : ""}` : source ? `(${source})` : none}`, "");
   });
