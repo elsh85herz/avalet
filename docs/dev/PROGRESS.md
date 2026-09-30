@@ -227,15 +227,22 @@ Baseline on `f711314`: `npm ci` ok, `npm run check` ok (187/187).
 
 ### Done
 
-- Phase 0: `docs/dev/spec-sync-plan.md` (where the artifact lives, cap, index for live calls, decision shape, patch addressing, warnings). Private, in CLEANUP with `CLOUD_TASK_5*.md`.
+- Phase 0: `docs/dev/spec-sync-plan.md` (private, in CLEANUP with `CLOUD_TASK_5*.md`).
+- Phase 1: document field (file or paste, 200 k cap, read-only while running, cost note), settings + `Meeting.artifact`, live index (`electron/shared/artifact.ts`), section on a typed question, review prompt paragraph, board proposals.
+- Phase 2: decisions in the review summary (with a document), tolerant parser, grounding and merge (`electron/decisions.ts`), mock model and fake recognizer review script.
+- Phase 3: `DecisionsPanel.tsx` (edit, delete, add, attach document), `meetings-set-decisions`, summary cost note.
+- Phase 4: `electron/artifact-patch.ts`, `artifact-prompt.ts`, `artifact-update.ts`, `ArtifactUpdate.tsx` (cost, confirmation, preview, apply, undo), usage purpose `artifact`.
+- Phase 5: exports (updated document, decisions `.md`).
+- Phase 6: `e2e/review.spec.ts`, log-hygiene review test, READMEs, CHANGELOG, MAC_VERIFY 9b, screenshots, guide review image, self-review fixes, REPORT section.
+- Verified: `npm run check` 227/227 (i18n 478); `npm run build` + `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` 20/20; CI runs 40, 43, 45, 46 green.
 
 ### In progress
 
-- Phase 1: load the artifact (settings + meeting fields, ContextFields field with cost note, live index, review prompt paragraph, board proposals).
+(nothing: all phases of CLOUD_TASK_5.md done)
 
 ### Next
 
-- Phase 2 (decisions in the summary), 3 (decisions panel), 4 (patches, preview, apply), 5 (exports), 6 (docs, E2E, report).
+- Owner: MAC_VERIFY step 9b; decisions in REPORT "Review mode as a spec-sync workflow".
 
 ### Blockers
 

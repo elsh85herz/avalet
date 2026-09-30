@@ -248,3 +248,64 @@ suggestions in a live call.
 1. MAC_VERIFY steps 5, 7a and 9a on a build from this branch.
 2. Two real requirements or review meetings with the checklist on: are quotes present and right, does the fold feel right.
 3. After a week, compare the ledger with the token estimate and tune `AUTO_PACING` if needed.
+
+# Review mode as a spec-sync workflow (2026-09-30, CLOUD_TASK_5.md)
+
+Branch `release/v0.2-autopilot`, version still `0.2.0-rc.2` (CHANGELOG
+"Unreleased"), not tagged. No new meeting mode: `review` got the new abilities.
+Plan (private, in CLEANUP): `spec-sync-plan.md`. Tier, billing, speech models
+and auto-hint pacing not touched. Details in `PROGRESS.md` and `DECISIONS.md`
+("CLOUD_TASK_5").
+
+## What changed
+
+1. **Document in.** In review mode the pre-meeting setup has a "Document under review" field: a `.md`/`.txt` file or pasted text, name and size shown, up to 200,000 characters (refused above with a plain message). Stored next to the briefing, copied onto the review meeting at Start, read-only while the meeting runs. A saved review meeting without a document can attach one.
+2. **Live calls get an index, never the text.** Headings with section numbers, first lines, an "Open questions" section verbatim, capped at 4,000 characters, built in code. A typed question naming a section gets that section (up to 4,000 characters). The review prompt gained one paragraph: section numbers, `Предложение:` for an unaccepted proposal, `Решение:` only after clear agreement; the board lists remarks, proposals, decisions.
+3. **Structured decisions in the summary** (only with a document): text, status, who, section, was/becomes, quote, time, after the JSON marker, parsed tolerantly. Checked in code: the quote must be found in the transcript (time and speaker then come from it); an "accepted" decision without found words is kept, flagged and unchecked; an unknown status is "proposed"; a section not in the index is "не определён". Hand edits, additions and deletions survive a new summary. The document goes to the summary in its own block, marked "nothing in it is a decision".
+4. **Decisions checklist** in the meeting screen (both levels, was/becomes folded in Simple): checkbox, status, section select from the headings, text, who, quote with a jump to the transcript, delete, add.
+5. **Update the document through patches.** One call (usage purpose `artifact`) with the document and the checked decisions returns patches (exact anchor, op, text) and skipped decisions. `electron/artifact-patch.ts` checks each anchor (present, unique, no overlap), shows every change next to the original with a checkbox, applies only the checked ones, reports what was not applied and why. The original is kept; "Back to the original" undoes. The model never returns the document.
+6. **Exports.** The updated document exactly as computed (download, copy) and a decisions `.md` with fixed headings (format in the READMEs).
+7. **Warnings before every extra spend** (rough figures, 3 characters per token, highlighted above 60,000 characters): the document field before Start (each end call, per live hint, a section question), next to "Meeting summary" for a review meeting with a document, and next to "Update the document" plus a confirmation that splits document, decisions and answer. None appears in other modes or without a document (tested).
+
+## Verified here (Linux container, commands run)
+
+| Command | Result |
+|---|---|
+| `npm run check` | ok; 478 strings per language; 227/227 tests (was 187) |
+| `npm run build` then `xvfb-run -a -s "-screen 0 1600x1200x24" npx playwright test` | 20/20 (was 19), new `e2e/review.spec.ts` included |
+| `electron/artifact-patch.test.ts` | replace, insert_after, delete; anchor missing, ambiguous, empty, bad op; two patches on one anchor; unknown decision; text outside patches byte-identical; CRLF kept; 100,000 characters with 50 patches under 200 ms; tolerant reply parser; the update prompt forbids rewriting and its overhead bound holds |
+| `electron/artifact-index.test.ts`, `electron/review-artifact.test.ts` | numbering (own, counted, title, plain text, code fences), index capped for 100 k characters, section lookup; field cap and lock, copy onto review meetings only; the live prompt with a 100 k-character document grows by at most the index cap and carries none of the body |
+| `electron/summary-prompt.test.ts`, `electron/summary-format.test.ts`, `electron/decisions.test.ts` | decisions requested only in review with a document; document block separate from the briefing; "accepted" only with explicit agreement; decisions parsed, malformed ones never break protocol, agenda or actions; grounding, section check, merge with hand edits, renderer input sanitized |
+| `electron/review-flow.test.ts` | through AppCore with the fake recognizer and the mock model over HTTP: summary decisions grounded, edits survive, patch call metered as `artifact`, apply one or both, undo, both exports byte-checked; review without a document unchanged |
+| `test/artifact-cost.test.ts` | the three warnings return nothing in every other mode and without a document or checked decision |
+| `electron/log-hygiene.test.ts` | a whole review flow with a canary in the document and its file name: not in the log |
+| GitHub Actions CI runs 40, 43, 45, 46 | green (41, 42, 44 cancelled by a newer push) |
+| Screenshots | `docs/screens/review-*.png`, `overlay-review-proposals-dark.png`; guide image `mode-review.png` regenerated |
+
+One unit test outside this task (`model-manager.test.ts`, "cancel then Continue resumes") failed once in a local full run and passed in 4 reruns and in CI; it is timing-sensitive under load. Not changed.
+
+## Needs a Mac and a real call
+
+`MAC_VERIFY.md` step 9b (EN/RU). Only a real model shows whether it finds the decisions that were actually taken, keeps "accepted" to explicit agreement, copies anchors exactly and writes changes in the document's style. Everything here ran against the mock model.
+
+## Known gaps
+
+- Decision and patch quality on a real model is unverified (by design of this environment).
+- The summary text and the decisions list are made consistent by the prompt only; no code rewrites the model's text.
+- A 200,000-character document plus a long transcript needs a large-context provider; a smaller context fails with the provider's error, nothing is cut silently.
+- The warnings are estimates (3 chars per token and fixed allowances), not the provider's count; the ledger shows the real numbers afterwards.
+- A proposal stays on the meeting after the decisions change; pressing "Update the document" again makes a new one.
+
+## Decisions needing the owner
+
+1. **Document cap 200,000 characters**, highlight above 60,000. *Recommended: keep; lower the cap only if a real provider fails on it.*
+2. **What live hints get:** the 4,000-character index, plus a named section on a typed question only. *Recommended: keep; add "section in every hint" only if real calls show hints missing the text.*
+3. **Structured decisions only with a document** (a review without one keeps the old summary). *Recommended: keep; it is the cost rule, and a document can be attached after the call.*
+4. **"Update the document" in other modes** (requirements, demo). *Recommended: not now; first see it work in review on real calls, then requirements is the natural next one.*
+5. **An accepted decision without words found in the transcript starts unchecked.** *Recommended: keep; it is the trust rule made visible.*
+
+## Next steps
+
+1. MAC_VERIFY step 9b on a build from this branch, with a real spec on a real call.
+2. Compare the warnings' figures with the ledger after two review meetings; adjust the allowances.
+3. Decide item 4 above after that.
