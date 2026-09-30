@@ -234,6 +234,8 @@ export type SummaryDoneEvent = {
   text: string;
   agendaStatus: AgendaStatusItem[] | null;
   actions: ActionItem[] | null;
+  /** Review mode: the decisions after the merge with hand edits; null when the summary returned none. */
+  decisions: Decision[] | null;
 };
 
 // --- speech models ---

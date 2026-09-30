@@ -7,6 +7,8 @@ import { buildSummaryPrompt } from "./summary-prompt.js";
 import { MODE_SUMMARY } from "./modes.js";
 import { mergeSummaryAnalysis } from "./live-tracker-logic.js";
 import { randomUUID } from "node:crypto";
+import { groundDecisions, mergeDecisions } from "./decisions.js";
+import type { Decision } from "./shared/ipc-contract.js";
 
 // A one-hour meeting is roughly 60k characters of Russian transcript; keep a
 // hard cap so a marathon call can't blow the provider's context window.
@@ -16,7 +18,7 @@ export type SummaryEvents = {
   onDelta: (delta: string) => void;
 };
 
-export type SummaryResult = { text: string; analysis: MeetingAnalysis | null };
+export type SummaryResult = { text: string; analysis: MeetingAnalysis | null; decisions: Decision[] | null };
 
 export async function summarizeMeeting(
   meetingId: string,
@@ -43,7 +45,12 @@ export async function summarizeMeeting(
     apiKey,
     baseUrl,
     model: settings.model,
-    systemPrompt: buildSummaryPrompt(spec.headings, spec.guidance, meeting.context, agenda, meeting.mode === "interview"),
+    systemPrompt: buildSummaryPrompt(spec.headings, spec.guidance, meeting.context, agenda, meeting.mode === "interview", {
+      // Structured decisions only when there is a document to update: the
+      // End screen warned about exactly this extra cost (CLOUD_TASK_5).
+      review: meeting.mode === "review" && Boolean(meeting.artifact?.text),
+      artifact: meeting.artifact?.text,
+    }),
     transcript,
     maxTokens: 6000,
     signal,
@@ -57,6 +64,11 @@ export async function summarizeMeeting(
   // The live checklist may already hold hand-set marks and confirmed action
   // points: the summary reads the whole call but must not overwrite them.
   const analysis = split.analysis ? mergeSummaryAnalysis(meeting, split.analysis, randomUUID) : null;
-  setSummary(meetingId, split.protocol, analysis);
-  return { text: split.protocol, analysis };
+  // Review: decisions checked against the transcript and the document; hand edits survive.
+  const decisions =
+    meeting.mode === "review" && split.analysis?.decisions
+      ? mergeDecisions(meeting.decisions, groundDecisions(split.analysis.decisions, meeting, randomUUID))
+      : null;
+  setSummary(meetingId, split.protocol, analysis, decisions);
+  return { text: split.protocol, analysis, decisions };
 }

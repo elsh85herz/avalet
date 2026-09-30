@@ -67,3 +67,46 @@ test("the protocol shows each quote under its agenda item and action, with speak
   assert.match(md, /> \*\*Прислать описание\*\*: «Я пришлю описание до пятницы» \(Я, 01:00:00\)/);
   assert.equal(meetingClock(startedAt - 5, startedAt), "00:00:00");
 });
+
+test("review: decisions are parsed from the JSON tail next to agenda and actions", () => {
+  const tail = {
+    agenda: [],
+    actions: [{ task: "Согласовать срок хранения", owner: "Я", due: "пятница" }],
+    decisions: [
+      { id: "d1", text: "В разделе 3.1 поднять лимит до 100", status: "accepted", by: "Собеседник", section: "3.1", before: "не более 50 записей", after: "не более 100 записей", quote: "Согласен, поднимаем", at: "01:05" },
+      { id: "d2", text: "Добавить XLSX", status: "proposed", section: "3.2", at: "1:02:03" },
+    ],
+  };
+  const { protocol, analysis } = splitSummary(`Обсуждения\n- x\n${ANALYSIS_MARKER}\n${JSON.stringify(tail)}`, []);
+  assert.equal(protocol, "Обсуждения\n- x");
+  assert.equal(analysis?.actions.length, 1);
+  assert.deepEqual(analysis?.decisions?.[0], {
+    text: "В разделе 3.1 поднять лимит до 100",
+    status: "accepted",
+    by: "Собеседник",
+    section: "3.1",
+    before: "не более 50 записей",
+    after: "не более 100 записей",
+    quote: "Согласен, поднимаем",
+    atSeconds: 65,
+  });
+  assert.equal(analysis?.decisions?.[1]?.atSeconds, 3723);
+  assert.equal(analysis?.decisions?.[1]?.by, "");
+});
+
+test("review: malformed decisions never break the protocol, the agenda or the actions", () => {
+  const broken = (decisions: unknown) =>
+    splitSummary(`Текст\n${ANALYSIS_MARKER}\n${JSON.stringify({ agenda: [{ index: 1, closed: true, note: "да" }], actions: [{ task: "t" }], decisions })}`, ["Вопрос"]);
+  for (const bad of ["oops", 7, null, { text: "not a list" }]) {
+    const { protocol, analysis } = broken(bad);
+    assert.equal(protocol, "Текст");
+    assert.deepEqual(analysis?.decisions, []);
+    assert.equal(analysis?.agendaStatus[0]?.closed, true);
+    assert.equal(analysis?.actions.length, 1);
+  }
+  const { analysis } = broken([{ status: "accepted" }, { text: "  " }, null, { text: "Решение", status: "ACCEPTED", at: "вчера" }]);
+  // No text: dropped. An unknown status is never read as accepted.
+  assert.deepEqual(analysis?.decisions?.map((d) => [d.text, d.status, d.atSeconds]), [["Решение", "proposed", null]]);
+  // Other modes' tails have no decisions key at all.
+  assert.equal(splitSummary(`Т\n${ANALYSIS_MARKER}\n{"agenda":[],"actions":[]}`, []).analysis?.decisions, undefined);
+});

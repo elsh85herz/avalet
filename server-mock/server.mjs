@@ -65,6 +65,11 @@ export function fakeCompletion(system, user) {
       ],
     });
   }
+  if (/turn confirmed decisions into patches/i.test(system)) return reviewPatches(userText(user));
+  if (/writing the outcome of a meeting/i.test(system) && /"decisions":\[/.test(system)) {
+    const marker = (system.match(/write exactly (\S+) and then/) ?? [])[1] ?? "@@AVALET_JSON@@";
+    return reviewSummary(marker);
+  }
   if (/writing the outcome of a meeting/i.test(system)) {
     const marker = (system.match(/write exactly (\S+) and then/) ?? [])[1] ?? "@@AVALET_JSON@@";
     return [
@@ -96,6 +101,89 @@ export function fakeCompletion(system, user) {
   return hasScreen
     ? "На экране форма лимитов: не хватает поля для порога подтверждения."
     : "Уточните: лимит дневной или разовый, и кто подтверждает изменение выше порога?";
+}
+
+// Review mode with a document (CLOUD_TASK_5): the scripted conversation of
+// test/fixtures/fake-sidecar.mjs (FAKE_SIDECAR_SCRIPT=review) about the
+// synthetic test/fixtures/spec-activity-journal.md.
+function reviewSummary(marker) {
+  return [
+    "Обсуждения",
+    "Тема: Размер страницы в GET /activities",
+    "- Собеседник предложил поднять лимит страницы с 50 до 100 записей, Я согласился.",
+    "Замечания к документу",
+    "- раздел 3.1 - пятидесяти записей мало - Собеседник",
+    "Решения по открытым вопросам",
+    "- размер страницы - принято - не более 100 записей",
+    "Поручения и сроки",
+    "- нет",
+    "Новые вопросы и риски",
+    "- выгрузка в XLSX предложена, не решена",
+    marker,
+    JSON.stringify({
+      agenda: [],
+      actions: [{ task: "Согласовать срок хранения 180 дней с безопасностью", owner: "Я", due: "срок не назван" }],
+      decisions: [
+        {
+          id: "d1",
+          text: "В разделе 3.1 поднять размер страницы до 100 записей",
+          status: "accepted",
+          by: "Собеседник предложил, Я согласился",
+          section: "3.1 GET /activities",
+          before: "не более 50 записей",
+          after: "не более 100 записей",
+          quote: "Согласен, поднимаем до 100 записей.",
+          at: "00:03",
+        },
+        {
+          id: "d2",
+          text: "В разделе 3.2 добавить выгрузку в XLSX",
+          status: "proposed",
+          by: "Собеседник",
+          section: "3.2",
+          before: "",
+          after: "",
+          quote: "И ещё давайте добавим выгрузку в XLSX, не только CSV.",
+          at: "00:05",
+        },
+        {
+          id: "d3",
+          text: "Срок хранения 180 дней согласовать с безопасностью",
+          status: "open",
+          by: "Собеседник",
+          section: "4 Хранение",
+          before: "",
+          after: "",
+          quote: "Срок хранения 180 дней пока не трогаем, это надо согласовать с безопасностью.",
+          at: "00:06",
+        },
+      ],
+    }),
+  ].join("\n");
+}
+
+/** Patches for the decisions in the request: "before" replaced by "after", else a line under the section heading. */
+function reviewPatches(text) {
+  const doc = (text.match(/<document>\n([\s\S]*?)\n<\/document>/) ?? [])[1] ?? "";
+  let decisions = [];
+  try {
+    decisions = JSON.parse((text.match(/<decisions>\n([\s\S]*?)\n<\/decisions>/) ?? [])[1] ?? "[]");
+  } catch {
+    decisions = [];
+  }
+  const patches = [];
+  const skipped = [];
+  for (const d of decisions) {
+    if (d.before && d.after && doc.includes(d.before)) {
+      patches.push({ decisionId: d.id, op: "replace", anchor: d.before, text: d.after });
+      continue;
+    }
+    const number = (String(d.section ?? "").match(/\d+(?:\.\d+)*/) ?? [])[0];
+    const heading = number ? doc.split("\n").find((line) => /^#+\s/.test(line) && line.includes(` ${number}`)) : undefined;
+    if (heading) patches.push({ decisionId: d.id, op: "insert_after", anchor: heading, text: `\n\n${d.text}.` });
+    else skipped.push({ decisionId: d.id, reason: "в документе нет подходящего места" });
+  }
+  return JSON.stringify({ patches, skipped });
 }
 
 const MODE_ANSWERS = [

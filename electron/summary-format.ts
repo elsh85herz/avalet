@@ -1,5 +1,5 @@
 import type { Meeting } from "./meetings-store.js";
-import type { ActionItem, ActionState, AgendaStatusItem, QuoteRef } from "./shared/ipc-contract.js";
+import type { ActionItem, ActionState, AgendaStatusItem, DecisionStatus, QuoteRef } from "./shared/ipc-contract.js";
 
 // The summary call returns the protocol text first and, after this marker, a
 // small JSON block with the machine-readable part: which agenda questions got
@@ -8,7 +8,52 @@ import type { ActionItem, ActionState, AgendaStatusItem, QuoteRef } from "./shar
 export const ANALYSIS_MARKER = "@@AVALET_JSON@@";
 
 export type { ActionItem, ActionState, AgendaStatusItem };
-export type MeetingAnalysis = { agendaStatus: AgendaStatusItem[]; actions: ActionItem[] };
+export type MeetingAnalysis = { agendaStatus: AgendaStatusItem[]; actions: ActionItem[]; decisions?: RawDecision[] };
+
+/**
+ * A decision as the review summary returns it (CLOUD_TASK_5), before it is
+ * checked against the transcript and the document (electron/decisions.ts).
+ */
+export type RawDecision = {
+  text: string;
+  status: DecisionStatus;
+  by: string;
+  section: string;
+  before: string;
+  after: string;
+  quote: string;
+  /** Seconds from the meeting start, from "mm:ss" / "hh:mm:ss"; null when absent or unreadable. */
+  atSeconds: number | null;
+};
+
+const STATUSES: DecisionStatus[] = ["accepted", "proposed", "rejected", "open"];
+
+/** "12:04" or "01:12:04" as seconds; null for anything else. */
+export function parseClock(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const m = value.trim().match(/^(?:(\d{1,2}):)?(\d{1,3}):(\d{2})$/);
+  if (!m) return null;
+  return Number(m[1] ?? 0) * 3600 + Number(m[2]) * 60 + Number(m[3]);
+}
+
+/** Tolerant: a missing or broken list gives [], an entry without text is dropped, an unknown status is "proposed". */
+export function parseDecisions(value: unknown): RawDecision[] {
+  if (!Array.isArray(value)) return [];
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && str((item as Record<string, unknown>).text) !== "")
+    .map((item) => ({
+      text: str(item.text).replace(/\s*\r?\n\s*/g, " "),
+      // Never "accepted" by accident: only the exact value counts.
+      status: STATUSES.includes(item.status as DecisionStatus) ? (item.status as DecisionStatus) : "proposed",
+      by: str(item.by),
+      section: str(item.section),
+      before: str(item.before),
+      after: str(item.after),
+      quote: str(item.quote),
+      atSeconds: parseClock(item.at),
+    }));
+}
 
 /** One agenda question per line; list bullets and numbering are stripped. */
 export function parseAgendaText(text: string): string[] {
@@ -30,7 +75,7 @@ export function splitSummary(raw: string, agenda: string[]): { protocol: string;
   try {
     const start = tail.indexOf("{");
     const end = tail.lastIndexOf("}");
-    const data = JSON.parse(tail.slice(start, end + 1)) as { agenda?: unknown; actions?: unknown };
+    const data = JSON.parse(tail.slice(start, end + 1)) as { agenda?: unknown; actions?: unknown; decisions?: unknown };
     const agendaStatus: AgendaStatusItem[] = agenda.map((question, i) => {
       const found = Array.isArray(data.agenda)
         ? (data.agenda as { index?: unknown; closed?: unknown; note?: unknown }[]).find((item) => Number(item?.index) === i + 1)
@@ -46,7 +91,7 @@ export function splitSummary(raw: string, agenda: string[]): { protocol: string;
             due: typeof item.due === "string" ? item.due.trim() : "",
           }))
       : [];
-    return { protocol, analysis: { agendaStatus, actions } };
+    return { protocol, analysis: data.decisions === undefined ? { agendaStatus, actions } : { agendaStatus, actions, decisions: parseDecisions(data.decisions) } };
   } catch {
     return { protocol, analysis: null };
   }

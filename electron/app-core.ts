@@ -520,12 +520,12 @@ export class AppCore {
       this.summaryAbort = controller;
       flushCurrentMeeting();
       try {
-        const { text, analysis } = await summarizeMeeting(id, controller.signal, {
+        const { text, analysis, decisions } = await summarizeMeeting(id, controller.signal, {
           onDelta: (delta) => emit("avalet:event:summary-delta", { id, delta }, "main"),
         });
         emit(
           "avalet:event:summary-done",
-          { id, text, agendaStatus: analysis?.agendaStatus ?? null, actions: analysis?.actions ?? null },
+          { id, text, agendaStatus: analysis?.agendaStatus ?? null, actions: analysis?.actions ?? null, decisions },
           "main",
         );
         return text;

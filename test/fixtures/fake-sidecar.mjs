@@ -14,6 +14,15 @@ const CANNED = [
   "Выше трёхсот тысяч нужен звонок из колл-центра, это уже есть в другом процессе.",
   "Хорошо, тогда я пришлю описание процесса до пятницы.",
 ];
+// FAKE_SIDECAR_SCRIPT=review: a document review call about the synthetic
+// test/fixtures/spec-activity-journal.md (channels follow electron/fake-capture.ts).
+const REVIEW = [
+  "По разделу 3.1: пятидесяти записей на страницу мало, предлагаю поднять лимит до 100.",
+  "Согласен, поднимаем до 100 записей.",
+  "И ещё давайте добавим выгрузку в XLSX, не только CSV.",
+  "Срок хранения 180 дней пока не трогаем, это надо согласовать с безопасностью.",
+];
+const SCRIPT = process.env.FAKE_SIDECAR_SCRIPT === "review" ? REVIEW : CANNED;
 let cannedIndex = 0;
 let failuresLeft = Number(process.env.FAKE_SIDECAR_FAIL ?? 0);
 
@@ -29,7 +38,7 @@ function transcribe(params) {
   }
   const decoded = Buffer.from(params.audio_base64, "base64").toString("utf8");
   if (decoded.startsWith("TEXT:")) return { text: decoded.slice(5), language: params.language ?? "ru", ends_with_pause: true };
-  const text = CANNED[cannedIndex % CANNED.length];
+  const text = SCRIPT[cannedIndex % SCRIPT.length];
   cannedIndex += 1;
   return { text, language: params.language ?? "ru", ends_with_pause: true };
 }
