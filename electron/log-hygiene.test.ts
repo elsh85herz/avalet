@@ -126,3 +126,68 @@ test("a whole meeting with an own key leaves neither the meeting text nor the ke
   // The exports do carry the text: the canary really went through the meeting.
   assert.ok(fs.readdirSync(exports).some((f) => fs.readFileSync(path.join(exports, f), "utf8").includes(TEXT_CANARY)));
 });
+
+test("a review meeting with a document: neither the document nor the key reaches the log", async () => {
+  const logDir = tempDir();
+  configureLog(logDir);
+  const { dir } = setupStores({ onboardingDone: true, meetingMode: "review", autoDetectEnabled: false });
+  const hfCache = path.join(dir, "hf");
+  const exports = path.join(dir, "exports");
+  fs.mkdirSync(exports, { recursive: true });
+  const models = new SpeechModelManager({
+    cacheDir: () => hfCache,
+    spawnDownload: (model) =>
+      spawn(process.execPath, [fixturePath("fake-model-download.mjs"), model], {
+        env: { ...process.env, HF_HUB_CACHE: hfCache, FAKE_DOWNLOAD_STEP_MS: "5" },
+        stdio: ["ignore", "ignore", "pipe"],
+      }),
+    onChange: () => {},
+    pollMs: 10,
+  });
+  const core = new AppCore({
+    sidecar: new PythonRuntime(() => ({ command: process.execPath, args: [fixturePath("fake-sidecar.mjs")] }), 10_000),
+    models,
+    ledger: new UsageLedger(new MemoryKV()),
+    emit: () => {},
+    captureScreen: async () => null,
+    recognizeText: async () => null,
+    isOcrAvailable: async () => false,
+    chooseSavePath: async (name, _filter, ext) => path.join(exports, `${name}.${ext}`),
+  });
+  const call = async <C extends InvokeChannel>(channel: C, ...args: unknown[]) => (await core.handlers[channel]!(...args)) as InvokeResult<C>;
+  const say = (text: string, channel: "me" | "other" = "other") =>
+    call("avalet:capture-audio-chunk", Buffer.from(`TEXT:${text}`).toString("base64"), channel, {
+      startedAt: Date.now() - 1_000,
+      endedAt: Date.now(),
+      endedBySilence: true,
+    });
+  const doc = fs.readFileSync(fixturePath("spec-activity-journal.md"), "utf8").replace("## 2. Термины", `## 2. Термины ${TEXT_CANARY}`);
+  try {
+    setSelectedProviderId("openai");
+    updateProviderSettings("openai", { baseUrl: `${mock.url}/openai/v1`, model: "gpt-4.1-mini" });
+    setApiKey("openai", KEY_CANARY);
+    await call("avalet:speech-model-download", "small");
+    for (let i = 0; i < 400 && !models.isReady("small"); i++) await new Promise((r) => setTimeout(r, 15));
+    assert.deepEqual(await call("avalet:artifact-set", { name: `spec-${TEXT_CANARY}.md`, text: doc }), { ok: true });
+    assert.deepEqual(await call("avalet:session-start"), { ok: true });
+    await say("По разделу 3.1: пятидесяти записей на страницу мало, предлагаю поднять лимит до 100.");
+    await say("Согласен, поднимаем до 100 записей.", "me");
+    await call("avalet:session-ask", "что сейчас в разделе 2?");
+    const meeting = await call("avalet:meetings-current");
+    await call("avalet:session-reset");
+    await call("avalet:meetings-summarize", meeting!.id);
+    const proposed = await call("avalet:artifact-propose", meeting!.id);
+    assert.equal(proposed.ok, true);
+    const ids = proposed.ok ? proposed.proposal.patches.filter((p) => p.ok).map((p) => p.id) : [];
+    await call("avalet:artifact-apply", meeting!.id, ids);
+    await call("avalet:meetings-export-artifact", meeting!.id);
+  } finally {
+    await core.shutdown();
+  }
+  const log = readLog(logDir);
+  assert.ok(log.length > 0);
+  assert.ok(!log.includes(TEXT_CANARY), "document text or name in the log");
+  assert.ok(!log.includes("canary-91b2"), "the key in the log");
+  // The canary really went through: it is in the downloaded document.
+  assert.ok(fs.readdirSync(exports).some((f) => fs.readFileSync(path.join(exports, f), "utf8").includes(TEXT_CANARY)));
+});

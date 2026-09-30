@@ -26,11 +26,12 @@ export function estimateTokens(chars: number): number {
   return Math.ceil(Math.max(0, chars) / CHARS_PER_TOKEN);
 }
 
-/** A figure people read as "about": hundreds below a thousand, then thousands. */
+/** A figure people read as "about": two significant digits (1 460 is 1 500, 23 456 is 23 000). */
 export function roundTokens(tokens: number): number {
   if (tokens <= 0) return 0;
-  if (tokens < 1_000) return Math.max(100, Math.round(tokens / 100) * 100);
-  return Math.round(tokens / 1_000) * 1_000;
+  if (tokens < 100) return Math.max(10, Math.round(tokens / 10) * 10);
+  const step = 10 ** (Math.floor(Math.log10(tokens)) - 1);
+  return Math.round(tokens / step) * step;
 }
 
 export type ArtifactSection = {

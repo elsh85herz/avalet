@@ -74,3 +74,8 @@ test("section references: by number, with a word, by heading; unknown gives null
   assert.equal(sectionAskedFor("What does section 4 say?"), "4");
   assert.equal(sectionAskedFor("что с лимитом?"), null);
 });
+
+test("rough figures keep two significant digits", async () => {
+  const { roundTokens } = await import("./shared/artifact.js");
+  assert.deepEqual([0, 7, 44, 480, 1_459, 1_760, 23_456, 31_000].map(roundTokens), [0, 10, 40, 480, 1_500, 1_800, 23_000, 31_000]);
+});

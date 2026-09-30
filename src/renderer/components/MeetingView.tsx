@@ -52,6 +52,11 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     setAgendaDraft((initial.agenda ?? []).join("\n"));
   }, [initial.id]);
 
+  // End arrives as a new copy of the same meeting: take its end time, keep the rest.
+  useEffect(() => {
+    if (initial.endedAt) setMeeting((prev) => (prev.id === initial.id && !prev.endedAt ? { ...prev, endedAt: initial.endedAt } : prev));
+  }, [initial.id, initial.endedAt]);
+
   useEffect(() => {
     if (!live) return;
     const unsubscribers = [
@@ -226,7 +231,8 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
   const summaryCost = summaryExtraCost(meeting);
 
   function updateMeeting(next: Meeting) {
-    setMeeting((prev) => ({ ...prev, ...next, transcript: next.transcript.length >= prev.transcript.length ? next.transcript : prev.transcript }));
+    // The saved record wins (a removed field stays removed); a live transcript may be a segment ahead here.
+    setMeeting((prev) => ({ ...next, transcript: next.transcript.length >= prev.transcript.length ? next.transcript : prev.transcript }));
     onChanged?.(next);
   }
 
