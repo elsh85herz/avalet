@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getBridge } from "../lib/bridge.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { useAppSettings } from "../lib/settings.js";
@@ -22,12 +22,16 @@ export function ArtifactField({ uiLanguage }: { uiLanguage: UiLanguage }) {
   const [edited, setEdited] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const savedRef = useRef(saved);
+  savedRef.current = saved;
   const locked = session.state !== "idle";
 
-  // The stored document, again after a meeting ends (it may have been set elsewhere).
+  // The stored document, again after a meeting ends (it may have been set elsewhere);
+  // never over text typed since the last save.
   useEffect(() => {
-    if (!saved) return;
+    if (!savedRef.current) return;
     void bridge.settings.getArtifact().then((doc) => {
+      if (!savedRef.current) return;
       setText(doc.text);
       setName(doc.name);
     });
@@ -76,7 +80,7 @@ export function ArtifactField({ uiLanguage }: { uiLanguage: UiLanguage }) {
     }
   }
 
-  const cost = artifactFieldCost(settings.meetingMode, text);
+  const cost = useMemo(() => artifactFieldCost(settings.meetingMode, text), [settings.meetingMode, text]);
   const fmt = (n: number) => formatTokens(n, uiLanguage);
 
   return (

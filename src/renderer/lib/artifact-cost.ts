@@ -6,6 +6,7 @@ import {
   expectedReplyChars,
   patchDecisions,
   SUMMARY_ARTIFACT_OVERHEAD_CHARS,
+  SUMMARY_DECISIONS_REPLY_CHARS,
   buildArtifactIndex,
   estimateTokens,
   roundTokens,
@@ -31,7 +32,7 @@ export type FieldCost = {
 export function artifactFieldCost(mode: MeetingMode, text: string): FieldCost | null {
   if (mode !== "review" || !text.trim()) return null;
   return {
-    tokensEach: roundTokens(estimateTokens(text.length + SUMMARY_ARTIFACT_OVERHEAD_CHARS)),
+    tokensEach: roundTokens(estimateTokens(text.length + SUMMARY_ARTIFACT_OVERHEAD_CHARS + SUMMARY_DECISIONS_REPLY_CHARS)),
     indexTokens: roundTokens(estimateTokens(buildArtifactIndex(text).length + LIVE_INDEX_OVERHEAD_CHARS)),
     sectionTokens: roundTokens(estimateTokens(ARTIFACT_SECTION_CHAR_CAP)),
     high: text.length > ARTIFACT_HIGHLIGHT_CHARS,
@@ -43,7 +44,7 @@ export function summaryExtraCost(meeting: { mode: MeetingMode; artifact?: { text
   const text = meeting.artifact?.text ?? "";
   if (meeting.mode !== "review" || !text.trim()) return null;
   return {
-    tokens: roundTokens(estimateTokens(text.length + SUMMARY_ARTIFACT_OVERHEAD_CHARS)),
+    tokens: roundTokens(estimateTokens(text.length + SUMMARY_ARTIFACT_OVERHEAD_CHARS + SUMMARY_DECISIONS_REPLY_CHARS)),
     high: text.length > ARTIFACT_HIGHLIGHT_CHARS,
   };
 }

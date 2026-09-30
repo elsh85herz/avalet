@@ -23,8 +23,8 @@ test("the figure grows with the document and a large one is highlighted", () => 
   assert.ok(large.tokensEach > small.tokensEach * 10);
   assert.equal(small.high, false);
   assert.equal(large.high, true);
-  // 90,000 characters at 3 per token, plus the prompt around it: about 31,000.
-  assert.equal(large.tokensEach, 31_000);
+  // 90,000 characters at 3 per token, plus the prompt around it and the decisions in the answer: about 32,000.
+  assert.equal(large.tokensEach, 32_000);
 });
 
 test("the summary note appears only for a review meeting with a document", () => {

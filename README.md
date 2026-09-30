@@ -23,8 +23,9 @@ Local-first: audio never leaves your Mac and transcription runs on-device. For t
 - **Speech recognition that follows the conversation.** Audio is cut at natural pauses into whole phrases rather than fixed slices, and the spoken language is fixed rather than guessed every time. There is one speech model (faster-whisper small), no choice to make. Headphones remove the speaker echo completely.
 - **Meeting context.** Paste the ticket, spec, or agenda before the call; every suggestion is grounded in it.
 - **Manual ask, quick actions, screenshot.** Type a question any time, tap "Summarize" / "Risks?" / "Ask a question" / "Explain this", or send a screenshot of your screen for a priority read. Models that see images (Claude, OpenAI, DeepSeek) get the picture, which is the fast path; an optional setting adds the text recognized on your Mac for exact names, numbers and code (about a second slower). Models that do not (local ones) always get the screen as recognized text. If a provider refuses the image, Avalet retries with the text.
-- **Meeting modes.** Requirements gathering, grooming and estimation, demo and acceptance, document review, interview, or free: each shifts what the assistant pays attention to. Four of them also keep a running list in the overlay, collected from the suggestions with no extra model call: candidate requirements and risks, proposed slices and separate tasks, deviations and what to ask to see, remarks and decisions. One click copies it.
-- **Transcript and meeting summary.** Every call is saved as a meeting with a timestamped, speaker-tagged transcript. One button writes the summary in an analyst's format: decisions, open questions, requirements, risks, tasks. Export to Markdown or copy as plain text.
+- **Meeting modes.** Requirements gathering, grooming and estimation, demo and acceptance, document review, interview, or free: each shifts what the assistant pays attention to. Four of them also keep a running list in the overlay, collected from the suggestions with no extra model call: candidate requirements and risks, proposed slices and separate tasks, deviations and what to ask to see, remarks, proposals and decisions. One click copies it.
+- **Document review keeps your specification in sync.** Load the specification you are discussing (a `.md` or `.txt` file, or pasted, up to 200,000 characters) before the call. During the call the assistant sees only its table of contents, so hints stay cheap; after the call the summary returns the decisions that were actually taken, each with its section, old and new wording and the words that were said. You check and correct them, press "Update the document", look through every proposed change next to the original, apply the ones you want and download the updated `.md`. The model only proposes changes to exact places; the app applies them and keeps the original. Before each extra spend (the document's share of the summary and of the update) the app shows a rough token figure.
+- **Transcript and meeting summary.** Every call is saved as a meeting with a timestamped, speaker-tagged transcript. One button writes the summary in an analyst's format: decisions, open questions, requirements, risks, tasks. Export to Markdown or copy as plain text. In document review you can also download the updated document and a decisions file (see below).
 - **Pause / Resume / End / history.** Labelled buttons in the overlay and the main window: Pause freezes live output without losing anything, page through earlier blocks, resume instantly; End closes the meeting and hides the overlay. History is kept on disk.
 - **Token usage you can see.** Counts come from the providers' own responses, per month and per meeting, in Settings; the overlay shows a small per-meeting number. Background work can use a cheaper model. When Avalet tokens run out, nothing breaks: the transcript keeps recording and the app offers more tokens or your own key.
 - **Overlay stays out of your screen share** (macOS content protection), the way presenter notes do.
@@ -90,6 +91,32 @@ system audio (loopback)               5s WAV chunks, tagged "other"
 - **Speech to text** is fully local: `faster-whisper` in `python-sidecar/server.py`, talked to over newline-delimited JSON-RPC on stdin/stdout.
 - **Auto-suggest trigger:** a cheap regex over the freshly heard transcript plus a VAD-based "they stopped talking" signal from whisper's own segment timing. No extra model call. The pace depends on the meeting mode: interview answers at once (at most every 6 s); free waits for at least 15 s and a real sentence; the modes with a running list wait for about 25 s and a substantial statement or a question. Typed questions, quick actions, Screenshot and "Process now" always answer at once.
 
+### Document review: what goes where
+
+- **Before the call:** the document is kept in the app's local settings and copied onto the review meeting at Start. It is sent only to the model provider you chose, like the transcript, and never written to the log.
+- **During the call:** live hints get a table of contents built from the document's headings (section numbers, first lines, an "Open questions" section word for word), capped at 4,000 characters. A typed question that names a section ("what does section 3.2 say?") also gets that section.
+- **After the call:** the summary gets the whole document as reference only (for section names and the old wording); decisions come from the transcript alone, and "accepted" needs an explicit agreement in it. "Update the document" sends the document and the checked decisions once; the answer is a list of changes to exact places, which the app checks (the place must exist and be unique) and shows before anything is applied.
+- **Decisions file** (`<meeting> - decisions.md`), stable headings for handing to someone else together with the original:
+
+```
+# Decisions: <meeting title>
+Date: ...
+Document: <file name>
+
+## 1. <decision, phrased as an edit>
+- Section: 3.1 GET /activities
+- Status: Accepted | Proposed | Rejected | Open
+- Was: <old wording or "none">
+- Becomes: <new wording or "none">
+- Who: <as said in the call>
+- Quote: «<exact words>» (<speaker>, 00:12:04)
+
+## Action points
+- <task> (<owner>, <due>)
+```
+
+Only checked decisions are listed; headings follow the interface language (Russian: Решения, Дата, Документ, Раздел, Статус, Было, Стало, Кто, Цитата, Поручения).
+
 ## Screens
 
 | First run | Simple meeting | Overlay |
@@ -102,6 +129,7 @@ All screens, both themes: [`docs/screens/`](docs/screens/README.md). They are re
 
 - **The "Avalet without keys" option is not live yet.** The client side is done and tested against a mock server; the billing server, its signing key and the payment gateway are not deployed. Until then the app shows the option as "Coming soon", never contacts a billing server, and works with your own key.
 - **The live checklist is not yet verified on real meetings.** It is off in the Simple level and on in Advanced.
+- **Document review's decisions and changes are not yet verified on a real model.** The flow is tested end to end with a mock model; how well a real model finds decisions and exact places has to be judged on real calls. The summary with a document and the update send the whole document, so a very long one needs a provider with a large context window.
 - **System audio capture can be fragile.** Uses [`electron-audio-loopback`](https://github.com/alectrocute/electron-audio-loopback) (MIT); needs macOS 13.2+. If the other side's audio doesn't come through, a banner shows up with a **Reconnect** button. Mic-only always works as a fallback.
 - **Unsigned build.** See the install steps above. Code signing and auto-update are planned.
 - **Speech model is downloaded from Hugging Face** on first run. If that's slow or blocked on your network, use a VPN for the first download (ours: [ast-net.ru](https://ast-net.ru)); the model is cached afterwards. Bundling the model with the app is on the roadmap.

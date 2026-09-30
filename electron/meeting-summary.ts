@@ -52,7 +52,8 @@ export async function summarizeMeeting(
       artifact: meeting.artifact?.text,
     }),
     transcript,
-    maxTokens: 6000,
+    // The decisions list makes the answer longer; a cut-off JSON tail would lose agenda and actions too.
+    maxTokens: meeting.mode === "review" && meeting.artifact?.text ? 9000 : 6000,
     signal,
     onDelta: (delta) => {
       collected += delta;

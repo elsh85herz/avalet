@@ -179,6 +179,8 @@ export function sectionText(raw: string, section: ArtifactSection, cap = ARTIFAC
  * real prompt builders.
  */
 export const SUMMARY_ARTIFACT_OVERHEAD_CHARS = 3_000;
+/** Allowance for the decisions list in the summary's answer. */
+export const SUMMARY_DECISIONS_REPLY_CHARS = 3_000;
 export const PATCH_PROMPT_OVERHEAD_CHARS = 3_500;
 /** Wrapper text around the index in a live call. */
 export const LIVE_INDEX_OVERHEAD_CHARS = 250;
