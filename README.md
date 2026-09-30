@@ -25,6 +25,7 @@ Local-first: audio never leaves your Mac and transcription runs on-device. For t
 - **Manual ask, quick actions, screenshot.** Type a question any time, tap "Summarize" / "Risks?" / "Ask a question" / "Explain this", or send a screenshot of your screen for a priority read. Models that see images (Claude, OpenAI, DeepSeek) get the picture, which is the fast path; an optional setting adds the text recognized on your Mac for exact names, numbers and code (about a second slower). Models that do not (local ones) always get the screen as recognized text. If a provider refuses the image, Avalet retries with the text.
 - **Meeting modes.** Requirements gathering, grooming and estimation, demo and acceptance, document review, interview, or free: each shifts what the assistant pays attention to. Four of them also keep a running list in the overlay, collected from the suggestions with no extra model call: candidate requirements and risks, proposed slices and separate tasks, deviations and what to ask to see, remarks, proposals and decisions. One click copies it.
 - **Document review keeps your specification in sync.** Load the specification you are discussing (a `.md` or `.txt` file, or pasted, up to 200,000 characters) before the call. During the call the assistant sees only its table of contents, so hints stay cheap; after the call the summary returns the decisions that were actually taken, each with its section, old and new wording and the words that were said. You check and correct them, press "Update the document", look through every proposed change next to the original, apply the ones you want and download the updated `.md`. The model only proposes changes to exact places; the app applies them and keeps the original. Before each extra spend (the document's share of the summary and of the update) the app shows a rough token figure.
+- **A review summary does not hide what is still open.** A question asked and not answered, or passed on to someone else, is listed as a risk with who asked and how many times, and a contradiction with your briefing is shown rather than silently resolved; a decision that changes a data structure says what its key and value are in the speakers' words, or says "not clarified" and stays unchecked.
 - **Transcript and meeting summary.** Every call is saved as a meeting with a timestamped, speaker-tagged transcript. One button writes the summary in an analyst's format: decisions, open questions, requirements, risks, tasks. Export to Markdown or copy as plain text. In document review you can also download the updated document and a decisions file (see below).
 - **Pause / Resume / End / history.** Labelled buttons in the overlay and the main window: Pause freezes live output without losing anything, page through earlier blocks, resume instantly; End closes the meeting and hides the overlay. History is kept on disk.
 - **Token usage you can see.** Counts come from the providers' own responses, per month and per meeting, in Settings; the overlay shows a small per-meeting number. Background work can use a cheaper model. When Avalet tokens run out, nothing breaks: the transcript keeps recording and the app offers more tokens or your own key.
@@ -108,6 +109,7 @@ Document: <file name>
 - Status: Accepted | Proposed | Rejected | Open
 - Was: <old wording or "none">
 - Becomes: <new wording or "none">
+- Terms: <what the key, value and one entry are, "not clarified: ...", or "none">
 - Who: <as said in the call>
 - Quote: «<exact words>» (<speaker>, 00:12:04)
 
@@ -115,7 +117,7 @@ Document: <file name>
 - <task> (<owner>, <due>)
 ```
 
-Only checked decisions are listed; headings follow the interface language (Russian: Решения, Дата, Документ, Раздел, Статус, Было, Стало, Кто, Цитата, Поручения).
+Only checked decisions are listed; headings follow the interface language (Russian: Решения, Дата, Документ, Раздел, Статус, Было, Стало, Термины, Кто, Цитата, Поручения).
 
 ## Screens
 
@@ -129,6 +131,7 @@ All screens, both themes: [`docs/screens/`](docs/screens/README.md). They are re
 
 - **The "Avalet without keys" option is not live yet.** The client side is done and tested against a mock server; the billing server, its signing key and the payment gateway are not deployed. Until then the app shows the option as "Coming soon", never contacts a billing server, and works with your own key.
 - **The live checklist is not yet verified on real meetings.** It is off in the Simple level and on in Advanced.
+- **Transcript cleaning is conservative.** A doubled line is recognized by the same text comparison the live filter uses, so an echo garbled beyond recognition stays; if your system audio also carries your own voice, your line may be kept under the other side. The credit-line list is short and best-effort. Hidden lines are one click away in the transcript.
 - **Document review's decisions and changes are not yet verified on a real model.** The flow is tested end to end with a mock model; how well a real model finds decisions and exact places has to be judged on real calls. The summary with a document and the update send the whole document, so a very long one needs a provider with a large context window.
 - **System audio capture can be fragile.** Uses [`electron-audio-loopback`](https://github.com/alectrocute/electron-audio-loopback) (MIT); needs macOS 13.2+. If the other side's audio doesn't come through, a banner shows up with a **Reconnect** button. Mic-only always works as a fallback.
 - **Unsigned build.** See the install steps above. Code signing and auto-update are planned.
