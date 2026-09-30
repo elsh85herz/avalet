@@ -414,6 +414,8 @@ export type InvokeMap = {
   "avalet:artifact-set": [[doc: ArtifactDoc], ArtifactSetResult];
   /** Attaches (or with null removes) the document on a saved meeting, e.g. one forgotten before Start. */
   "avalet:meetings-set-artifact": [[id: string, doc: ArtifactDoc | null], Meeting | null];
+  /** The decisions list after the analyst edited it (rows edited by hand carry `manual`). */
+  "avalet:meetings-set-decisions": [[id: string, decisions: Decision[]], Meeting | null];
   "avalet:auto-detect-set": [[enabled: boolean], void];
   "avalet:overlay-set-opacity": [[opacity: number], void];
   "avalet:overlay-set-collapsed": [[collapsed: boolean], void];
@@ -622,6 +624,7 @@ export type AvaletApi = {
     setAgenda: (id: string, agenda: string[]) => Promise<Meeting | null>;
     toText: (id: string, labels: ExportLabels, modeLabel: string) => Promise<string>;
     setArtifact: (id: string, doc: ArtifactDoc | null) => Promise<Meeting | null>;
+    setDecisions: (id: string, decisions: Decision[]) => Promise<Meeting | null>;
   };
   events: {
     onBlockStart: Listener<"avalet:event:block-start">;
@@ -708,6 +711,7 @@ const CHANNEL_SET: Record<InvokeChannel, true> = {
   "avalet:artifact-get": true,
   "avalet:artifact-set": true,
   "avalet:meetings-set-artifact": true,
+  "avalet:meetings-set-decisions": true,
   "avalet:auto-detect-set": true,
   "avalet:overlay-set-opacity": true,
   "avalet:overlay-set-collapsed": true,

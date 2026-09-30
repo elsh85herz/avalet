@@ -130,6 +130,7 @@ const api: AvaletApi = {
     setAgenda: (id, agenda) => invoke("avalet:meetings-set-agenda", id, agenda),
     toText: (id, labels, modeLabel) => invoke("avalet:meetings-to-text", id, labels, modeLabel),
     setArtifact: (id, doc) => invoke("avalet:meetings-set-artifact", id, doc),
+    setDecisions: (id, decisions) => invoke("avalet:meetings-set-decisions", id, decisions),
   },
   events: {
     onBlockStart: on("avalet:event:block-start"),

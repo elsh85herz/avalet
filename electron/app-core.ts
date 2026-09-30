@@ -29,6 +29,7 @@ import {
   setAgenda,
   setCurrentContext,
   setMeetingArtifact,
+  updateMeeting,
   setCurrentMode,
   startMeeting,
   transcriptToRawText,
@@ -36,6 +37,7 @@ import {
 import { summarizeMeeting } from "./meeting-summary.js";
 import { buildProtocolMarkdown, parseAgendaText } from "./summary-format.js";
 import { ARTIFACT_CHAR_CAP } from "./shared/artifact.js";
+import { sanitizeDecisions } from "./decisions.js";
 import {
   getAgendaText,
   getAllProviderSettings,
@@ -588,6 +590,12 @@ export class AppCore {
       const doc = raw === null ? null : validArtifact(raw);
       if (doc && doc.text.length > ARTIFACT_CHAR_CAP) throw new Error("the document is too large");
       return setMeetingArtifact(id, doc);
+    };
+    h["avalet:meetings-set-decisions"] = (rawId, raw) => {
+      const decisions = sanitizeDecisions(raw);
+      return updateMeeting(requireString(rawId, "id"), (meeting) => {
+        meeting.decisions = decisions;
+      });
     };
     h["avalet:auto-detect-set"] = (enabled) => {
       const next = Boolean(enabled);

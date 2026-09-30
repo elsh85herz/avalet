@@ -5,6 +5,8 @@ import type { AgendaStatusItem, QuoteRef } from "../../../electron/shared/ipc-co
 import { parseAgendaText } from "../lib/agenda.js";
 import { UI_STRINGS, type UiLanguage } from "../lib/i18n.js";
 import { IconChevron, IconCheck } from "../icons.js";
+import { DecisionsPanel } from "./DecisionsPanel.js";
+import { formatTokens, summaryExtraCost } from "../lib/artifact-cost.js";
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -77,7 +79,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
         if (id !== meeting.id) return;
         setSummaryDraft((prev) => prev + delta);
       }),
-      bridge.events.onSummaryDone(({ id, text, agendaStatus, actions }) => {
+      bridge.events.onSummaryDone(({ id, text, agendaStatus, actions, decisions }) => {
         if (id !== meeting.id) return;
         setSummaryDraft(text);
         setSummarizing(false);
@@ -88,6 +90,7 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
             summaryAt: Date.now(),
             agendaStatus: agendaStatus ?? prev.agendaStatus,
             actions: actions ?? prev.actions,
+            decisions: decisions ?? prev.decisions,
           };
           onChanged?.(next);
           return next;
@@ -219,6 +222,14 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
     );
   }
 
+  // Review with a document: the summary request is bigger; said before it is sent.
+  const summaryCost = summaryExtraCost(meeting);
+
+  function updateMeeting(next: Meeting) {
+    setMeeting((prev) => ({ ...prev, ...next, transcript: next.transcript.length >= prev.transcript.length ? next.transcript : prev.transcript }));
+    onChanged?.(next);
+  }
+
   const highlightIndex = highlightAt === null ? -1 : meeting.transcript.findIndex((seg) => seg.at >= highlightAt);
 
   function onTranscriptScroll(e: React.UIEvent<HTMLDivElement>) {
@@ -273,6 +284,11 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
         ) : null}
         {notice ? <span className="notice">{notice}</span> : null}
       </div>
+      {summaryCost ? (
+        <p className={`cost-note${summaryCost.high ? " high" : ""}`} data-testid="summary-cost" role="note">
+          {t.spec.summaryCost.replace("{tokens}", formatTokens(summaryCost.tokens, uiLanguage))}
+        </p>
+      ) : null}
 
       <div className="meeting-agenda">
         <button
@@ -348,6 +364,17 @@ export function MeetingView({ meeting: initial, uiLanguage, live, onBack, onDele
           </div>
         ) : null}
       </div>
+
+      {meeting.mode === "review" ? (
+        <DecisionsPanel
+          meeting={meeting}
+          uiLanguage={uiLanguage}
+          simple={simple}
+          onChange={updateMeeting}
+          jumpTo={jumpTo}
+          clock={(at) => clock(at, meeting.startedAt)}
+        />
+      ) : null}
 
       <div className="meeting-summary">
         <h3>{t.meeting.summaryTitle}</h3>
